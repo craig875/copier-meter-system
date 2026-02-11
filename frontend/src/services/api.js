@@ -109,5 +109,10 @@ export const dashboardApi = {
   get: () => api.get('/dashboard'),
 };
 
+// Audit / Transaction History API (admin only)
+export const auditApi = {
+  getHistory: (params = {}) => api.get('/audit', { params }).then(res => res.data),
+};
+
 
 export default api;

@@ -7,8 +7,9 @@ import { hasAdminAccess } from '../utils/permissions.js';
  * Single Responsibility: HTTP layer only - delegates to service layer
  */
 export class MachineController {
-  constructor(machineService = services.machine) {
+  constructor(machineService = services.machine, auditService = services.audit) {
     this.machineService = machineService;
+    this.auditService = auditService;
   }
 
   getMachines = asyncHandler(async (req, res) => {
@@ -77,6 +78,7 @@ export class MachineController {
 
     const machineData = { ...req.body, branch };
     const result = await this.machineService.createMachine(machineData);
+    this.auditService.log(req.user.id, 'machine_create', 'machine', result.machine.id, { serialNumber: result.machine.machineSerialNumber, branch });
     res.status(201).json(result);
   });
 
@@ -115,6 +117,7 @@ export class MachineController {
     }
 
     const result = await this.machineService.updateMachine(id, req.body);
+    this.auditService.log(req.user.id, 'machine_update', 'machine', id, { serialNumber: result.machine?.machineSerialNumber });
     res.json(result);
   });
 
@@ -130,6 +133,7 @@ export class MachineController {
     }
     
     const result = await this.machineService.deleteMachine(id);
+    this.auditService.log(req.user.id, 'machine_delete', 'machine', id, { serialNumber: existing?.machine?.machineSerialNumber });
     res.json(result);
   });
 
@@ -145,6 +149,7 @@ export class MachineController {
     }
     
     const result = await this.machineService.decommissionMachine(id);
+    this.auditService.log(req.user.id, 'machine_decommission', 'machine', id, { serialNumber: existing?.machine?.machineSerialNumber });
     res.json(result);
   });
 
@@ -160,6 +165,7 @@ export class MachineController {
     }
     
     const result = await this.machineService.recommissionMachine(id);
+    this.auditService.log(req.user.id, 'machine_recommission', 'machine', id, { serialNumber: existing?.machine?.machineSerialNumber });
     res.json(result);
   });
 }

@@ -11,7 +11,8 @@ import {
   X,
   Building2,
   Home,
-  Upload
+  Upload,
+  ScrollText
 } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
@@ -41,6 +42,7 @@ const Layout = ({ children }) => {
     },
     ...(isAdmin ? [
       { name: 'Users', href: '/users', icon: Users },
+      { name: 'Transaction History', href: '/transaction-history', icon: ScrollText },
     ] : []),
   ];
 

@@ -7,8 +7,9 @@ import { hasAdminAccess } from '../utils/permissions.js';
  * Single Responsibility: HTTP layer only - delegates to service layer
  */
 export class ReadingController {
-  constructor(readingService = services.reading) {
+  constructor(readingService = services.reading, auditService = services.audit) {
     this.readingService = readingService;
+    this.auditService = auditService;
   }
 
   getReadings = asyncHandler(async (req, res) => {
@@ -54,6 +55,7 @@ export class ReadingController {
 
     const userId = req.user.id;
     const result = await this.readingService.submitReadings(year, month, branch, readings, userId);
+    this.auditService.log(userId, 'reading_submit', 'reading', null, { year, month, branch, savedCount: result.savedCount });
     res.json(result);
   });
 
@@ -72,6 +74,7 @@ export class ReadingController {
 
     const userId = req.user.id;
     const buffer = await this.readingService.exportReadings(year, month, branch, userId);
+    this.auditService.log(userId, 'reading_export', 'reading', null, { year, month, branch: branch || 'all' });
 
     const filename = `meter-readings-${branch || 'all'}-${year}-${String(month).padStart(2, '0')}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -122,6 +125,7 @@ export class ReadingController {
 
     const userId = req.user.id;
     const buffer = await this.readingService.exportReadingsSplitByBranch(year, month, userId);
+    this.auditService.log(userId, 'reading_export_all_branches', 'reading', null, { year, month });
 
     const filename = `meter-readings-all-branches-${year}-${String(month).padStart(2, '0')}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -138,6 +142,7 @@ export class ReadingController {
     }
 
     const result = await this.readingService.deleteReading(machineId, year, month);
+    this.auditService.log(req.user.id, 'reading_delete', 'reading', machineId, { year, month });
     res.json(result);
   });
 
@@ -157,6 +162,7 @@ export class ReadingController {
       }
 
       const result = await this.readingService.unlockMonth(y, m, b);
+      this.auditService.log(req.user.id, 'reading_unlock', 'reading', null, { year: y, month: m, branch: b });
       res.json(result);
     } catch (err) {
       console.error('Unlock failed:', err);

@@ -1,3 +1,4 @@
+import { services } from '../services/index.js';
 import { ImportService } from '../services/import.service.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { hasAdminAccess } from '../utils/permissions.js';
@@ -7,8 +8,9 @@ import { hasAdminAccess } from '../utils/permissions.js';
  * Single Responsibility: HTTP layer only
  */
 export class ImportController {
-  constructor(importService = new ImportService()) {
+  constructor(importService = new ImportService(), auditService = services.audit) {
     this.importService = importService;
+    this.auditService = auditService;
   }
 
   importMachines = asyncHandler(async (req, res) => {
@@ -21,6 +23,7 @@ export class ImportController {
 
     const userId = req.user.id;
     const result = await this.importService.importMachines(data, year, month, branch, userId);
+    this.auditService.log(userId, 'machine_import', 'import', null, { year, month, branch, created: result.results?.created, updated: result.results?.updated });
     res.json(result);
   });
 
@@ -37,6 +40,7 @@ export class ImportController {
 
     const userId = req.user.id;
     const result = await this.importService.importReadings(data, year, month, branch, userId);
+    this.auditService.log(userId, 'reading_import', 'import', null, { year, month, branch, created: result.results?.readingsCreated });
     res.json(result);
   });
 }

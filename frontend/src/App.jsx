@@ -10,6 +10,7 @@ import History from './pages/History';
 import Machines from './pages/Machines';
 import Users from './pages/Users';
 import ImportReadings from './pages/ImportReadings';
+import TransactionHistory from './pages/TransactionHistory';
 
 function App() {
   const { user, loading } = useAuth();
@@ -97,6 +98,16 @@ function App() {
           <ProtectedRoute adminOnly>
             <Layout>
               <Users />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/transaction-history"
+        element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <TransactionHistory />
             </Layout>
           </ProtectedRoute>
         }

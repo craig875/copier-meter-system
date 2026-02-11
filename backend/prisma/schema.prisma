@@ -34,6 +34,7 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   readings     Reading[]
   submissions  Submission[]
+  auditLogs    AuditLog[]
 
   @@map("users")
 }
@@ -99,4 +100,21 @@ model Submission {
   @@index([year, month])
   @@index([branch])
   @@map("submissions")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  details    Json?    @map("details")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

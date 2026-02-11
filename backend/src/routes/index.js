@@ -4,6 +4,7 @@ import userRoutes from './user.routes.js';
 import machineRoutes from './machine.routes.js';
 import readingRoutes from './reading.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
+import auditRoutes from './audit.routes.js';
 
 const router = Router();
 
@@ -13,6 +14,9 @@ router.use('/dashboard', dashboardRoutes);
 // Meter Reading System routes
 router.use('/machines', machineRoutes);
 router.use('/readings', readingRoutes);
+
+// Audit / Transaction history (admin only)
+router.use('/audit', auditRoutes);
 
 // Auth and user management
 router.use('/auth', authRoutes);

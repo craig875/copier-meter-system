@@ -6,9 +6,10 @@ import { asyncHandler } from '../middleware/errorHandler.js';
  * Single Responsibility: HTTP layer only - delegates to service layer
  */
 export class AuthController {
-  constructor(authService = services.auth, userService = services.user) {
+  constructor(authService = services.auth, userService = services.user, auditService = services.audit) {
     this.authService = authService;
     this.userService = userService;
+    this.auditService = auditService;
   }
 
   login = asyncHandler(async (req, res) => {
@@ -29,18 +30,21 @@ export class AuthController {
 
   createUser = asyncHandler(async (req, res) => {
     const result = await this.userService.createUser(req.body);
+    this.auditService.log(req.user.id, 'user_create', 'user', result.user?.id, { email: result.user?.email });
     res.status(201).json(result);
   });
 
   updateUser = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const result = await this.userService.updateUser(id, req.body);
+    this.auditService.log(req.user.id, 'user_update', 'user', id, { email: result.user?.email });
     res.json(result);
   });
 
   deleteUser = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const result = await this.userService.deleteUser(id, req.user.id);
+    this.auditService.log(req.user.id, 'user_delete', 'user', id, {});
     res.json(result);
   });
 }
