@@ -109,7 +109,7 @@ const stepsByPath = {
       element: '[data-tour="readings-table"]',
       popover: {
         title: 'Readings Table',
-        description: 'Enter Mono, Colour, and Scan readings in the input fields. Add a note if you can\'t get a reading. Edits are highlighted in blue.',
+        description: 'Enter Mono, Colour, and Scan readings in the input fields. Add a note. Edits are highlighted in blue.',
         side: 'top',
       },
     },
