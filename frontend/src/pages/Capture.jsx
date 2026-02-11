@@ -610,7 +610,7 @@ const Capture = () => {
                       value={getReadingValue(machine.id, 'note', currentReading) || ''}
                       onChange={(e) => handleReadingChange(machine.id, 'note', e.target.value)}
                       disabled={isLocked}
-                      placeholder="Add note if unable to retrieve reading..."
+                      placeholder="Add note..."
                       maxLength={500}
                       rows={2}
                       className={clsx(
