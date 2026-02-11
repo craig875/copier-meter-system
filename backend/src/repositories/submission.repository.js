@@ -1,12 +1,13 @@
 import { BaseRepository } from './base.repository.js';
+import prisma from '../config/database.js';
 
 /**
  * Submission Repository - Handles all data access operations for submissions
  * Single Responsibility: Data access for Submission entities
  */
 export class SubmissionRepository extends BaseRepository {
-  constructor(prisma) {
-    super('submission', prisma);
+  constructor(prismaClient) {
+    super('submission', prismaClient);
   }
 
   async findByYearMonth(year, month, branch) {
@@ -44,11 +45,17 @@ export class SubmissionRepository extends BaseRepository {
   }
 
   async deleteByYearMonth(year, month, branch) {
-    const result = await this.prisma.submission.deleteMany({
+    const y = parseInt(year, 10);
+    const m = parseInt(month, 10);
+    const b = String(branch).toUpperCase();
+    if (!['JHB', 'CT'].includes(b)) {
+      throw new Error(`Invalid branch: ${branch}`);
+    }
+    const result = await prisma.submission.deleteMany({
       where: {
-        year: parseInt(year),
-        month: parseInt(month),
-        branch,
+        year: y,
+        month: m,
+        branch: b,
       },
     });
     return result.count;
