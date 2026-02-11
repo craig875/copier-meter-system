@@ -40,15 +40,11 @@ export class ReadingController {
   });
 
   submitReadings = asyncHandler(async (req, res) => {
-    const { year, month, readings } = req.body;
+    const { year, month, readings, branch: bodyBranch } = req.body;
     
-    // Admins and management can specify branch or use their branch
-    // Non-admins use their branch, default to JHB if not set
-    let branch = hasAdminAccess(req.user.role)
-      ? req.body.branch || req.user.branch 
-      : req.user.branch;
-    
-    // Default to JHB if no branch is set
+    // Use branch from request (frontend selection) when provided - user is viewing that branch
+    // Otherwise use user's assigned branch, default to JHB
+    let branch = bodyBranch || req.user.branch;
     if (!branch) {
       branch = 'JHB';
     }
