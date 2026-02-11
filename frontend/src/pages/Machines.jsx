@@ -217,7 +217,6 @@ const Machines = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial Number</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Model</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contract</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Branch</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Meters</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -227,7 +226,7 @@ const Machines = () => {
             <tbody className="divide-y divide-gray-200">
               {machines.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
                     No machines found. {data ? 'Try adjusting your search.' : 'Loading...'}
                   </td>
                 </tr>
@@ -237,7 +236,6 @@ const Machines = () => {
                   <td className="px-4 py-3 font-medium text-gray-900">{machine.machineSerialNumber}</td>
                   <td className="px-4 py-3 text-gray-500">{machine.customer || '-'}</td>
                   <td className="px-4 py-3 text-gray-500">{machine.model || '-'}</td>
-                  <td className="px-4 py-3 text-gray-500">{machine.contractReference || '-'}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={clsx(
                       'inline-flex px-2 py-1 rounded-full text-xs font-medium',
@@ -348,7 +346,6 @@ const MachineModal = ({ machine, onClose }) => {
     machineSerialNumber: machine?.machineSerialNumber || '',
     customer: machine?.customer || '',
     model: machine?.model || '',
-    contractReference: machine?.contractReference || '',
     branch: machine?.branch || effectiveBranch || 'JHB',
     monoEnabled: machine?.monoEnabled ?? true,
     colourEnabled: machine?.colourEnabled ?? false,
@@ -431,19 +428,6 @@ const MachineModal = ({ machine, onClose }) => {
               type="text"
               name="model"
               value={formData.model}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contract Reference
-            </label>
-            <input
-              type="text"
-              name="contractReference"
-              value={formData.contractReference}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
@@ -617,9 +601,6 @@ const ImportModal = ({ onClose }) => {
                 case 'model':
                   row.model = value;
                   break;
-                case 'contract reference':
-                  row.contractReference = value;
-                  break;
                 case 'mono enabled':
                   row.monoEnabled = value;
                   break;
@@ -706,9 +687,6 @@ const ImportModal = ({ onClose }) => {
                   break;
                 case 'model':
                   row.model = value;
-                  break;
-                case 'contract reference':
-                  row.contractReference = value;
                   break;
                 case 'mono enabled':
                   row.monoEnabled = value;
@@ -798,10 +776,9 @@ const ImportModal = ({ onClose }) => {
                 <h3 className="font-semibold text-blue-900 mb-2">CSV Format Required:</h3>
                 <p className="text-sm text-blue-800 mb-2">Columns (in order):</p>
                 <ol className="text-sm text-blue-800 list-decimal list-inside space-y-1">
-                  <li>Serial Number (required)</li>
+                  <li>Serial Number (required – also used as contract reference)</li>
                   <li>Customer (optional)</li>
                   <li>Model (optional)</li>
-                  <li>Contract Reference (optional)</li>
                   <li>Mono Enabled (yes/no)</li>
                   <li>Colour Enabled (yes/no)</li>
                   <li>Scan Enabled (yes/no)</li>
@@ -814,7 +791,7 @@ const ImportModal = ({ onClose }) => {
               </div>
               <button
                 onClick={() => {
-                  const csv = 'Serial Number,Customer,Model,Contract Reference,Mono Enabled,Colour Enabled,Scan Enabled,Mono Reading,Colour Reading,Scan Reading,Year,Month\nCPR-001,Reception Area,Canon iR-ADV C5535,CTR-2024-001,yes,yes,yes,50000,20000,5000,2024,1';
+                  const csv = 'Serial Number,Customer,Model,Mono Enabled,Colour Enabled,Scan Enabled,Mono Reading,Colour Reading,Scan Reading,Year,Month\nCPR-001,Reception Area,Canon iR-ADV C5535,yes,yes,yes,50000,20000,5000,2024,1';
                   const blob = new Blob([csv], { type: 'text/csv' });
                   const url = window.URL.createObjectURL(blob);
                   const link = document.createElement('a');
