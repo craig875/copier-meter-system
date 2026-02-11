@@ -1,7 +1,5 @@
 # Super Simple Deployment Guide
 
-> **For a cleaner version:** See **ONE_SHOT_DEPLOY.md** – single guide with fill-in values and troubleshooting.
-
 Do these steps one at a time. Don't skip any.
 
 ---
@@ -51,6 +49,8 @@ git push -u origin main
 ```
 If it asks for login, sign in with your GitHub account.
 
+*(If it says "remote origin already exists", skip the remote add line and just run: `git push -u origin main`)*
+
 ---
 
 # PART 2: DEPLOY THE BACKEND (Railway)
@@ -68,10 +68,10 @@ Click **Deploy from GitHub repo**.
 Click **Configure GitHub App** if it asks. Allow Railway to access your repos.
 
 ### Step 11
-Click on **copier-meter-system** (your repo). Railway will start deploying. That's wrong – we need to set it up first.
+Click on **copier-meter-system** (your repo). Railway will start deploying. That's okay – we'll configure it.
 
 ### Step 12
-Click the **+** button (or "Add Service"). Click **Database**. Click **PostgreSQL**.
+Click the **+** button (or "New" or "Add Service"). Click **Database**. Click **PostgreSQL**.
 
 ### Step 13
 Wait for the database to turn green. Click on it. Click the **Variables** tab. Find **DATABASE_URL**. Click the copy button. **Save this somewhere** – you'll need it soon.
@@ -90,7 +90,7 @@ Click **Variables** tab. Click **Add Variable** or **RAW Editor**. Add these one
 
 | Name | Value |
 |------|-------|
-| DATABASE_URL | Paste what you copied in Step 13 |
+| DATABASE_URL | Use `${{Postgres.DATABASE_URL}}` if Railway shows it. Otherwise paste what you copied in Step 13. |
 | JWT_SECRET | See Step 18 below |
 | NODE_ENV | production |
 | FRONTEND_URL | https://temp.com |
@@ -105,30 +105,34 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 A long random string will appear. Copy it. That's your JWT_SECRET. Paste it into Railway.
 
 ### Step 19
-In Railway, click **Settings** again. Find **Build Command**. Set it to:
+In Railway, click **Settings** again. Find **Deploy** → **Custom Start Command**. Set it to:
 ```
-npm install && npx prisma generate
+npx prisma migrate deploy && npm run db:seed && npm start
 ```
+*(Railway may use Docker – if you only see Start Command, use that. No separate Build Command needed.)*
 
 ### Step 20
-Find **Start Command**. Set it to:
-```
-npx prisma migrate deploy && npm start
-```
+Save the settings. Click **Deploy** if you see a Deploy button, or wait for auto-deploy.
 
 ### Step 21
-Click **Settings** → **Networking**. Click **Generate Domain**. A URL will appear like `https://something.up.railway.app`. **Copy this URL** – you need it for the frontend.
+Click **Settings** → **Networking**. Click **Generate Domain**. A URL will appear like `https://something.up.railway.app`. **Copy this URL** – you need it for the frontend. Add `https://` when using it if it doesn't show.
 
 ### Step 22 (Seed the database – create login users)
-Open PowerShell. Type (replace THE_DATABASE_URL with what you saved from Step 13 – put it in quotes):
+
+The seed can run automatically from Step 19, but if you don't see "Created admin user" in the logs, run it from your computer:
+
+1. Get a **public** database URL:
+   - **Railway:** PostgreSQL service → **Variables** → **DATABASE_PUBLIC_URL** (enable Public Networking in Settings if you don't see it)
+   - **Or use [Neon.tech](https://neon.tech):** Sign up → New Project → copy the connection string
+2. In PowerShell (use **single quotes**, paste your full URL):
+
 ```
 cd c:\Users\27620\copier-meter-system\backend
-$env:DATABASE_URL="THE_DATABASE_URL"
+$env:DATABASE_URL='YOUR_DATABASE_URL_HERE'
 npm run db:seed
 ```
-Example: `$env:DATABASE_URL="postgresql://postgres:xxxxx@xxx.railway.app:5432/railway"`
 
-You should see "Seeding completed!" and "Created admin user: admin@example.com".
+3. You should see "Seeding completed!" and "Created admin user: admin@example.com"
 
 ---
 
@@ -203,11 +207,15 @@ Add your colleagues: **Users** → **Add User** → enter their email, name, and
 ## SOMETHING BROKE?
 
 **Can't log in?**  
-Go back to Step 22 and run the seed command again with your DATABASE_URL.
+Check Step 19: Start Command should include `npm run db:seed`. Redeploy the backend.
 
-**Page won't load / "Failed to fetch"?**  
+**Page won't load / "Failed to fetch" / White screen?**  
 Check Step 27: VITE_API_URL should be your Railway URL with NO /api at the end.  
 Check Step 31: FRONTEND_URL should be your Vercel URL exactly.
+Redeploy both after changing.
+
+**PostgreSQL crashes on Railway?**  
+Use [Neon.tech](https://neon.tech) – sign up, create free database, copy connection string. Use that as DATABASE_URL in Railway instead.
 
 **Still stuck?**  
 Check the Railway logs: click your backend service → Deployments → click the latest → View Logs.

@@ -1,5 +1,5 @@
-# Use Node.js LTS version
-FROM node:18-alpine
+# Use Node.js LTS - Debian base has OpenSSL required by Prisma (Alpine causes "schema engine" errors)
+FROM node:18
 
 # Set working directory
 WORKDIR /app

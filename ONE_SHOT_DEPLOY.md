@@ -101,7 +101,7 @@ If the database fails to start with "catatonit" or similar:
 
 | Variable | Value |
 |----------|-------|
-| `DATABASE_URL` | Value from 2.2 (or Neon from 2.3) |
+| `DATABASE_URL` | **Use `${{Postgres.DATABASE_URL}}`** if Railway shows it (recommended). Otherwise paste the URL from 2.2. |
 | `JWT_SECRET` | *(see 2.7)* |
 | `NODE_ENV` | `production` |
 | `FRONTEND_URL` | `https://temp.com` |
