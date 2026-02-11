@@ -38,6 +38,12 @@ export const exportQuerySchema = z.object({
   branch: z.enum(['JHB', 'CT']).optional(),
 });
 
+export const unlockQuerySchema = z.object({
+  year: z.string().transform(Number).pipe(z.number().int().min(2000).max(2100)),
+  month: z.string().transform(Number).pipe(z.number().int().min(1).max(12)),
+  branch: z.enum(['JHB', 'CT']),
+});
+
 export const importReadingsSchema = z.object({
   data: z.array(z.object({
     machineSerialNumber: z.string().min(1, 'Machine serial number is required'),

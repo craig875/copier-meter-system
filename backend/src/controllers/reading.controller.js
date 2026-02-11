@@ -140,6 +140,17 @@ export class ReadingController {
     const result = await this.readingService.deleteReading(machineId, year, month);
     res.json(result);
   });
+
+  unlockMonth = asyncHandler(async (req, res) => {
+    const { year, month, branch } = req.query;
+
+    if (!year || !month || !branch) {
+      return res.status(400).json({ error: 'Year, month, and branch are required' });
+    }
+
+    const result = await this.readingService.unlockMonth(year, month, branch);
+    res.json(result);
+  });
 }
 
 // Export singleton instance
@@ -152,3 +163,4 @@ export const getReadingHistory = readingController.getReadingHistory.bind(readin
 export const getReadingsSplitByBranch = readingController.getReadingsSplitByBranch.bind(readingController);
 export const exportReadingsSplitByBranch = readingController.exportReadingsSplitByBranch.bind(readingController);
 export const deleteReading = readingController.deleteReading.bind(readingController);
+export const unlockMonth = readingController.unlockMonth.bind(readingController);

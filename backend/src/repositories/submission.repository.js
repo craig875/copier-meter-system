@@ -42,4 +42,15 @@ export class SubmissionRepository extends BaseRepository {
       }
     );
   }
+
+  async deleteByYearMonth(year, month, branch) {
+    const result = await this.prisma.submission.deleteMany({
+      where: {
+        year: parseInt(year),
+        month: parseInt(month),
+        branch,
+      },
+    });
+    return result.count;
+  }
 }

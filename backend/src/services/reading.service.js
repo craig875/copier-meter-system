@@ -392,6 +392,31 @@ export class ReadingService {
   }
 
   /**
+   * Unlock a submitted month for editing (admin only) - removes the submission record
+   * @param {number} year
+   * @param {number} month
+   * @param {string} branch
+   * @returns {Promise<Object>}
+   */
+  async unlockMonth(year, month, branch) {
+    const targetYear = parseInt(year);
+    const targetMonth = parseInt(month);
+
+    if (!branch) {
+      throw new ValidationError('Branch is required to unlock');
+    }
+
+    const count = await this.submissionRepo.deleteByYearMonth(targetYear, targetMonth, branch);
+
+    return {
+      message: count > 0 ? 'Month unlocked successfully' : 'Month was not locked',
+      year: targetYear,
+      month: targetMonth,
+      branch,
+    };
+  }
+
+  /**
    * Delete a reading for a specific machine, year, and month (admin only)
    * @param {string} machineId
    * @param {number} year

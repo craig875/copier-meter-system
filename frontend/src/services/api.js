@@ -99,6 +99,9 @@ export const readingsApi = {
   delete: (machineId, year, month) => {
     return api.delete(`/readings/machine/${machineId}`, { params: { year, month } });
   },
+  unlock: (year, month, branch) => {
+    return api.post('/readings/unlock', null, { params: { year, month, branch } });
+  },
 };
 
 // Dashboard API

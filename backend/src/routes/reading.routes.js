@@ -7,12 +7,13 @@ import {
   getReadingsSplitByBranch,
   exportReadingsSplitByBranch,
   deleteReading,
+  unlockMonth,
 } from '../controllers/reading.controller.js';
 import { importReadings } from '../controllers/import.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { requireMeterReadingAccess } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';
-import { submitReadingsSchema, readingsQuerySchema, exportQuerySchema, importReadingsSchema } from '../schemas/reading.schema.js';
+import { submitReadingsSchema, readingsQuerySchema, exportQuerySchema, importReadingsSchema, unlockQuerySchema } from '../schemas/reading.schema.js';
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.get('/split-by-branch', validateQuery(readingsQuerySchema), getReadingsSp
 router.get('/export/split-by-branch', validateQuery(exportQuerySchema), exportReadingsSplitByBranch);
 router.get('/history/:machineId', getReadingHistory);
 router.delete('/machine/:machineId', requireAdmin, deleteReading);
+router.post('/unlock', requireAdmin, validateQuery(unlockQuerySchema), unlockMonth);
 
 export default router;
