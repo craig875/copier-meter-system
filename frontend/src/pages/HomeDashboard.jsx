@@ -68,7 +68,7 @@ const HomeDashboard = () => {
       </div>
 
       {/* Meter Capture Progress - Colour Spectrum Bar - glass */}
-      <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-white/50 p-6">
+      <div className="bg-white/60 backdrop-blur-xl rounded-xl shadow-xl border border-white/80 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Meter capture – {monthName}</h2>
           <span className="text-2xl font-bold text-gray-700">{progressPercent}%</span>
@@ -99,7 +99,7 @@ const HomeDashboard = () => {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-gray-900">Modules by Category</h2>
           {Object.entries(data.modulesByCategory).map(([category, categoryModules]) => (
-            <div key={category} className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-white/50 p-6">
+            <div key={category} className="bg-white/60 backdrop-blur-xl rounded-xl shadow-xl border border-white/80 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{category}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {categoryModules.map((module) => (
@@ -139,7 +139,7 @@ const ModuleCard = ({ module }) => {
   return (
     <Link
       to={route}
-      className="group bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-white/50 p-6 hover:bg-white/90 hover:shadow-xl hover:border-red-200/50 transition-all duration-200"
+      className="group bg-white/60 backdrop-blur-xl rounded-xl shadow-xl border border-white/80 p-6 hover:bg-white/80 hover:shadow-2xl hover:border-red-200/60 transition-all duration-200"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="p-3 bg-red-50 rounded-lg group-hover:bg-red-100 transition-colors">

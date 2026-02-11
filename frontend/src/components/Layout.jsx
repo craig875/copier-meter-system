@@ -52,7 +52,13 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-slate-100">
+    <div 
+      className="min-h-screen"
+      style={{ 
+        backgroundImage: 'radial-gradient(circle at 1px 1px, rgb(148 163 184 / 0.25) 1px, transparent 0), linear-gradient(to bottom right, rgb(226 232 240), rgb(243 244 246), rgb(231 229 228))',
+        backgroundSize: '28px 28px, 100% 100%'
+      }}
+    >
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
@@ -167,7 +173,7 @@ const Layout = ({ children }) => {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar - glass */}
-        <header className="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 shadow-sm h-16 flex items-center px-6">
+        <header className="bg-white/60 backdrop-blur-xl border-b border-gray-300/50 shadow-sm h-16 flex items-center px-6">
           <button 
             className="lg:hidden mr-4"
             onClick={() => setSidebarOpen(true)}

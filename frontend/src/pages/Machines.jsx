@@ -209,7 +209,7 @@ const Machines = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-white/50 overflow-hidden">
+      <div className="bg-white/60 backdrop-blur-xl rounded-xl shadow-xl border border-white/80 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
