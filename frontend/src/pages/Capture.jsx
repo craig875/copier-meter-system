@@ -64,15 +64,19 @@ const Capture = () => {
       queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
     },
     onError: (error) => {
-      if (error.response?.data?.errors) {
+      const fieldErrors = error.response?.data?.errors;
+      const mainError = error.response?.data?.error || 'Failed to save readings';
+      if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
         const newErrors = {};
-        error.response.data.errors.forEach(err => {
-          newErrors[`${err.machineId}-${err.field}`] = err.message;
+        fieldErrors.forEach(err => {
+          if (err.machineId && err.field) {
+            newErrors[`${err.machineId}-${err.field}`] = err.message;
+          }
         });
         setErrors(newErrors);
         toast.error('Validation errors - check highlighted fields');
       } else {
-        toast.error(error.response?.data?.error || 'Failed to save readings');
+        toast.error(mainError);
       }
     },
   });
