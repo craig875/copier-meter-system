@@ -46,7 +46,8 @@ const Capture = () => {
       queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to unlock');
+      const msg = error.response?.data?.message || error.response?.data?.error || 'Failed to unlock';
+      toast.error(msg);
     },
   });
 

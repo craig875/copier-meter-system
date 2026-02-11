@@ -399,19 +399,12 @@ export class ReadingService {
    * @returns {Promise<Object>}
    */
   async unlockMonth(year, month, branch) {
-    const targetYear = parseInt(year);
-    const targetMonth = parseInt(month);
-
-    if (!branch) {
-      throw new ValidationError('Branch is required to unlock');
-    }
-
-    const count = await this.submissionRepo.deleteByYearMonth(targetYear, targetMonth, branch);
+    const count = await this.submissionRepo.deleteByYearMonth(year, month, branch);
 
     return {
       message: count > 0 ? 'Month unlocked successfully' : 'Month was not locked',
-      year: targetYear,
-      month: targetMonth,
+      year,
+      month,
       branch,
     };
   }

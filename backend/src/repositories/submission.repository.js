@@ -1,5 +1,6 @@
 import { BaseRepository } from './base.repository.js';
 import prisma from '../config/database.js';
+import { Branch as BranchEnum } from '@prisma/client';
 
 /**
  * Submission Repository - Handles all data access operations for submissions
@@ -8,6 +9,13 @@ import prisma from '../config/database.js';
 export class SubmissionRepository extends BaseRepository {
   constructor(prismaClient) {
     super('submission', prismaClient);
+  }
+
+  static toBranch(val) {
+    const s = String(val).toUpperCase();
+    if (s === 'JHB') return BranchEnum.JHB;
+    if (s === 'CT') return BranchEnum.CT;
+    throw new Error(`Invalid branch: ${val}`);
   }
 
   async findByYearMonth(year, month, branch) {
@@ -45,17 +53,12 @@ export class SubmissionRepository extends BaseRepository {
   }
 
   async deleteByYearMonth(year, month, branch) {
-    const y = parseInt(year, 10);
-    const m = parseInt(month, 10);
-    const b = String(branch).toUpperCase();
-    if (!['JHB', 'CT'].includes(b)) {
-      throw new Error(`Invalid branch: ${branch}`);
-    }
+    const branchEnum = this.constructor.toBranch(branch);
     const result = await prisma.submission.deleteMany({
       where: {
-        year: y,
-        month: m,
-        branch: b,
+        year,
+        month,
+        branch: branchEnum,
       },
     });
     return result.count;

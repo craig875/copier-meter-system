@@ -141,16 +141,32 @@ export class ReadingController {
     res.json(result);
   });
 
-  unlockMonth = asyncHandler(async (req, res) => {
-    const { year, month, branch } = req.query;
+  unlockMonth = async (req, res) => {
+    try {
+      const { year, month, branch } = req.query;
 
-    if (!year || !month || !branch) {
-      return res.status(400).json({ error: 'Year, month, and branch are required' });
+      if (!year || !month || !branch) {
+        return res.status(400).json({ error: 'Year, month, and branch are required' });
+      }
+
+      const y = parseInt(year, 10);
+      const m = parseInt(month, 10);
+      const b = String(branch).toUpperCase();
+      if (isNaN(y) || isNaN(m) || !['JHB', 'CT'].includes(b)) {
+        return res.status(400).json({ error: 'Invalid year, month, or branch' });
+      }
+
+      const result = await this.readingService.unlockMonth(y, m, b);
+      res.json(result);
+    } catch (err) {
+      console.error('Unlock failed:', err);
+      res.status(500).json({
+        error: 'Failed to unlock',
+        message: err.message,
+        ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
+      });
     }
-
-    const result = await this.readingService.unlockMonth(year, month, branch);
-    res.json(result);
-  });
+  };
 }
 
 // Export singleton instance
