@@ -128,7 +128,7 @@ const Layout = ({ children }) => {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700 space-y-3">
           {/* Branch Selector for Admins and Meter Users with All Branches Access */}
           {canSwitchBranches && (
-            <div className="mb-3">
+            <div data-tour="branch-selector" className="mb-3">
               <label className="block text-xs font-medium text-gray-400 mb-1">
                 Branch
               </label>

@@ -112,7 +112,7 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
 }
 
-/* Overlay - slightly darker for more punch */
+/* Overlay - light enough to see highlighted elements clearly */
 .driver-active .driver-overlay {
-  background-color: rgba(0, 0, 0, 0.75) !important;
+  background-color: rgba(0, 0, 0, 0.4) !important;
 }

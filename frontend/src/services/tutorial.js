@@ -5,9 +5,9 @@ import '../styles/tutorial.css';
 const driverConfig = {
   showProgress: true,
   allowClose: true,
-  overlayOpacity: 0.75,
+  overlayOpacity: 0.4,
   smoothScroll: true,
-  stagePadding: 16,
+  stagePadding: 20,
   stageRadius: 12,
   popoverClass: 'driver-tutorial-cartoon',
   popoverOffset: 12,
@@ -23,6 +23,14 @@ const stepsByPath = {
       popover: {
         title: 'Navigation',
         description: 'Use the sidebar to move between pages. Home shows your dashboard; Meter Readings gives you access to capture, history, and machines.',
+        side: 'right',
+      },
+    },
+    {
+      element: '[data-tour="branch-selector"]',
+      popover: {
+        title: 'Switch Branch',
+        description: 'If you have access to multiple branches, use this dropdown to switch between Johannesburg (JHB) and Cape Town (CT). Your view and data will update to show the selected branch.',
         side: 'right',
       },
     },
