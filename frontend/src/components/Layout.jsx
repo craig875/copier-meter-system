@@ -12,7 +12,8 @@ import {
   Building2,
   Home,
   Upload,
-  ScrollText
+  ScrollText,
+  HelpCircle
 } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
@@ -68,7 +69,7 @@ const Layout = ({ children }) => {
       )}
 
       {/* Sidebar - glass effect */}
-      <aside className={clsx(
+      <aside data-tour="sidebar" className={clsx(
         'fixed inset-y-0 left-0 z-30 w-64 bg-gray-900/95 backdrop-blur-xl border-r border-white/10 shadow-xl transform transition-transform duration-300 lg:translate-x-0',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
@@ -173,16 +174,26 @@ const Layout = ({ children }) => {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar - glass */}
-        <header className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/60 shadow-sm h-16 flex items-center px-6">
-          <button 
-            className="lg:hidden mr-4"
-            onClick={() => setSidebarOpen(true)}
+        <header className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/60 shadow-sm h-16 flex items-center justify-between px-6">
+          <div className="flex items-center">
+            <button 
+              className="lg:hidden mr-4"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <h2 className="text-lg font-semibold text-gray-800">
+              {navigation.find(n => isActive(n.href))?.name || 'Dashboard'}
+            </h2>
+          </div>
+          <button
+            onClick={() => import('../services/tutorial').then((m) => m.startTutorial(location.pathname, isAdmin))}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 hover:bg-white/50 rounded-lg transition-colors"
+            title="Take a tour"
           >
-            <Menu className="h-6 w-6" />
+            <HelpCircle className="h-5 w-5" />
+            <span className="hidden sm:inline">Help</span>
           </button>
-          <h2 className="text-lg font-semibold text-gray-800">
-            {navigation.find(n => isActive(n.href))?.name || 'Dashboard'}
-          </h2>
         </header>
 
         {/* Page content */}

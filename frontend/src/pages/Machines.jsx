@@ -187,6 +187,7 @@ const Machines = () => {
             </button>
           )}
           <button
+            data-tour="add-machine"
             onClick={() => setShowModal(true)}
             className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
@@ -197,7 +198,7 @@ const Machines = () => {
       </div>
 
       {/* Search */}
-      <div className="relative">
+      <div data-tour="machines-search" className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
         <input
           type="text"
@@ -209,7 +210,7 @@ const Machines = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white/35 backdrop-blur-2xl backdrop-saturate-150 rounded-xl shadow-xl border border-white/70 overflow-hidden">
+      <div data-tour="machines-table" className="bg-white/35 backdrop-blur-2xl backdrop-saturate-150 rounded-xl shadow-xl border border-white/70 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">

@@ -266,7 +266,7 @@ const ImportReadings = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div data-tour="import-content" className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

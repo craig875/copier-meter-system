@@ -68,7 +68,7 @@ const HomeDashboard = () => {
       </div>
 
       {/* Meter Capture Progress - Colour Spectrum Bar - glass */}
-      <div className="bg-white/35 backdrop-blur-2xl backdrop-saturate-150 rounded-xl shadow-xl border border-white/70 p-6">
+      <div data-tour="progress-bar" className="bg-white/35 backdrop-blur-2xl backdrop-saturate-150 rounded-xl shadow-xl border border-white/70 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Meter capture – {monthName}</h2>
           <span className="text-2xl font-bold text-gray-700">{progressPercent}%</span>
@@ -139,6 +139,7 @@ const ModuleCard = ({ module }) => {
   return (
     <Link
       to={route}
+      data-tour="module-card"
       className="group bg-white/35 backdrop-blur-2xl backdrop-saturate-150 rounded-xl shadow-xl border border-white/70 p-6 hover:bg-white/50 hover:shadow-2xl hover:border-red-200/60 transition-all duration-200"
     >
       <div className="flex items-start justify-between mb-4">

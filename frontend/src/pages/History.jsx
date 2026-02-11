@@ -112,7 +112,7 @@ const History = () => {
 
         <div className="flex items-center gap-4">
           {/* Month Navigation */}
-          <div className="flex items-center bg-white rounded-lg shadow-sm border">
+          <div data-tour="history-month-nav" className="flex items-center bg-white rounded-lg shadow-sm border">
             <button
               onClick={() => changeMonth(-1)}
               disabled={year === 2026 && month === 1}
@@ -133,6 +133,7 @@ const History = () => {
 
           {/* Export Button */}
           <button
+            data-tour="history-export"
             onClick={handleExport}
             disabled={exporting || summary.capturedCount === 0}
             className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -166,7 +167,7 @@ const History = () => {
       </div>
 
       {/* Readings Table */}
-      <div className="bg-white/35 backdrop-blur-2xl backdrop-saturate-150 rounded-xl shadow-xl border border-white/70 overflow-hidden">
+      <div data-tour="history-table" className="bg-white/35 backdrop-blur-2xl backdrop-saturate-150 rounded-xl shadow-xl border border-white/70 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
