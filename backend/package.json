@@ -11,7 +11,7 @@
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio",
-    "deploy": "npx prisma migrate resolve --rolled-back 20260124000000_add_branch_to_user 2>/dev/null || true && npx prisma migrate deploy && npm run db:seed && npm start"
+    "deploy": "(npx prisma migrate resolve --rolled-back 20260124000000_add_branch_to_user 2>/dev/null || true) && (npx prisma migrate resolve --rolled-back 20260125000000_replace_customer_reference_with_order_date 2>/dev/null || true) && npx prisma migrate deploy && npm run db:seed && npm start"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
