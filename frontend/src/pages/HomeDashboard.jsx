@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { dashboardApi } from '../services/api';
+import { dashboardApi, readingsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
@@ -10,10 +10,26 @@ import {
 } from 'lucide-react';
 
 const HomeDashboard = () => {
+  const { effectiveBranch } = useAuth();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => dashboardApi.get().then(res => res.data),
   });
+
+  const { data: readingsData } = useQuery({
+    queryKey: ['readings', currentYear, currentMonth, effectiveBranch],
+    queryFn: () => readingsApi.get(currentYear, currentMonth, false, effectiveBranch),
+  });
+
+  const summary = readingsData?.data?.summary || { totalMachines: 0, capturedCount: 0, pendingCount: 0 };
+  const progressPercent = summary.totalMachines > 0 
+    ? Math.round((summary.capturedCount / summary.totalMachines) * 100)
+    : 0;
+  const monthName = new Date(currentYear, currentMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
 
   if (isLoading) {
     return (
@@ -43,6 +59,31 @@ const HomeDashboard = () => {
         {data?.message && (
           <p className="text-gray-600 mt-2">{data.message}</p>
         )}
+      </div>
+
+      {/* Meter Capture Progress - Colour Spectrum Bar */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Meter capture – {monthName}</h2>
+          <span className="text-2xl font-bold text-gray-700">{progressPercent}%</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+          <div 
+            className="h-4 rounded-full transition-all duration-500"
+            style={{ 
+              width: `${Math.min(progressPercent, 100)}%`,
+              background: `linear-gradient(to right, 
+                rgb(220, 38, 38) 0%, 
+                rgb(234, 88, 12) 25%, 
+                rgb(234, 179, 8) 50%, 
+                rgb(34, 197, 94) 75%, 
+                rgb(22, 163, 74) 100%)`
+            }}
+          />
+        </div>
+        <p className="text-sm text-gray-500 mt-2">
+          {summary.capturedCount} of {summary.totalMachines} machines captured
+        </p>
       </div>
 
       {/* Modules Grid */}
