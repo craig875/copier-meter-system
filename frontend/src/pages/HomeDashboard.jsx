@@ -31,6 +31,12 @@ const HomeDashboard = () => {
     : 0;
   const monthName = new Date(currentYear, currentMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
 
+  const getProgressColor = (pct) => {
+    if (pct < 34) return 'rgb(220, 38, 38)';   // red
+    if (pct < 67) return 'rgb(234, 88, 12)';   // orange
+    return 'rgb(34, 197, 94)';                  // green
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -72,12 +78,7 @@ const HomeDashboard = () => {
             className="h-4 rounded-full transition-all duration-500"
             style={{ 
               width: `${Math.min(progressPercent, 100)}%`,
-              background: `linear-gradient(to right, 
-                rgb(220, 38, 38) 0%, 
-                rgb(234, 88, 12) 25%, 
-                rgb(234, 179, 8) 50%, 
-                rgb(34, 197, 94) 75%, 
-                rgb(22, 163, 74) 100%)`
+              backgroundColor: getProgressColor(progressPercent)
             }}
           />
         </div>
