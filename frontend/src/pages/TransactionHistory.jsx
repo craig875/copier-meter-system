@@ -82,7 +82,7 @@ const TransactionHistory = () => {
         <p className="text-gray-500">View who made what changes in the system</p>
       </div>
 
-      <div className="bg-white/60 backdrop-blur-xl rounded-xl shadow-xl border border-white/80 overflow-hidden">
+      <div className="bg-white/35 backdrop-blur-2xl backdrop-saturate-150 rounded-xl shadow-xl border border-white/70 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">

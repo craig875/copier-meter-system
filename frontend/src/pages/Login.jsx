@@ -31,9 +31,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-300 via-gray-200 to-stone-300 px-4">
+    <div 
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ 
+        backgroundImage: 'radial-gradient(circle at 1px 1px, rgb(100 116 139 / 0.35) 1px, transparent 0), linear-gradient(135deg, rgb(203 213 225), rgb(229 231 235), rgb(214 211 209))',
+        backgroundSize: '24px 24px, 100% 100%'
+      }}
+    >
       <div className="max-w-md w-full">
-        <div className="bg-white/55 backdrop-blur-2xl rounded-2xl shadow-2xl border-2 border-white/90 p-8">
+        <div className="bg-white/35 backdrop-blur-3xl backdrop-saturate-150 rounded-2xl shadow-2xl border border-white/60 p-8">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center mb-4">
               <img src={logo} alt="Pancom" className="h-16 w-auto" />
