@@ -166,7 +166,7 @@ const History = () => {
       </div>
 
       {/* Readings Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-white/50 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">

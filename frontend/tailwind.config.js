@@ -20,6 +20,11 @@ export default {
           900: '#7f1d1d',
         },
       },
+      backdropBlur: {
+        xs: '2px',
+        glass: '12px',
+        'glass-lg': '20px',
+      },
     },
   },
   plugins: [],

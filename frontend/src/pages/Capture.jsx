@@ -437,7 +437,7 @@ const Capture = () => {
 
         <div className="flex items-center gap-4">
           {/* Month Navigation */}
-          <div className="flex items-center bg-white rounded-lg shadow-sm border">
+          <div className="flex items-center bg-white/60 backdrop-blur-sm rounded-lg shadow-md border border-white/50">
             <button
               onClick={() => changeMonth(-1)}
               className="p-2 hover:bg-gray-100 rounded-l-lg"
@@ -506,8 +506,8 @@ const Capture = () => {
         </div>
       </div>
 
-      {/* Summary Bar */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      {/* Summary Bar - glass */}
+      <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-white/50 p-4">
         <div className="flex flex-wrap items-center gap-6 mb-4">
           <div className="flex items-center gap-2">
             <span className="text-gray-500">Total:</span>
@@ -558,8 +558,8 @@ const Capture = () => {
         />
       </div>
 
-      {/* Readings Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* Readings Table - glass */}
+      <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-white/50 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">

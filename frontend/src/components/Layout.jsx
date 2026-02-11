@@ -52,18 +52,18 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-slate-100">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
+          className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - glass effect */}
       <aside className={clsx(
-        'fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 shadow-lg transform transition-transform duration-300 lg:translate-x-0',
+        'fixed inset-y-0 left-0 z-30 w-64 bg-gray-900/95 backdrop-blur-xl border-r border-white/10 shadow-xl transform transition-transform duration-300 lg:translate-x-0',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-700">
@@ -166,8 +166,8 @@ const Layout = ({ children }) => {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top bar */}
-        <header className="bg-white shadow-sm h-16 flex items-center px-6">
+        {/* Top bar - glass */}
+        <header className="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 shadow-sm h-16 flex items-center px-6">
           <button 
             className="lg:hidden mr-4"
             onClick={() => setSidebarOpen(true)}

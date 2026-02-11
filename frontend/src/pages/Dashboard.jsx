@@ -64,8 +64,8 @@ const Dashboard = () => {
         </Link>
       </div>
 
-      {/* Progress Card */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      {/* Progress Card - glass */}
+      <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-white/50 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Capture Progress</h2>
           <span className={`text-2xl font-bold ${progressPercent === 100 ? 'text-green-600' : 'text-red-600'}`}>
@@ -113,8 +113,8 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      {/* Quick Actions - glass */}
+      <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-white/50 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
@@ -172,7 +172,7 @@ const StatCard = ({ title, value, icon: Icon, color }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
+    <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-white/50 p-6">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-500">{title}</p>
