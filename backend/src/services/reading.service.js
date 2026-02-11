@@ -133,32 +133,41 @@ export class ReadingService {
       throw new NotFoundError(`Machines with IDs: ${missingMachines.join(', ')}`);
     }
 
-    // Validate all machines belong to the specified branch
-    const invalidBranchMachines = machines.filter(m => m.branch !== branch);
-    if (invalidBranchMachines.length > 0) {
-      const serialNumbers = invalidBranchMachines.map(m => m.machineSerialNumber).join(', ');
+    // Filter to only machines belonging to the specified branch (handles stale data / branch switch)
+    const branchStr = String(branch).toUpperCase();
+    const validMachines = machines.filter(m => String(m.branch).toUpperCase() === branchStr);
+    const skippedMachines = machines.filter(m => String(m.branch).toUpperCase() !== branchStr);
+    const validMachineIds = new Set(validMachines.map(m => m.id));
+    const readingsToProcess = readings.filter(r => validMachineIds.has(r.machineId));
+
+    if (readingsToProcess.length === 0) {
+      const serialNumbers = skippedMachines.map(m => m.machineSerialNumber).join(', ');
       throw new ValidationError(
-        `Machines do not belong to branch ${branch}: ${serialNumbers}`
+        `No machines belong to branch ${branch}. Check branch selection. Skipped: ${serialNumbers || 'none'}`
       );
+    }
+
+    if (skippedMachines.length > 0) {
+      console.warn(`SubmitReadings: Skipped ${skippedMachines.length} machines not in branch ${branch}:`, skippedMachines.map(m => m.machineSerialNumber));
     }
 
     // Get previous month readings
     const prev = getPreviousMonth(targetYear, targetMonth);
     const previousReadings = await this.readingRepo.findByMachineIdsAndYearMonth(
-      machineIds,
+      readingsToProcess.map(r => r.machineId),
       prev.year,
       prev.month
     );
     const previousReadingMap = new Map(previousReadings.map(r => [r.machineId, r]));
 
-    // Validate readings
-    const validation = validateReadings(readings, machineMap, previousReadingMap);
+    // Validate readings (only for machines we're processing)
+    const validation = validateReadings(readingsToProcess, machineMap, previousReadingMap);
     if (!validation.valid) {
       throw new ValidationError('Validation failed', validation.errors);
     }
 
     // Prepare readings with calculated metrics
-    const readingsToSave = readings.map(reading => {
+    const readingsToSave = readingsToProcess.map(reading => {
       const machine = machineMap.get(reading.machineId);
       const prevReading = previousReadingMap.get(reading.machineId);
 
@@ -196,10 +205,15 @@ export class ReadingService {
       readingsToSave.map(data => this.readingRepo.upsertReading(data))
     );
 
-    return {
+    const response = {
       message: 'Readings saved successfully',
       savedCount: results.length,
     };
+    if (skippedMachines.length > 0) {
+      response.skippedCount = skippedMachines.length;
+      response.skippedSerialNumbers = skippedMachines.map(m => m.machineSerialNumber);
+    }
+    return response;
   }
 
   /**

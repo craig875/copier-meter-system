@@ -54,7 +54,11 @@ const Capture = () => {
   const submitMutation = useMutation({
     mutationFn: (readings) => readingsApi.submit({ year, month, readings, branch: effectiveBranch }),
     onSuccess: (response) => {
-      toast.success(`Saved ${response.data.savedCount} readings`);
+      const { savedCount, skippedCount, skippedSerialNumbers } = response.data;
+      toast.success(`Saved ${savedCount} readings${skippedCount ? `. ${skippedCount} skipped (wrong branch)` : ''}`);
+      if (skippedCount > 0 && skippedSerialNumbers?.length) {
+        toast(`Skipped: ${skippedSerialNumbers.slice(0, 3).join(', ')}${skippedSerialNumbers.length > 3 ? '...' : ''}`, { icon: '⚠️' });
+      }
       setEditedReadings({});
       setErrors({});
       queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
