@@ -18,25 +18,23 @@ export class MachineController {
     // Handle string "null" or "undefined" from query params
     const cleanQueryBranch = queryBranch === 'null' || queryBranch === 'undefined' || queryBranch === '' 
       ? null 
-      : queryBranch;
+      : (queryBranch && String(queryBranch).toUpperCase());
     
-    // Admins can specify branch or see all if not specified
-    // Non-admins use their branch, or see all if no branch assigned
+    // Validate branch is JHB or CT if provided
+    const validBranch = (cleanQueryBranch === 'JHB' || cleanQueryBranch === 'CT') ? cleanQueryBranch : null;
+    
+    // Admins: use selected branch from UI, or their branch, or all
+    // Meter users with branch assigned: use their branch only (cannot switch)
+    // Meter users with no branch (can switch): use selected branch from UI
     let branch = null;
     if (hasAdminAccess(req.user.role)) {
-      branch = cleanQueryBranch || req.user.branch || null;
+      branch = validBranch || (req.user.branch ? String(req.user.branch).toUpperCase() : null) || null;
+    } else if (req.user.role === 'meter_user' && !req.user.branch) {
+      // Meter user with no branch - can switch, use UI selection
+      branch = validBranch || null;
     } else {
-      branch = req.user.branch || null;
+      branch = req.user.branch ? String(req.user.branch).toUpperCase() : null;
     }
-    
-    console.log('getMachines - Query params:', { 
-      queryBranch, 
-      cleanQueryBranch,
-      filters, 
-      branch, 
-      userRole: req.user.role,
-      userBranch: req.user.branch 
-    });
     
     const result = await this.machineService.getMachines({ ...filters, branch });
     res.json(result);
