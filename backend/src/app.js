@@ -10,7 +10,15 @@ const app = express();
 
 // Middleware - CORS
 app.use(cors({
-  origin: config.nodeEnv === 'development' ? true : config.frontendUrl,
+  origin: config.nodeEnv === 'development'
+    ? true
+    : (origin, cb) => {
+        const allowed = (config.frontendUrl || '').replace(/\/$/, '');
+        if (!origin) return cb(null, true);
+        if (allowed && (origin === allowed || origin.startsWith(allowed))) return cb(null, origin);
+        if (allowed && origin.includes('vercel.app')) return cb(null, origin);
+        return cb(null, allowed || origin);
+      },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
