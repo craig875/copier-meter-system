@@ -56,8 +56,8 @@ const Layout = ({ children }) => {
     <div 
       className="min-h-screen"
       style={{ 
-        backgroundImage: 'radial-gradient(circle at 1px 1px, rgb(100 116 139 / 0.4) 1px, transparent 0), linear-gradient(135deg, rgb(203 213 225), rgb(241 245 249), rgb(214 211 209))',
-        backgroundSize: '24px 24px, 100% 100%'
+        backgroundImage: 'linear-gradient(135deg, rgb(226 232 240), rgb(241 245 249), rgb(228 231 235))',
+        backgroundSize: '100% 100%'
       }}
     >
       {/* Mobile sidebar backdrop */}
@@ -174,7 +174,7 @@ const Layout = ({ children }) => {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar - glass */}
-        <header className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/60 shadow-sm h-16 flex items-center justify-between px-6">
+        <header className="bg-white/20 backdrop-blur-3xl border-b border-white/30 shadow-sm h-16 flex items-center justify-between px-6" style={{ boxShadow: '0 1px 0 0 rgba(255,255,255,0.5) inset' }}>
           <div className="flex items-center">
             <button 
               className="lg:hidden mr-4"
@@ -188,7 +188,7 @@ const Layout = ({ children }) => {
           </div>
           <button
             onClick={() => import('../services/tutorial').then((m) => m.startTutorial(location.pathname, isAdmin))}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 hover:bg-white/50 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 hover:bg-white/30 rounded-lg transition-colors"
             title="Take a tour"
           >
             <HelpCircle className="h-5 w-5" />

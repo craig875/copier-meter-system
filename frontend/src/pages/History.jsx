@@ -167,7 +167,7 @@ const History = () => {
       </div>
 
       {/* Readings Table */}
-      <div data-tour="history-table" className="bg-white/35 backdrop-blur-2xl backdrop-saturate-150 rounded-xl shadow-xl border border-white/70 overflow-hidden">
+      <div data-tour="history-table" className="liquid-glass rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
