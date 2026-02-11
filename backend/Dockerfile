@@ -22,5 +22,5 @@ COPY . .
 # Expose port
 EXPOSE 3001
 
-# Start the application
-CMD ["npm", "start"]
+# Run migrations then start the application
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
