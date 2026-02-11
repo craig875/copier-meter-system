@@ -27,10 +27,10 @@ export const generateExcelExport = async (
 
   // Define columns
   worksheet.columns = [
-    { header: 'Machine Serial Number', key: 'machineSerialNumber', width: 22 },
-    { header: 'Mono Reading', key: 'monoReading', width: 15 },
-    { header: 'Colour Reading', key: 'colourReading', width: 15 },
-    { header: 'Scan Reading', key: 'scanReading', width: 15 },
+    { header: 'Code', key: 'machineSerialNumber', width: 22 },
+    { header: 'Mono', key: 'monoReading', width: 15 },
+    { header: 'Colour', key: 'colourReading', width: 15 },
+    { header: 'Scan', key: 'scanReading', width: 15 },
   ];
 
   // Style header row
@@ -88,10 +88,10 @@ export const generateExcelExportSplitByBranch = async (
 
     // Define columns
     worksheet.columns = [
-      { header: 'Machine Serial Number', key: 'machineSerialNumber', width: 22 },
-      { header: 'Mono Reading', key: 'monoReading', width: 15 },
-      { header: 'Colour Reading', key: 'colourReading', width: 15 },
-      { header: 'Scan Reading', key: 'scanReading', width: 15 },
+      { header: 'Code', key: 'machineSerialNumber', width: 22 },
+      { header: 'Mono', key: 'monoReading', width: 15 },
+      { header: 'Colour', key: 'colourReading', width: 15 },
+      { header: 'Scan', key: 'scanReading', width: 15 },
     ];
 
     // Style header row
