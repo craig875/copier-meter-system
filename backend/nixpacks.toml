@@ -1,0 +1,9 @@
+# Fallback if Railway doesn't use Dockerfile
+[phases.setup]
+nixPkgs = ["nodejs_18"]
+
+[phases.install]
+cmds = ["npm install", "npx prisma generate"]
+
+[start]
+cmd = "npx prisma migrate deploy && npm start"
