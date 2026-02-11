@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  user
+  management
+  meter_user
+  sales_agent
+}
+
+enum Branch {
+  JHB
+  CT
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  role         Role      @default(meter_user)
+  branch       Branch?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  readings     Reading[]
+  submissions  Submission[]
+
+  @@map("users")
+}
+
+model Machine {
+  id                String    @id @default(uuid())
+  machineSerialNumber String    @unique @map("machine_serial_number")
+  customer          String?   @map("customer")
+  model             String?
+  contractReference String?   @map("contract_reference")
+  monoEnabled       Boolean   @default(true) @map("mono_enabled")
+  colourEnabled     Boolean   @default(false) @map("colour_enabled")
+  scanEnabled       Boolean   @default(false) @map("scan_enabled")
+  isActive          Boolean   @default(true) @map("is_active")
+  isDecommissioned Boolean   @default(false) @map("is_decommissioned")
+  branch            Branch    @default(JHB)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  readings          Reading[]
+
+  @@index([contractReference])
+  @@index([branch])
+  @@map("machines")
+}
+
+model Reading {
+  id           String   @id @default(uuid())
+  machineId    String   @map("machine_id")
+  year         Int
+  month        Int
+  monoReading  Int?     @map("mono_reading")
+  colourReading Int?    @map("colour_reading")
+  scanReading  Int?     @map("scan_reading")
+  monoUsage    Int?     @map("mono_usage")
+  colourUsage  Int?     @map("colour_usage")
+  scanUsage    Int?     @map("scan_usage")
+  note         String?  @map("note")
+  branch       Branch   @default(JHB)
+  capturedBy   String   @map("captured_by")
+  capturedAt   DateTime @default(now()) @map("captured_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [capturedBy], references: [id])
+
+  @@unique([machineId, year, month])
+  @@index([machineId])
+  @@index([year, month])
+  @@index([branch])
+  @@map("readings")
+}
+
+model Submission {
+  id        String   @id @default(uuid())
+  year      Int
+  month     Int
+  branch    Branch   @default(JHB)
+  submittedBy String  @map("submitted_by")
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  user      User     @relation(fields: [submittedBy], references: [id])
+
+  @@unique([year, month, branch])
+  @@index([year, month])
+  @@index([branch])
+  @@map("submissions")
+}
