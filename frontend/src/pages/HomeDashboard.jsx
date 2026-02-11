@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 
 const HomeDashboard = () => {
-  const { effectiveBranch } = useAuth();
+  const { effectiveBranch, isAdmin, isMeterUser, user } = useAuth();
+  const canSwitchBranches = isAdmin || (isMeterUser && !user?.branch);
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -25,10 +26,27 @@ const HomeDashboard = () => {
     queryFn: () => readingsApi.get(currentYear, currentMonth, false, effectiveBranch),
   });
 
+  // Multi-branch users: fetch both JHB and CT
+  const { data: jhbData } = useQuery({
+    queryKey: ['readings', currentYear, currentMonth, 'JHB'],
+    queryFn: () => readingsApi.get(currentYear, currentMonth, false, 'JHB'),
+    enabled: canSwitchBranches,
+  });
+  const { data: ctData } = useQuery({
+    queryKey: ['readings', currentYear, currentMonth, 'CT'],
+    queryFn: () => readingsApi.get(currentYear, currentMonth, false, 'CT'),
+    enabled: canSwitchBranches,
+  });
+
   const summary = readingsData?.data?.summary || { totalMachines: 0, capturedCount: 0, pendingCount: 0 };
   const progressPercent = summary.totalMachines > 0 
     ? Math.round((summary.capturedCount / summary.totalMachines) * 100)
     : 0;
+
+  const jhbSummary = jhbData?.data?.summary || { totalMachines: 0, capturedCount: 0 };
+  const ctSummary = ctData?.data?.summary || { totalMachines: 0, capturedCount: 0 };
+  const jhbPercent = jhbSummary.totalMachines > 0 ? Math.round((jhbSummary.capturedCount / jhbSummary.totalMachines) * 100) : 0;
+  const ctPercent = ctSummary.totalMachines > 0 ? Math.round((ctSummary.capturedCount / ctSummary.totalMachines) * 100) : 0;
   const monthName = new Date(currentYear, currentMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
 
   const getProgressColor = (pct) => {
@@ -71,20 +89,56 @@ const HomeDashboard = () => {
       <div data-tour="progress-bar" className="liquid-glass rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Meter capture – {monthName}</h2>
-          <span className="text-2xl font-bold text-gray-700">{progressPercent}%</span>
+          {!canSwitchBranches && (
+            <span className="text-2xl font-bold text-gray-700">{progressPercent}%</span>
+          )}
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-          <div 
-            className="h-4 rounded-full transition-all duration-500"
-            style={{ 
-              width: `${Math.min(progressPercent, 100)}%`,
-              backgroundColor: getProgressColor(progressPercent)
-            }}
-          />
-        </div>
-        <p className="text-sm text-gray-500 mt-2">
-          {summary.capturedCount} of {summary.totalMachines} machines captured
-        </p>
+
+        {canSwitchBranches ? (
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium text-gray-700">Johannesburg (JHB)</span>
+                <span className="text-lg font-bold" style={{ color: getProgressColor(jhbPercent) }}>{jhbPercent}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div 
+                  className="h-3 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(jhbPercent, 100)}%`, backgroundColor: getProgressColor(jhbPercent) }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">{jhbSummary.capturedCount} of {jhbSummary.totalMachines} machines</p>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium text-gray-700">Cape Town (CT)</span>
+                <span className="text-lg font-bold" style={{ color: getProgressColor(ctPercent) }}>{ctPercent}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div 
+                  className="h-3 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(ctPercent, 100)}%`, backgroundColor: getProgressColor(ctPercent) }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">{ctSummary.capturedCount} of {ctSummary.totalMachines} machines</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+              <div 
+                className="h-4 rounded-full transition-all duration-500"
+                style={{ 
+                  width: `${Math.min(progressPercent, 100)}%`,
+                  backgroundColor: getProgressColor(progressPercent)
+                }}
+              />
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              {summary.capturedCount} of {summary.totalMachines} machines captured
+            </p>
+          </>
+        )}
       </div>
 
       {/* Modules Grid */}
