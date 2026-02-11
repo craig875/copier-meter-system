@@ -27,21 +27,28 @@ export class AuditService {
     if (userId) where.userId = userId;
     if (action) where.action = action;
 
-    const [logs, total] = await Promise.all([
-      prisma.auditLog.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: Math.min(parseInt(limit, 10) || 100, 500),
-        skip: parseInt(offset, 10) || 0,
-        include: {
-          user: {
-            select: { id: true, name: true, email: true },
+    try {
+      const [logs, total] = await Promise.all([
+        prisma.auditLog.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          take: Math.min(parseInt(limit, 10) || 100, 500),
+          skip: parseInt(offset, 10) || 0,
+          include: {
+            user: {
+              select: { id: true, name: true, email: true },
+            },
           },
-        },
-      }),
-      prisma.auditLog.count({ where }),
-    ]);
-
-    return { logs, total };
+        }),
+        prisma.auditLog.count({ where }),
+      ]);
+      return { logs, total };
+    } catch (err) {
+      if (err.message?.includes('does not exist') || err.code === 'P2021') {
+        console.warn('Audit log table not found - run: npx prisma migrate deploy');
+        return { logs: [], total: 0 };
+      }
+      throw err;
+    }
   }
 }
