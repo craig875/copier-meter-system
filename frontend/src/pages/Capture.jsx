@@ -531,7 +531,7 @@ const Capture = () => {
                   Machine
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contract
+                  Customer
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Mono
@@ -562,13 +562,10 @@ const Capture = () => {
                   )}
                 >
                   <td className="px-4 py-3">
-                    <div>
-                      <p className="font-medium text-gray-900">{machine.machineSerialNumber}</p>
-                      <p className="text-sm text-gray-500">{machine.customer}</p>
-                    </div>
+                    <p className="font-medium text-gray-900">{machine.machineSerialNumber}</p>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
-                    {machine.contractReference || '-'}
+                    {machine.customer || '-'}
                   </td>
                   <td className="px-4 py-3">
                     {machine.monoEnabled ? (

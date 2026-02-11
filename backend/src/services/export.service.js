@@ -27,7 +27,7 @@ export const generateExcelExport = async (
 
   // Define columns
   worksheet.columns = [
-    { header: 'Contract Reference', key: 'contractReference', width: 20 },
+    { header: 'Machine Serial Number', key: 'machineSerialNumber', width: 22 },
     { header: 'Mono Reading', key: 'monoReading', width: 15 },
     { header: 'Colour Reading', key: 'colourReading', width: 15 },
     { header: 'Scan Reading', key: 'scanReading', width: 15 },
@@ -47,7 +47,7 @@ export const generateExcelExport = async (
     const current = currentReadingMap.get(machine.id);
 
     worksheet.addRow({
-      contractReference: machine.contractReference || '',
+      machineSerialNumber: machine.machineSerialNumber || '',
       monoReading: machine.monoEnabled ? (current?.monoReading ?? '') : '',
       colourReading: machine.colourEnabled ? (current?.colourReading ?? '') : '',
       scanReading: machine.scanEnabled ? (current?.scanReading ?? '') : '',
@@ -88,7 +88,7 @@ export const generateExcelExportSplitByBranch = async (
 
     // Define columns
     worksheet.columns = [
-      { header: 'Contract Reference', key: 'contractReference', width: 20 },
+      { header: 'Machine Serial Number', key: 'machineSerialNumber', width: 22 },
       { header: 'Mono Reading', key: 'monoReading', width: 15 },
       { header: 'Colour Reading', key: 'colourReading', width: 15 },
       { header: 'Scan Reading', key: 'scanReading', width: 15 },
@@ -108,7 +108,7 @@ export const generateExcelExportSplitByBranch = async (
       const current = currentReadingMap.get(machine.id);
 
       worksheet.addRow({
-        contractReference: machine.contractReference || '',
+        machineSerialNumber: machine.machineSerialNumber || '',
         monoReading: machine.monoEnabled ? (current?.monoReading ?? '') : '',
         colourReading: machine.colourEnabled ? (current?.colourReading ?? '') : '',
         scanReading: machine.scanEnabled ? (current?.scanReading ?? '') : '',
