@@ -47,7 +47,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await authApi.login({ email, password });
-    const { token, user } = response.data;
+    const data = response?.data;
+    if (!data?.token || !data?.user) {
+      throw new Error('Invalid response from server. Check that the backend is running and CORS is configured.');
+    }
+    const { token, user } = data;
     
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));

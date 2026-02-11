@@ -1,5 +1,7 @@
 # Super Simple Deployment Guide
 
+> **For a cleaner version:** See **ONE_SHOT_DEPLOY.md** – single guide with fill-in values and troubleshooting.
+
 Do these steps one at a time. Don't skip any.
 
 ---
