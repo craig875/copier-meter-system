@@ -1,11 +1,16 @@
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
+import '../styles/tutorial.css';
 
 const driverConfig = {
   showProgress: true,
   allowClose: true,
-  overlayOpacity: 0.6,
+  overlayOpacity: 0.75,
   smoothScroll: true,
+  stagePadding: 16,
+  stageRadius: 12,
+  popoverClass: 'driver-tutorial-cartoon',
+  popoverOffset: 12,
   nextBtnText: 'Next',
   prevBtnText: 'Back',
   doneBtnText: 'Done',
@@ -40,18 +45,18 @@ const stepsByPath = {
   ],
   '/meter-readings': [
     {
-      element: '[data-tour="sidebar"]',
-      popover: {
-        title: 'Navigation',
-        description: 'The sidebar expands to show Meter Readings sub-menu: Monthly Capture, History, and Machines.',
-        side: 'right',
-      },
-    },
-    {
       element: '[data-tour="capture-progress"]',
       popover: {
         title: 'Capture Progress',
         description: 'Shows how many machines have readings entered this month. Click "Continue Capture" to add or edit readings.',
+        side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="stats-grid"]',
+      popover: {
+        title: 'Stats at a Glance',
+        description: 'Total machines, how many captured, how many pending, and the percentage complete. These numbers update as you enter readings.',
         side: 'bottom',
       },
     },
@@ -65,14 +70,6 @@ const stepsByPath = {
     },
   ],
   '/capture': [
-    {
-      element: '[data-tour="sidebar"]',
-      popover: {
-        title: 'Navigation',
-        description: 'Use sidebar links to switch between Capture, History, and Machines.',
-        side: 'right',
-      },
-    },
     {
       element: '[data-tour="month-nav"]',
       popover: {
@@ -116,14 +113,6 @@ const stepsByPath = {
   ],
   '/history': [
     {
-      element: '[data-tour="sidebar"]',
-      popover: {
-        title: 'Navigation',
-        description: 'Use the sidebar to move between Capture, History, and Machines.',
-        side: 'right',
-      },
-    },
-    {
       element: '[data-tour="history-month-nav"]',
       popover: {
         title: 'Select Month',
@@ -149,14 +138,6 @@ const stepsByPath = {
     },
   ],
   '/machines': [
-    {
-      element: '[data-tour="sidebar"]',
-      popover: {
-        title: 'Navigation',
-        description: 'Use the sidebar to move between Meter Readings sections.',
-        side: 'right',
-      },
-    },
     {
       element: '[data-tour="add-machine"]',
       popover: {
@@ -184,14 +165,6 @@ const stepsByPath = {
   ],
   '/users': [
     {
-      element: '[data-tour="sidebar"]',
-      popover: {
-        title: 'Admin Navigation',
-        description: 'Admin-only: Users, Import Readings, and Transaction History.',
-        side: 'right',
-      },
-    },
-    {
       element: '[data-tour="users-content"]',
       popover: {
         title: 'User Management',
@@ -202,14 +175,6 @@ const stepsByPath = {
   ],
   '/import-readings': [
     {
-      element: '[data-tour="sidebar"]',
-      popover: {
-        title: 'Admin Navigation',
-        description: 'Admin-only pages: Import Readings, Users, Transaction History.',
-        side: 'right',
-      },
-    },
-    {
       element: '[data-tour="import-content"]',
       popover: {
         title: 'Import Readings',
@@ -219,14 +184,6 @@ const stepsByPath = {
     },
   ],
   '/transaction-history': [
-    {
-      element: '[data-tour="sidebar"]',
-      popover: {
-        title: 'Admin Navigation',
-        description: 'Admin-only sections: Transaction History, Users, Import Readings.',
-        side: 'right',
-      },
-    },
     {
       element: '[data-tour="audit-table"]',
       popover: {
