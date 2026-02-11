@@ -114,5 +114,5 @@
 
 /* Overlay - light enough to see highlighted elements clearly */
 .driver-active .driver-overlay {
-  background-color: rgba(0, 0, 0, 0.4) !important;
+  background-color: rgba(0, 0, 0, 0.25) !important;
 }

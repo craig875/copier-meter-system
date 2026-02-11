@@ -5,7 +5,7 @@ import '../styles/tutorial.css';
 const driverConfig = {
   showProgress: true,
   allowClose: true,
-  overlayOpacity: 0.4,
+  overlayOpacity: 0.25,
   smoothScroll: true,
   stagePadding: 20,
   stageRadius: 12,
