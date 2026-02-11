@@ -8,12 +8,13 @@ import { NotFoundError } from './utils/errors.js';
 
 const app = express();
 
-// Middleware
+// Middleware - CORS
 app.use(cors({
-  origin: config.nodeEnv === 'development' 
-    ? true  // Allow all origins in development
-    : config.frontendUrl,
+  origin: config.nodeEnv === 'development' ? true : config.frontendUrl,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
 }));
 app.use(express.json());
 
