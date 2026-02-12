@@ -280,7 +280,10 @@ export class ReadingService {
     if (branch) {
       const readings = await this.readingRepo.findMany(
         { machineId, branch },
-        options
+        {
+          ...options,
+          orderBy: [{ year: 'desc' }, { month: 'desc' }],
+        }
       );
       return { readings };
     }

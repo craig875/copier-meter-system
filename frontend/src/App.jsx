@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Capture from './pages/Capture';
 import History from './pages/History';
 import Machines from './pages/Machines';
+import MachineHistory from './pages/MachineHistory';
 import Users from './pages/Users';
 import ImportReadings from './pages/ImportReadings';
 import TransactionHistory from './pages/TransactionHistory';
@@ -76,6 +77,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Machines />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/machines/:machineId/history"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <MachineHistory />
             </Layout>
           </ProtectedRoute>
         }

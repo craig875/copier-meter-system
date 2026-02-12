@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { machinesApi } from '../services/api';
 import toast from 'react-hot-toast';
@@ -234,7 +235,14 @@ const Machines = () => {
               ) : (
                 machines.map((machine) => (
                 <tr key={machine.id} className={clsx(!machine.isActive && 'bg-gray-50 opacity-60')}>
-                  <td className="px-4 py-3 font-medium text-gray-900">{machine.machineSerialNumber}</td>
+                  <td className="px-4 py-3">
+                    <Link
+                      to={`/machines/${machine.id}/history`}
+                      className="font-medium text-red-600 hover:text-red-700 hover:underline"
+                    >
+                      {machine.machineSerialNumber}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-gray-500">{machine.customer || '-'}</td>
                   <td className="px-4 py-3 text-gray-500">{machine.model || '-'}</td>
                   <td className="px-4 py-3 text-center">

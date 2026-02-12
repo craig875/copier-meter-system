@@ -214,7 +214,7 @@ const Layout = ({ children }) => {
               <Menu className="h-6 w-6" />
             </button>
             <h2 className="text-lg font-semibold text-gray-800">
-              {navigation.find(n => isActive(n.href))?.name || 'Dashboard'}
+              {location.pathname.match(/^\/machines\/[^/]+\/history/) ? 'Machine History' : navigation.find(n => isActive(n.href))?.name || 'Dashboard'}
             </h2>
           </div>
           <button
