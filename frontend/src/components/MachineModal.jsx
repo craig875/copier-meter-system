@@ -75,7 +75,18 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
     const { name, value, type, checked } = e.target;
     setFormData(prev => {
       const next = { ...prev, [name]: type === 'checkbox' ? checked : type === 'number' ? Number(value) : value };
-      if (name === 'makeId') next.modelId = '';
+      if (name === 'makeId') {
+        next.modelId = '';
+      } else if (name === 'modelId' && value) {
+        // Auto-set meters from model type: mono model = mono only, colour model = mono + colour, scan always on
+        const selectedModel = models.find(m => m.id === value);
+        if (selectedModel) {
+          const isColour = selectedModel.modelType === 'colour';
+          next.monoEnabled = true;
+          next.colourEnabled = isColour;
+          next.scanEnabled = true;
+        }
+      }
       return next;
     });
   };
