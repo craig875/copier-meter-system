@@ -13,7 +13,6 @@ import {
   Building2,
   Printer,
   ChevronRight,
-  BarChart3,
   AlertTriangle,
   Archive,
   RotateCcw,
@@ -104,16 +103,12 @@ const Customers = ({ title = 'Customers' }) => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          <p className="text-gray-500">Select a customer to view machines and record consumable orders</p>
+          <p className="text-gray-500">
+            Select a customer to view machines and record consumable orders
+            <span className="ml-2 text-gray-400 font-medium">· {customers.length} customer{customers.length !== 1 ? 's' : ''}</span>
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            to="/consumables/summary"
-            className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <BarChart3 className="h-5 w-5 mr-2" />
-            Summary
-          </Link>
           {isAdmin && (
           <button
             onClick={() => setShowModal(true)}

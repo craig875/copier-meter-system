@@ -190,7 +190,10 @@ const Machines = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Machines</h1>
-          <p className="text-gray-500">Manage copier machines and meter configurations</p>
+          <p className="text-gray-500">
+            Manage copier machines and meter configurations
+            <span className="ml-2 text-gray-400 font-medium">· {machines.length} machine{machines.length !== 1 ? 's' : ''}</span>
+          </p>
         </div>
         <div className="flex gap-2">
           {isAdmin && (
