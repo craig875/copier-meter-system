@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { customersApi, consumablesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, ArrowLeft, Building2, Printer, Package, ChevronRight, Pencil, AlertTriangle } from 'lucide-react';
+import { Loader2, ArrowLeft, Building2, Printer, Package, ChevronRight, Pencil, AlertTriangle, Plus } from 'lucide-react';
+import MachineModal from '../components/MachineModal';
 
 const CustomerDetail = () => {
   const { customerId } = useParams();
   const { effectiveBranch } = useAuth();
+  const [showAddMachine, setShowAddMachine] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['customer', customerId],
@@ -84,7 +87,16 @@ const CustomerDetail = () => {
       </div>
 
       <div className="liquid-glass rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Machines</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Machines</h2>
+          <button
+            onClick={() => setShowAddMachine(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add machine
+          </button>
+        </div>
         {machines.length === 0 ? (
           <p className="text-gray-500 py-4">
             No machines linked to this customer. Add machines from the Machines page and link them to this customer.
@@ -168,6 +180,15 @@ const CustomerDetail = () => {
           </div>
         )}
       </div>
+
+      {showAddMachine && (
+        <MachineModal
+          machine={null}
+          onClose={() => setShowAddMachine(false)}
+          initialCustomerId={customerId}
+          lockCustomer
+        />
+      )}
     </div>
   );
 };

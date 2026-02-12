@@ -1,0 +1,22 @@
+make,model,paper_size,model_type,machine_life,part_name,item_code,part_type,toner_color,expected_yield,cost_rand,meter_type,branch
+HP,LaserJet Pro M404dn,A4,mono,,Black Toner,,toner,,12000,650,mono,JHB
+HP,LaserJet Pro M404dn,A4,mono,,Drum,,general,,25000,800,mono,JHB
+Konica Minolta,Bizhub C250i,A3,colour,,,,,,,,,JHB
+Olivetti,D-Colour MF3023/3024,A4,colour,,Black Toner MF3023/24,0509121TK5270KHC,toner,black,17000,1113,mono,CT
+Olivetti,D-Colour MF3023/3024,A4,colour,,Yellow Toner MF3023/3024,0509121TK5270YHC,toner,yellow,13500,1113,colour,CT
+Olivetti,D-Colour MF3023/3024,A4,colour,,Magenta Toner MF3023/3024,0509121TK5270MHC,toner,magenta,13500,1113,colour,CT
+Olivetti,D-Colour MF3023/3024,A4,colour,,Cyan Toner MF3023/3024,0509121TK5270CHC,toner,cyan,13500,1113,colour,CT
+Olivetti,d-Colour MF2555,A3,colour,1800000,Comp Black Toner MF2555,0509121TK8365K,toner,black,25000,1032,mono,CT
+Olivetti,d-Colour MF2555,A3,colour,1800000,Comp Cyan Toner MF2555,0509121TK8365C,toner,cyan,12000,1032,colour,CT
+Olivetti,d-Colour MF2555,A3,colour,1800000,Comp Magenta Toner MF2555,0509121TK8365M,toner,magenta,12000,1032,colour,CT
+Olivetti,d-Colour MF2555,A3,colour,1800000,Comp Yellow Toner MF255,0509121TK8365Y,toner,yellow,12000,1032,colour,CT
+Olivetti,D-Copia 4523/4513MF,A4,mono,900000,K Toner Olivetti 4513/14MF,0509121TK3160,toner,black,12500,679,mono,CT
+Olivetti,D-Colour MF3533,A4,colour,600000,K Toner Olivetti MF3533,0409121TK5370K,toner,black,7000,838,mono,CT
+Olivetti,D-Colour MF3533,A4,colour,600000,M Toner Olivetti MF3533,0409121TK5370M,toner,magenta,5000,838,colour,CT
+Olivetti,D-Colour MF3533,A4,colour,600000,C Toner Olivetti MF3533,0409121TK5370C,toner,cyan,5000,838,colour,CT
+Olivetti,D-Colour MF3533,A4,colour,600000,Y Toner Olivetti MF3533,0409121TK5370Y,toner,yellow,5000,838,colour,CT
+Olivetti,D-Copia 4024MF,A4,mono,200000,Toner K D4023MF/4024MF/4024MF+,0209121TK1170,toner,black,7200,357,mono,CT
+Olivetti,D-Copia 5524MF,A4,mono,1000000,,,,,,,,JHB
+Olivetti,D-Copia 4513MF Plus,A4,mono,,Black Toner 4513/4514MF plus,0509121TK3060,toner,black,12500,699,mono,CT
+Ricoh,MP C4504,A4,mono,,Black Drum,,general,,80000,1800,mono,JHB
+Ricoh,MP C4504,A4,mono,,Black Toner,,toner,,22000,1100,mono,JHB

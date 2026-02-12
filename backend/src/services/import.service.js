@@ -509,11 +509,15 @@ export class ImportService {
         const meterType = meterTypes.includes(meterTypeVal) ? meterTypeVal : 'mono';
         const itemCode = (row.item_code || row.itemCode || '').trim() || null;
 
+        // Use row branch if provided and valid, else use request branch
+        const rowBranch = (row.branch || row.Branch || '').toString().toUpperCase();
+        const partBranchForRow = rowBranch === 'JHB' || rowBranch === 'CT' ? rowBranch : partBranch;
+
         const existingPart = await prisma.modelPart.findFirst({
           where: {
             modelId: model.id,
             partName,
-            branch: partBranch,
+            branch: partBranchForRow,
           },
         });
 
@@ -526,7 +530,7 @@ export class ImportService {
           expectedYield,
           costRand,
           meterType,
-          branch: partBranch,
+          branch: partBranchForRow,
           isActive: true,
         };
 
