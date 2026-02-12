@@ -25,6 +25,7 @@ const Layout = ({ children }) => {
   const canSwitchBranches = isAdmin || (isMeterUser && !user?.branch);
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState(new Set());
 
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
@@ -50,6 +51,33 @@ const Layout = ({ children }) => {
   const isActive = (href) => {
     if (href === '/') return location.pathname === '/';
     return location.pathname.startsWith(href);
+  };
+
+  const isChildActive = (item) => {
+    if (!item.children) return false;
+    return item.children.some((child) => isActive(child.href));
+  };
+
+  const isSectionExpanded = (item) => {
+    if (!item.children) return true;
+    const parentOrChildActive = isActive(item.href) || isChildActive(item);
+    const manuallyCollapsed = collapsedSections.has(item.name);
+    return parentOrChildActive && !manuallyCollapsed;
+  };
+
+  const handleParentClick = (item, e) => {
+    if (!item.children) return;
+    const expanded = isSectionExpanded(item);
+    if (expanded) {
+      e.preventDefault();
+      setCollapsedSections((prev) => new Set(prev).add(item.name));
+    } else {
+      setCollapsedSections((prev) => {
+        const next = new Set(prev);
+        next.delete(item.name);
+        return next;
+      });
+    }
   };
 
   return (
@@ -90,10 +118,13 @@ const Layout = ({ children }) => {
             <div key={item.name}>
               <Link
                 to={item.href}
-                onClick={() => setSidebarOpen(false)}
+                onClick={(e) => {
+                  if (item.children) handleParentClick(item, e);
+                  setSidebarOpen(false);
+                }}
                 className={clsx(
                   'flex items-center px-4 py-3 mb-1 rounded-lg transition-colors',
-                  isActive(item.href)
+                  (isActive(item.href) || (item.children && isChildActive(item)))
                     ? 'bg-red-600 text-white'
                     : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                 )}
@@ -101,7 +132,7 @@ const Layout = ({ children }) => {
                 <item.icon className="h-5 w-5 mr-3" />
                 {item.name}
               </Link>
-              {item.children && isActive(item.href) && (
+              {item.children && isSectionExpanded(item) && (
                 <div className="ml-4 mt-1 space-y-1">
                   {item.children.map((child) => (
                     <Link
