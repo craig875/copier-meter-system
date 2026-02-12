@@ -238,7 +238,7 @@ const Machines = () => {
                   <td className="px-4 py-3">
                     <Link
                       to={`/machines/${machine.id}/history`}
-                      className="font-medium text-red-600 hover:text-red-700 hover:underline"
+                      className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
                     >
                       {machine.machineSerialNumber}
                     </Link>
