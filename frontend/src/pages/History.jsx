@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { readingsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { format } from 'date-fns';
 import { 
   Download, 
   ChevronLeft, 
@@ -179,13 +180,14 @@ const History = () => {
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Scan</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Usage</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Note</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saved</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {machines.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
                     No machines found for this month. {isLoading ? 'Loading...' : 'Try selecting a different month or check your branch filter.'}
                   </td>
                 </tr>
@@ -270,6 +272,13 @@ const History = () => {
                         <div className="bg-yellow-50 border border-yellow-200 rounded px-2 py-1">
                           <p className="text-xs text-yellow-800 break-words">{currentReading.note}</p>
                         </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+                      {currentReading?.capturedAt ? (
+                        format(new Date(currentReading.capturedAt), 'dd MMM yyyy, HH:mm')
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
