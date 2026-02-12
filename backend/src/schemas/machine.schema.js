@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const createMachineSchema = z.object({
   machineSerialNumber: z.string().min(1, 'Machine serial number is required'),
-  customer: z.string().optional(),
-  model: z.string().optional(),
+  customerId: z.string().uuid().optional().nullable(),
+  modelId: z.string().uuid().optional(),
   contractReference: z.string().optional(),
   monoEnabled: z.boolean().default(true),
   colourEnabled: z.boolean().default(false),
@@ -15,8 +15,8 @@ export const createMachineSchema = z.object({
 
 export const updateMachineSchema = z.object({
   machineSerialNumber: z.string().min(1).optional(),
-  customer: z.string().optional(),
-  model: z.string().optional(),
+  customerId: z.string().uuid().optional().nullable(),
+  modelId: z.string().uuid().optional().nullable(),
   contractReference: z.string().optional(),
   monoEnabled: z.boolean().optional(),
   colourEnabled: z.boolean().optional(),

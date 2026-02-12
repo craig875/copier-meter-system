@@ -1,3 +1,4 @@
+import prisma from '../config/database.js';
 import { repositories } from '../repositories/index.js';
 import { getPreviousMonth } from '../utils/date.utils.js';
 import { calculateReadingMetrics } from '../utils/reading.utils.js';
@@ -11,6 +12,7 @@ export class ImportService {
   constructor(repos = repositories) {
     this.machineRepo = repos.machine;
     this.readingRepo = repos.reading;
+    this.customerRepo = repos.customer;
   }
 
   /**
@@ -64,11 +66,42 @@ export class ImportService {
         const colourEnabled = row.colourEnabled?.toLowerCase().trim() === 'yes';
         const scanEnabled = row.scanEnabled?.toLowerCase().trim() === 'yes';
 
-        // Prepare machine data
+        // Resolve model from "Make ModelName" string
+        let modelId = null;
+        if (row.model?.trim()) {
+          const modelStr = row.model.trim();
+          const firstSpace = modelStr.indexOf(' ');
+          const makeName = firstSpace > 0 ? modelStr.slice(0, firstSpace) : modelStr;
+          const modelName = firstSpace > 0 ? modelStr.slice(firstSpace + 1) : modelStr;
+          const found = await prisma.model.findFirst({
+            where: {
+              make: { name: makeName },
+              name: modelName,
+            },
+          });
+          if (found) modelId = found.id;
+        }
+
+        // Resolve customer - find or create by name
+        let customerId = null;
+        const customerName = row.customer?.trim();
+        const machineBranch = row.branch ? row.branch.toUpperCase() : branch;
+        if (customerName) {
+          let customer = await prisma.customer.findFirst({
+            where: { name: customerName, OR: [{ branch: machineBranch }, { branch: null }] },
+          });
+          if (!customer) {
+            customer = await prisma.customer.create({
+              data: { name: customerName, branch: machineBranch || null },
+            });
+          }
+          customerId = customer.id;
+        }
+
         const machineData = {
           machineSerialNumber,
-          customer: row.customer?.trim() || null,
-          model: row.model?.trim() || null,
+          customerId,
+          modelId,
           contractReference: row.contractReference?.trim() || null,
           monoEnabled,
           colourEnabled,
@@ -346,6 +379,180 @@ export class ImportService {
 
     return {
       message: 'Readings import completed',
+      results,
+    };
+  }
+
+  /**
+   * Import makes, models, and model parts from data array
+   * CSV columns: make, model, paper_size, model_type, machine_life, part_name, item_code, part_type, toner_color, expected_yield, cost_rand, meter_type, branch
+   * - make + model required for each row
+   * - part_name optional; if empty, only create/upsert make and model
+   * @param {Array} data
+   * @param {string} branch - Default branch for parts (JHB or CT)
+   * @returns {Promise<Object>}
+   */
+  async importMakeModelParts(data, branch) {
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new ValidationError('Import data must be a non-empty array');
+    }
+
+    const partBranch = (branch || 'JHB').toUpperCase();
+    if (partBranch !== 'JHB' && partBranch !== 'CT') {
+      throw new ValidationError('Branch must be JHB or CT');
+    }
+
+    const results = {
+      makesCreated: 0,
+      modelsCreated: 0,
+      partsCreated: 0,
+      partsUpdated: 0,
+      skipped: 0,
+      errors: [],
+    };
+
+    const makeCache = new Map();
+    const modelCache = new Map();
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowNumber = i + 2;
+
+      try {
+        const makeName = (row.make || row.Make || '').trim();
+        const modelName = (row.model || row.Model || '').trim();
+
+        if (!makeName || !modelName) {
+          results.errors.push({
+            row: rowNumber,
+            error: 'Make and model are required',
+          });
+          results.skipped++;
+          continue;
+        }
+
+        let make = makeCache.get(makeName);
+        if (!make) {
+          make = await prisma.make.findUnique({ where: { name: makeName } });
+          if (!make) {
+            make = await prisma.make.create({ data: { name: makeName } });
+            results.makesCreated++;
+          }
+          makeCache.set(makeName, make);
+        }
+
+        const modelKey = `${make.id}:${modelName}`;
+        let model = modelCache.get(modelKey);
+        if (!model) {
+          model = await prisma.model.findFirst({
+            where: { makeId: make.id, name: modelName },
+          });
+          if (!model) {
+            const paperSize = ['A3', 'A4'].includes(String(row.paper_size || 'A4').toUpperCase())
+              ? String(row.paper_size || 'A4').toUpperCase()
+              : 'A4';
+            const modelType = ['mono', 'colour'].includes(String(row.model_type || 'mono').toLowerCase())
+              ? String(row.model_type || 'mono').toLowerCase()
+              : 'mono';
+            const machineLife = row.machine_life != null && row.machine_life !== '' ? parseInt(row.machine_life) : null;
+
+            model = await prisma.model.create({
+              data: {
+                makeId: make.id,
+                name: modelName,
+                paperSize,
+                modelType,
+                machineLife: !isNaN(machineLife) ? machineLife : null,
+              },
+            });
+            results.modelsCreated++;
+          }
+          modelCache.set(modelKey, model);
+        }
+
+        const partName = (row.part_name || row.partName || '').trim();
+        if (!partName) continue;
+
+        const expectedYield = parseInt(row.expected_yield || row.expectedYield);
+        const costRand = parseFloat(row.cost_rand || row.costRand);
+        if (isNaN(expectedYield) || expectedYield < 0) {
+          results.errors.push({
+            row: rowNumber,
+            make: makeName,
+            model: modelName,
+            part: partName,
+            error: 'Expected yield must be a valid non-negative number',
+          });
+          results.skipped++;
+          continue;
+        }
+        if (isNaN(costRand) || costRand < 0) {
+          results.errors.push({
+            row: rowNumber,
+            make: makeName,
+            model: modelName,
+            part: partName,
+            error: 'Cost (R) must be a valid non-negative number',
+          });
+          results.skipped++;
+          continue;
+        }
+
+        const partType = ['general', 'toner'].includes(String(row.part_type || row.partType || 'general').toLowerCase())
+          ? String(row.part_type || row.partType || 'general').toLowerCase()
+          : 'general';
+        const tonerColors = ['black', 'cyan', 'magenta', 'yellow'];
+        const tonerColorVal = String(row.toner_color || row.tonerColor || '').toLowerCase();
+        const tonerColor = tonerColors.includes(tonerColorVal) ? tonerColorVal : null;
+        const meterTypes = ['mono', 'colour', 'total'];
+        const meterTypeVal = String(row.meter_type || row.meterType || 'mono').toLowerCase();
+        const meterType = meterTypes.includes(meterTypeVal) ? meterTypeVal : 'mono';
+        const itemCode = (row.item_code || row.itemCode || '').trim() || null;
+
+        const existingPart = await prisma.modelPart.findFirst({
+          where: {
+            modelId: model.id,
+            partName,
+            branch: partBranch,
+          },
+        });
+
+        const partData = {
+          modelId: model.id,
+          partName,
+          itemCode,
+          partType,
+          tonerColor,
+          expectedYield,
+          costRand,
+          meterType,
+          branch: partBranch,
+          isActive: true,
+        };
+
+        if (existingPart) {
+          await prisma.modelPart.update({
+            where: { id: existingPart.id },
+            data: partData,
+          });
+          results.partsUpdated++;
+        } else {
+          await prisma.modelPart.create({
+            data: partData,
+          });
+          results.partsCreated++;
+        }
+      } catch (error) {
+        results.errors.push({
+          row: rowNumber,
+          error: error.message || 'Unknown error',
+        });
+        results.skipped++;
+      }
+    }
+
+    return {
+      message: 'Makes, models and parts import completed',
       results,
     };
   }

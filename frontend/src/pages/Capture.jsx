@@ -36,9 +36,6 @@ const Capture = () => {
     enabled: !!year && !!month, // Ensure query runs when year/month are set
   });
 
-  // Debug logging
-  console.log('Capture query state:', { isLoading, isError, error, year, month, data });
-
   const unlockMutation = useMutation({
     mutationFn: () => readingsApi.unlock(year, month, effectiveBranch),
     onSuccess: (response) => {
@@ -62,6 +59,7 @@ const Capture = () => {
       setEditedReadings({});
       setErrors({});
       queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+      queryClient.invalidateQueries(['toner-alerts']);
     },
     onError: (error) => {
       const fieldErrors = error.response?.data?.errors;
@@ -98,7 +96,7 @@ const Capture = () => {
     const searchLower = search.toLowerCase();
     return machines.filter(m => 
       m.machine.machineSerialNumber.toLowerCase().includes(searchLower) ||
-      m.machine.customer?.toLowerCase().includes(searchLower) ||
+      m.machine.customer?.name?.toLowerCase().includes(searchLower) ||
       m.machine.contractReference?.toLowerCase().includes(searchLower)
     );
   }, [machines, search]);
@@ -236,6 +234,7 @@ const Capture = () => {
       });
       
       queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+      queryClient.invalidateQueries(['toner-alerts']);
     } catch (error) {
       if (error.response?.data?.errors) {
         const newErrors = {};
@@ -310,6 +309,7 @@ const Capture = () => {
       });
       
       queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+      queryClient.invalidateQueries(['toner-alerts']);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to delete reading');
     }
@@ -342,6 +342,7 @@ const Capture = () => {
           await readingsApi.submit({ year, month, readings: readingsToSubmit, branch: effectiveBranch });
           setEditedReadings({});
           queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+          queryClient.invalidateQueries(['toner-alerts']);
         } catch (error) {
           toast.error('Failed to save readings before export');
           return;
@@ -363,6 +364,7 @@ const Capture = () => {
       toast.success('Excel file exported successfully! Month has been locked.');
       // Refresh to get locked status
       queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+      queryClient.invalidateQueries(['toner-alerts']);
     } catch (error) {
       toast.error('Failed to export readings');
     }
@@ -390,6 +392,12 @@ const Capture = () => {
     month: 'long', 
     year: 'numeric' 
   });
+
+  const getPrevMonthLabel = (y, m) => {
+    const prevM = m === 1 ? 12 : m - 1;
+    const prevY = m === 1 ? y - 1 : y;
+    return new Date(prevY, prevM - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+  };
 
   const hasChanges = Object.keys(editedReadings).length > 0;
 
@@ -604,7 +612,7 @@ const Capture = () => {
                     <p className="font-medium text-gray-900">{machine.machineSerialNumber}</p>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
-                    {machine.customer || '-'}
+                    {machine.customer?.name || '-'}
                   </td>
                   <td className="px-4 py-3">
                     {machine.monoEnabled ? (
@@ -612,6 +620,7 @@ const Capture = () => {
                         value={getReadingValue(machine.id, 'monoReading', currentReading)}
                         onChange={(v) => handleReadingChange(machine.id, 'monoReading', v)}
                         previous={previousReading?.monoReading}
+                        previousMonthLabel={getPrevMonthLabel(year, month)}
                         error={errors[`${machine.id}-monoReading`]}
                       />
                     ) : (
@@ -624,6 +633,7 @@ const Capture = () => {
                         value={getReadingValue(machine.id, 'colourReading', currentReading)}
                         onChange={(v) => handleReadingChange(machine.id, 'colourReading', v)}
                         previous={previousReading?.colourReading}
+                        previousMonthLabel={getPrevMonthLabel(year, month)}
                         error={errors[`${machine.id}-colourReading`]}
                         disabled={isLocked}
                       />
@@ -637,6 +647,7 @@ const Capture = () => {
                         value={getReadingValue(machine.id, 'scanReading', currentReading)}
                         onChange={(v) => handleReadingChange(machine.id, 'scanReading', v)}
                         previous={previousReading?.scanReading}
+                        previousMonthLabel={getPrevMonthLabel(year, month)}
                         error={errors[`${machine.id}-scanReading`]}
                         disabled={isLocked}
                       />
@@ -732,7 +743,7 @@ const Capture = () => {
   );
 };
 
-const MeterInput = ({ value, onChange, previous, error, disabled = false }) => {
+const MeterInput = ({ value, onChange, previous, previousMonthLabel, error, disabled = false }) => {
   return (
     <div className="space-y-1">
       <input
@@ -748,7 +759,9 @@ const MeterInput = ({ value, onChange, previous, error, disabled = false }) => {
         min="0"
       />
       {previous != null && (
-        <p className="text-xs text-gray-400 text-center">Prev: {previous.toLocaleString()}</p>
+        <p className="text-xs text-gray-400 text-center" title="Previous month's reading">
+          {previousMonthLabel ? `${previousMonthLabel}: ` : 'Prev: '}{previous.toLocaleString()}
+        </p>
       )}
       {error && (
         <div className="text-xs text-red-600 text-center">

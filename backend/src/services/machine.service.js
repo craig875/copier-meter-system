@@ -39,8 +39,9 @@ export class MachineService {
       whereClause.OR = [
         { machineSerialNumber: { contains: search, mode: 'insensitive' } },
         { customer: { contains: search, mode: 'insensitive' } },
-        { model: { contains: search, mode: 'insensitive' } },
         { contractReference: { contains: search, mode: 'insensitive' } },
+        { model: { name: { contains: search, mode: 'insensitive' } } },
+        { model: { make: { name: { contains: search, mode: 'insensitive' } } } },
       ];
     }
 
@@ -48,6 +49,7 @@ export class MachineService {
       this.machineRepo.findManyWithPagination(whereClause, {
         skip,
         take: parseInt(limit),
+        include: { model: { include: { make: true } }, customer: true },
       }),
       this.machineRepo.count(whereClause),
     ]);

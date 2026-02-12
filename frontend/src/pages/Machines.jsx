@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { machinesApi } from '../services/api';
+import { machinesApi, makesApi, modelsApi, customersApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -21,6 +21,7 @@ import clsx from 'clsx';
 
 const Machines = () => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin, selectedBranch, effectiveBranch, user, loading: authLoading } = useAuth();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -69,6 +70,19 @@ const Machines = () => {
 
   // API now returns response.data directly, so data is { machines, pagination }
   const machines = data?.machines || [];
+
+  // Open edit modal when ?edit=<machineId> in URL (e.g. from Customer Detail)
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId && machines.length > 0) {
+      const machine = machines.find((m) => m.id === editId);
+      if (machine) {
+        setEditingMachine(machine);
+        setShowModal(true);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, machines, setSearchParams]);
 
   const handleEdit = (machine) => {
     setEditingMachine(machine);
@@ -237,14 +251,23 @@ const Machines = () => {
                 <tr key={machine.id} className={clsx(!machine.isActive && 'bg-gray-50 opacity-60')}>
                   <td className="px-4 py-3">
                     <Link
-                      to={`/machines/${machine.id}/history`}
-                      className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+                      to={`/consumables/machines/${machine.id}`}
+                      className="font-medium text-red-600 hover:text-red-700 hover:underline"
                     >
                       {machine.machineSerialNumber}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{machine.customer || '-'}</td>
-                  <td className="px-4 py-3 text-gray-500">{machine.model || '-'}</td>
+                  <td className="px-4 py-3 text-gray-500">{machine.customer?.name || '-'}</td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {machine.model ? (
+                      <>
+                        {`${machine.model.make?.name || ''} ${machine.model.name || ''}`.trim() || '-'}
+                        <span className="text-gray-500 text-xs ml-1">
+                          ({machine.model.paperSize || 'A4'} · {machine.model.modelType === 'colour' ? 'Colour' : 'Mono'})
+                        </span>
+                      </>
+                    ) : '-'}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <span className={clsx(
                       'inline-flex px-2 py-1 rounded-full text-xs font-medium',
@@ -277,10 +300,11 @@ const Machines = () => {
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleEdit(machine)}
-                      className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
-                      title="Edit"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      title="Edit machine"
                     >
                       <Pencil className="h-4 w-4" />
+                      <span>Edit</span>
                     </button>
                     {machine.isDecommissioned ? (
                       isAdmin ? (
@@ -353,8 +377,9 @@ const MachineModal = ({ machine, onClose }) => {
 
   const [formData, setFormData] = useState({
     machineSerialNumber: machine?.machineSerialNumber || '',
-    customer: machine?.customer || '',
-    model: machine?.model || '',
+    customerId: machine?.customerId || machine?.customer?.id || '',
+    makeId: machine?.model?.make?.id || '',
+    modelId: machine?.modelId || machine?.model?.id || '',
     branch: machine?.branch || effectiveBranch || 'JHB',
     monoEnabled: machine?.monoEnabled ?? true,
     colourEnabled: machine?.colourEnabled ?? false,
@@ -362,13 +387,34 @@ const MachineModal = ({ machine, onClose }) => {
     isActive: machine?.isActive ?? true,
   });
 
+  const { data: makesData } = useQuery({
+    queryKey: ['makes'],
+    queryFn: () => makesApi.getAll(),
+  });
+  const { data: customersData } = useQuery({
+    queryKey: ['customers', effectiveBranch],
+    queryFn: () => customersApi.getAll(effectiveBranch),
+  });
+  const { data: modelsData } = useQuery({
+    queryKey: ['models', formData.makeId],
+    queryFn: () => modelsApi.getAll(formData.makeId || null),
+  });
+  const makes = makesData?.makes || [];
+  const models = modelsData?.models || [];
+  const customers = customersData?.customers || [];
+
   const mutation = useMutation({
-    mutationFn: (data) => isEditing 
-      ? machinesApi.update(machine.id, data)
-      : machinesApi.create(data),
+    mutationFn: (data) => {
+      const { makeId, ...rest } = data;
+      const payload = { ...rest, customerId: rest.customerId || null };
+      return isEditing
+        ? machinesApi.update(machine.id, payload)
+        : machinesApi.create(payload);
+    },
     onSuccess: () => {
       toast.success(isEditing ? 'Machine updated' : 'Machine created');
       queryClient.invalidateQueries(['machines']);
+      queryClient.invalidateQueries(['customers']);
       onClose();
     },
     onError: (error) => {
@@ -383,10 +429,11 @@ const MachineModal = ({ machine, onClose }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : type === 'number' ? Number(value) : value,
-    }));
+    setFormData(prev => {
+      const next = { ...prev, [name]: type === 'checkbox' ? checked : type === 'number' ? Number(value) : value };
+      if (name === 'makeId') next.modelId = '';
+      return next;
+    });
   };
 
   return (
@@ -420,26 +467,53 @@ const MachineModal = ({ machine, onClose }) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Customer
             </label>
-            <input
-              type="text"
-              name="customer"
-              value={formData.customer}
+            <select
+              name="customerId"
+              value={formData.customerId}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            >
+              <option value="">No customer</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Model
+              Make
             </label>
-            <input
-              type="text"
-              name="model"
-              value={formData.model}
+            <select
+              name="makeId"
+              value={formData.makeId}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            >
+              <option value="">Select make...</option>
+              {makes.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Model
+            </label>
+            <select
+              name="modelId"
+              value={formData.modelId}
+              onChange={handleChange}
+              disabled={!formData.makeId}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+            >
+              <option value="">Select model...</option>
+              {models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.make?.name} {m.name} ({m.paperSize || 'A4'} · {m.modelType === 'colour' ? 'Colour' : 'Mono'})
+                </option>
+              ))}
+            </select>
           </div>
 
           {isAdmin && (

@@ -1,50 +1,85 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
-  FileSpreadsheet, 
   Printer, 
   Users, 
-  History,
   LogOut,
   Menu,
   X,
   Building2,
   Home,
-  Upload,
   ScrollText,
-  HelpCircle
+  HelpCircle,
+  Package,
+  Wrench,
+  Cog,
+  ChevronDown,
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import logo from '../assets/logo.png';
 
 const Layout = ({ children }) => {
   const { user, logout, isAdmin, isMeterUser, selectedBranch, updateSelectedBranch, effectiveBranch } = useAuth();
+  const navigate = useNavigate();
   // Show branch selector for admins or meter users with no branch assigned (can switch branches)
   const canSwitchBranches = isAdmin || (isMeterUser && !user?.branch);
   const location = useLocation();
+  const showBackButton = location.pathname !== '/';
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set());
+  const [expandedSections, setExpandedSections] = useState(new Set());
+
+  const toggleSection = (name) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  // Auto-expand section when current route is within it (e.g. direct nav or refresh)
+  useEffect(() => {
+    let sectionToExpand = null;
+    navigation.forEach((item) => {
+      item.children?.forEach((child) => {
+        if (child.children?.some((gc) => location.pathname === gc.href || (gc.href !== '/' && location.pathname.startsWith(gc.href)))) {
+          sectionToExpand = child.name;
+        }
+      });
+    });
+    if (sectionToExpand) {
+      setExpandedSections((prev) => new Set(prev).add(sectionToExpand));
+    }
+  }, [location.pathname]);
 
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
     { 
-      name: 'Meter Readings', 
-      href: '/meter-readings', 
-      icon: LayoutDashboard,
+      name: 'Copier Service', 
+      href: '/copier-service', 
+      icon: Printer,
       children: [
-        { name: 'Monthly Capture', href: '/capture', icon: FileSpreadsheet },
-        { name: 'History', href: '/history', icon: History },
+        { name: 'Customers', href: '/customers', icon: Building2 },
+        { name: 'Meter Readings', href: '/meter-readings', icon: LayoutDashboard, activePaths: ['/capture', '/history', '/import-readings'] },
         { name: 'Machines', href: '/machines', icon: Printer },
-        ...(isAdmin ? [
-          { name: 'Import Readings', href: '/import-readings', icon: Upload },
-        ] : []),
+        { name: 'Consumable Orders', href: '/consumables/orders', icon: Package, activePaths: ['/consumables'] },
       ]
     },
     ...(isAdmin ? [
-      { name: 'Users', href: '/users', icon: Users },
-      { name: 'Transaction History', href: '/transaction-history', icon: ScrollText },
+      { 
+        name: 'Admin Tools', 
+        href: '/admin', 
+        icon: Wrench,
+        children: [
+          { name: 'Machine Configuration', href: '/admin/machine-configuration', icon: Cog },
+          { name: 'Users', href: '/users', icon: Users },
+          { name: 'Transaction History', href: '/transaction-history', icon: ScrollText },
+        ]
+      },
     ] : []),
   ];
 
@@ -53,32 +88,17 @@ const Layout = ({ children }) => {
     return location.pathname.startsWith(href);
   };
 
-  const isChildActive = (item) => {
+  const isChildActive = (child) => {
+    if (child.activePaths?.some((p) => location.pathname.startsWith(p))) return true;
+    return isActive(child.href) || (child.children && child.children.some((gc) => isActive(gc.href)));
+  };
+
+  const hasActiveChild = (item) => {
     if (!item.children) return false;
-    return item.children.some((child) => isActive(child.href));
+    return item.children.some((c) => isChildActive(c));
   };
 
-  const isSectionExpanded = (item) => {
-    if (!item.children) return true;
-    const parentOrChildActive = isActive(item.href) || isChildActive(item);
-    const manuallyCollapsed = collapsedSections.has(item.name);
-    return parentOrChildActive && !manuallyCollapsed;
-  };
-
-  const handleParentClick = (item, e) => {
-    if (!item.children) return;
-    const expanded = isSectionExpanded(item);
-    if (expanded) {
-      e.preventDefault();
-      setCollapsedSections((prev) => new Set(prev).add(item.name));
-    } else {
-      setCollapsedSections((prev) => {
-        const next = new Set(prev);
-        next.delete(item.name);
-        return next;
-      });
-    }
-  };
+  const isItemActive = (item) => isActive(item.href) || hasActiveChild(item);
 
   return (
     <div 
@@ -116,15 +136,12 @@ const Layout = ({ children }) => {
         <nav className="mt-6 px-3">
           {navigation.map((item) => (
             <div key={item.name}>
-              <Link
+                <Link
                 to={item.href}
-                onClick={(e) => {
-                  if (item.children) handleParentClick(item, e);
-                  setSidebarOpen(false);
-                }}
+                onClick={() => setSidebarOpen(false)}
                 className={clsx(
                   'flex items-center px-4 py-3 mb-1 rounded-lg transition-colors',
-                  (isActive(item.href) || (item.children && isChildActive(item)))
+                  isItemActive(item)
                     ? 'bg-red-600 text-white'
                     : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                 )}
@@ -132,24 +149,57 @@ const Layout = ({ children }) => {
                 <item.icon className="h-5 w-5 mr-3" />
                 {item.name}
               </Link>
-              {item.children && isSectionExpanded(item) && (
+              {item.children && isItemActive(item) && (
                 <div className="ml-4 mt-1 space-y-1">
-                  {item.children.map((child) => (
-                    <Link
-                      key={child.name}
-                      to={child.href}
-                      onClick={() => setSidebarOpen(false)}
-                      className={clsx(
-                        'flex items-center px-4 py-2 mb-1 rounded-lg transition-colors text-sm',
-                        isActive(child.href)
-                          ? 'bg-red-700 text-white'
-                          : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                      )}
-                    >
-                      <child.icon className="h-4 w-4 mr-3" />
-                      {child.name}
-                    </Link>
-                  ))}
+                  {item.children.map((child) => {
+                    const isExpanded = expandedSections.has(child.name);
+                    const hasChildren = child.children?.length > 0;
+                    return (
+                      <div key={child.name}>
+                        {hasChildren ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => toggleSection(child.name)}
+                              className="flex items-center w-full px-4 py-2 mb-1 rounded-lg transition-colors text-sm text-left text-gray-400 hover:bg-gray-800 hover:text-white"
+                            >
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4 mr-1 flex-shrink-0" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 mr-1 flex-shrink-0" />
+                              )}
+                              <child.icon className="h-4 w-4 mr-2" />
+                              {child.name}
+                            </button>
+                            {isExpanded && (
+                              <div className="ml-4 mt-1 space-y-1">
+                                {child.children.map((grandchild) => (
+                                  <Link
+                                    key={grandchild.name}
+                                    to={grandchild.href}
+                                    onClick={() => setSidebarOpen(false)}
+                                    className="flex items-center px-4 py-2 mb-1 rounded-lg transition-colors text-xs text-gray-400 hover:bg-gray-800 hover:text-white"
+                                  >
+                                    <grandchild.icon className="h-3.5 w-3 mr-3" />
+                                    {grandchild.name}
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <Link
+                            to={child.href}
+                            onClick={() => setSidebarOpen(false)}
+                            className="flex items-center px-4 py-2 mb-1 rounded-lg transition-colors text-sm text-gray-400 hover:bg-gray-800 hover:text-white"
+                          >
+                            <child.icon className="h-4 w-4 mr-2" />
+                            {child.name}
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -206,15 +256,26 @@ const Layout = ({ children }) => {
       <div className="lg:pl-64">
         {/* Top bar - glass */}
         <header className="bg-white/20 backdrop-blur-3xl border-b border-white/30 shadow-sm h-16 flex items-center justify-between px-6" style={{ boxShadow: '0 1px 0 0 rgba(255,255,255,0.5) inset' }}>
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
+            {showBackButton && (
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 -ml-2 rounded-lg text-gray-600 hover:text-red-600 hover:bg-white/30 transition-colors"
+                title="Back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+            )}
             <button 
-              className="lg:hidden mr-4"
+              className="lg:hidden"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="h-6 w-6" />
             </button>
             <h2 className="text-lg font-semibold text-gray-800">
-              {location.pathname.match(/^\/machines\/[^/]+\/history/) ? 'Machine History' : navigation.find(n => isActive(n.href))?.name || 'Dashboard'}
+              {location.pathname.startsWith('/consumables/machines/') ? 'Machine Consumables' 
+                : location.pathname.startsWith('/admin/machine-configuration') ? 'Machine Configuration'
+                : navigation.find(n => isItemActive(n))?.name || 'Dashboard'}
             </h2>
           </div>
           <button

@@ -9,6 +9,16 @@ export class MachineRepository extends BaseRepository {
     super('machine', prisma);
   }
 
+  async findById(id) {
+    return this.prisma.machine.findUnique({
+      where: { id },
+      include: {
+        model: { include: { make: true } },
+        customer: true,
+      },
+    });
+  }
+
   async findBySerialNumber(serialNumber) {
     return this.findOne({
       machineSerialNumber: serialNumber,
@@ -27,9 +37,10 @@ export class MachineRepository extends BaseRepository {
     }
     return this.findMany(where, {
       orderBy: [
-        { customer: 'asc' },
+        { customer: { name: 'asc' } },
         { machineSerialNumber: 'asc' },
       ],
+      include: { model: { include: { make: true } }, customer: true },
     });
   }
 
@@ -39,17 +50,19 @@ export class MachineRepository extends BaseRepository {
     if (searchTerm) {
       where.OR = [
         { machineSerialNumber: { contains: searchTerm, mode: 'insensitive' } },
-        { customer: { contains: searchTerm, mode: 'insensitive' } },
-        { model: { contains: searchTerm, mode: 'insensitive' } },
+        { customer: { name: { contains: searchTerm, mode: 'insensitive' } } },
         { contractReference: { contains: searchTerm, mode: 'insensitive' } },
+        { model: { name: { contains: searchTerm, mode: 'insensitive' } } },
+        { model: { make: { name: { contains: searchTerm, mode: 'insensitive' } } } },
       ];
     }
 
     return this.findMany(where, {
       orderBy: [
-        { customer: 'asc' },
+        { customer: { name: 'asc' } },
         { machineSerialNumber: 'asc' },
       ],
+      include: { model: { include: { make: true } }, customer: true },
     });
   }
 
@@ -58,7 +71,7 @@ export class MachineRepository extends BaseRepository {
     const { orderBy, ...restOptions } = options;
     return this.findMany(where, {
       orderBy: orderBy || [
-        { customer: 'asc' },
+        { customer: { name: 'asc' } },
         { machineSerialNumber: 'asc' },
       ],
       ...restOptions,

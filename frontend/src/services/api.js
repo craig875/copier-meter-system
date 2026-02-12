@@ -22,14 +22,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle auth errors
+// Handle auth errors (session expired, invalid token)
+// Don't redirect for login request - let the error propagate so the user sees "Invalid email or password"
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      if (!isLoginRequest) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -114,5 +118,63 @@ export const auditApi = {
   getHistory: (params = {}) => api.get('/audit', { params }).then(res => res.data),
 };
 
+// Customers API
+export const customersApi = {
+  getAll: (branch = null) => {
+    const params = branch ? { branch } : {};
+    return api.get('/customers', { params }).then((r) => r.data);
+  },
+  getOne: (id) => api.get(`/customers/${id}`).then((r) => r.data),
+  create: (data) => api.post('/customers', data).then((r) => r.data),
+  update: (id, data) => api.put(`/customers/${id}`, data).then((r) => r.data),
+  archive: (id, isArchived = true) => api.patch(`/customers/${id}/archive`, { isArchived }).then((r) => r.data),
+  delete: (id) => api.delete(`/customers/${id}`).then((r) => r.data),
+};
+
+// Makes & Models API
+export const makesApi = {
+  getAll: () => api.get('/makes').then((r) => r.data),
+  create: (data) => api.post('/makes', data).then((r) => r.data),
+  update: (id, data) => api.put(`/makes/${id}`, data).then((r) => r.data),
+  delete: (id) => api.delete(`/makes/${id}`).then((r) => r.data),
+  import: (data, branch) => api.post('/makes/import', { data, branch }).then((r) => r.data),
+};
+export const modelsApi = {
+  getAll: (makeId = null) => {
+    const params = makeId ? { makeId } : {};
+    return api.get('/models', { params }).then((r) => r.data);
+  },
+  create: (data) => api.post('/models', data).then((r) => r.data),
+  update: (id, data) => api.put(`/models/${id}`, data).then((r) => r.data),
+  delete: (id) => api.delete(`/models/${id}`).then((r) => r.data),
+};
+
+// Consumables API
+export const consumablesApi = {
+  getModelParts: (modelId, branch = null) => {
+    const params = modelId ? { modelId } : {};
+    if (branch) params.branch = branch;
+    return api.get('/consumables/model-parts', { params }).then((r) => r.data);
+  },
+  getModelPartsAll: (branch = null) => {
+    const params = branch ? { branch } : {};
+    return api.get('/consumables/model-parts/all', { params }).then(res => res.data);
+  },
+  getModelPart: (id) => api.get(`/consumables/model-parts/${id}`).then(res => res.data),
+  createModelPart: (data) => api.post('/consumables/model-parts', data).then(res => res.data),
+  updateModelPart: (id, data) => api.put(`/consumables/model-parts/${id}`, data).then(res => res.data),
+  deleteModelPart: (id) => api.delete(`/consumables/model-parts/${id}`).then(res => res.data),
+  recordPartOrder: (data) => api.post('/consumables/orders', data).then(res => res.data),
+  deletePartOrder: (id) => api.delete(`/consumables/orders/${id}`).then(res => res.data),
+  getMachineHistory: (machineId, branch = null) => {
+    const params = branch ? { branch } : {};
+    return api.get(`/consumables/machines/${machineId}/history`, { params }).then(res => res.data);
+  },
+  getSummary: (params = {}) => api.get('/consumables/summary', { params }).then(res => res.data),
+  getTonerAlerts: (branch = null) => {
+    const params = branch ? { branch } : {};
+    return api.get('/consumables/toner-alerts', { params }).then(res => res.data);
+  },
+};
 
 export default api;

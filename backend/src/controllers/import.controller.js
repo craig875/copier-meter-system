@@ -43,6 +43,26 @@ export class ImportController {
     this.auditService.log(userId, 'reading_import', 'import', null, { year, month, branch, created: result.results?.readingsCreated });
     res.json(result);
   });
+
+  importMakeModelParts = asyncHandler(async (req, res) => {
+    const { data, branch } = req.body;
+    const partBranch = branch || req.user?.branch || 'JHB';
+
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({ error: 'Import data array is required' });
+    }
+
+    const userId = req.user.id;
+    const result = await this.importService.importMakeModelParts(data, partBranch);
+    this.auditService.log(userId, 'make_model_part_import', 'import', null, {
+      branch: partBranch,
+      makesCreated: result.results?.makesCreated,
+      modelsCreated: result.results?.modelsCreated,
+      partsCreated: result.results?.partsCreated,
+      partsUpdated: result.results?.partsUpdated,
+    });
+    res.json(result);
+  });
 }
 
 // Export singleton instance
@@ -50,3 +70,4 @@ const importController = new ImportController();
 
 export const importMachines = importController.importMachines.bind(importController);
 export const importReadings = importController.importReadings.bind(importController);
+export const importMakeModelParts = importController.importMakeModelParts.bind(importController);

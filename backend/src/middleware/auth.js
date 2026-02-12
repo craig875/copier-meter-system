@@ -60,3 +60,10 @@ export const requireAdmin = (req, res, next) => {
   }
   next();
 };
+
+export const requireMeterOrAdmin = (req, res, next) => {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'meter_user') {
+    return res.status(403).json({ error: 'Admin or meter user access required' });
+  }
+  next();
+};

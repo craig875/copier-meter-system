@@ -32,18 +32,92 @@ model User {
   branch       Branch?
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
-  readings     Reading[]
-  submissions  Submission[]
-  auditLogs    AuditLog[]
+  readings        Reading[]
+  submissions     Submission[]
+  auditLogs       AuditLog[]
+  partReplacements PartReplacement[]
 
   @@map("users")
+}
+
+enum PartType {
+  general
+  toner
+}
+
+enum TonerColor {
+  black
+  cyan
+  magenta
+  yellow
+}
+
+enum MeterType {
+  mono
+  colour
+  total
+}
+
+model Customer {
+  id           String    @id @default(uuid())
+  name         String    @map("name")
+  contactName  String?    @map("contact_name")
+  email        String?   @map("email")
+  phone        String?   @map("phone")
+  address      String?   @map("address")
+  branch       Branch?   @map("branch")
+  isArchived   Boolean   @default(false) @map("is_archived")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  machines Machine[]
+
+  @@index([name])
+  @@index([branch])
+  @@map("customers")
+}
+
+model Make {
+  id      String   @id @default(uuid())
+  name    String   @unique @map("name")
+
+  models  Model[]
+
+  @@map("makes")
+}
+
+enum PaperSize {
+  A3
+  A4
+}
+
+enum ModelType {
+  mono
+  colour
+}
+
+model Model {
+  id          String     @id @default(uuid())
+  makeId      String     @map("make_id")
+  name        String     @map("name")
+  paperSize   PaperSize  @default(A4) @map("paper_size")
+  modelType   ModelType  @default(mono) @map("model_type")
+  machineLife Int?       @map("machine_life")
+
+  make      Make      @relation(fields: [makeId], references: [id], onDelete: Restrict)
+  machines  Machine[]
+  modelParts ModelPart[]
+
+  @@unique([makeId, name])
+  @@index([makeId])
+  @@map("models")
 }
 
 model Machine {
   id                String    @id @default(uuid())
   machineSerialNumber String    @unique @map("machine_serial_number")
-  customer          String?   @map("customer")
-  model             String?
+  modelId           String?   @map("model_id")
+  customerId        String?   @map("customer_id")
   contractReference String?   @map("contract_reference")
   monoEnabled       Boolean   @default(true) @map("mono_enabled")
   colourEnabled     Boolean   @default(false) @map("colour_enabled")
@@ -53,9 +127,14 @@ model Machine {
   branch            Branch    @default(JHB)
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
-  readings          Reading[]
+  model     Model?    @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  customer  Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  readings  Reading[]
+  partReplacements  PartReplacement[]
 
   @@index([contractReference])
+  @@index([modelId])
+  @@index([customerId])
   @@index([branch])
   @@map("machines")
 }
@@ -117,4 +196,59 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model ModelPart {
+  id            String      @id @default(uuid())
+  modelId       String      @map("model_id")
+  partName      String      @map("part_name")
+  itemCode      String?     @map("item_code")
+  partType      PartType    @default(general) @map("part_type")
+  tonerColor    TonerColor? @map("toner_color")
+  expectedYield  Int       @map("expected_yield")
+  costRand      Decimal   @map("cost_rand") @db.Decimal(12, 2)
+  meterType     MeterType @default(mono) @map("meter_type")
+  branch        Branch    @default(JHB)
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  model         Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  replacements  PartReplacement[]
+
+  @@unique([modelId, partName, branch])
+  @@index([modelId])
+  @@index([branch])
+  @@map("model_parts")
+}
+
+model PartReplacement {
+  id                     String    @id @default(uuid())
+  machineId               String    @map("machine_id")
+  modelPartId             String    @map("model_part_id")
+  orderDate               DateTime  @map("order_date")
+  priorReading            Int       @map("prior_reading")
+  currentReading          Int       @map("current_reading")
+  usage                   Int       @map("usage")
+  remainingTonerPercent   Float?    @map("remaining_toner_percent")
+  yieldMet                Boolean   @map("yield_met")
+  shortfallClicks         Int       @default(0) @map("shortfall_clicks")
+  adjustedShortfallClicks Int       @default(0) @map("adjusted_shortfall_clicks")
+  costPerClick            Decimal   @map("cost_per_click") @db.Decimal(10, 4)
+  displayChargeRand       Decimal   @map("display_charge_rand") @db.Decimal(12, 2)
+  expectedYieldSnapshot   Int       @map("expected_yield_snapshot")
+  costRandSnapshot        Decimal   @map("cost_rand_snapshot") @db.Decimal(12, 2)
+  branch                  Branch    @default(JHB)
+  capturedBy              String    @map("captured_by")
+  capturedAt              DateTime  @default(now()) @map("captured_at")
+
+  machine   Machine   @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  modelPart ModelPart @relation(fields: [modelPartId], references: [id], onDelete: Restrict)
+  user      User      @relation(fields: [capturedBy], references: [id])
+
+  @@index([machineId])
+  @@index([modelPartId])
+  @@index([orderDate])
+  @@index([branch])
+  @@map("part_replacements")
 }

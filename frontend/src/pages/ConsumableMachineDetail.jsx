@@ -1,0 +1,378 @@
+import { useParams, Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { consumablesApi, machinesApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
+import {
+  Loader2,
+  ArrowLeft,
+  CheckCircle,
+  AlertTriangle,
+  Plus,
+  Printer,
+  Trash2,
+} from 'lucide-react';
+import { useState } from 'react';
+
+const ConsumableMachineDetail = () => {
+  const { machineId } = useParams();
+  const queryClient = useQueryClient();
+  const { effectiveBranch, isAdmin } = useAuth();
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderForm, setOrderForm] = useState({
+    modelPartId: '',
+    orderDate: new Date().toISOString().slice(0, 10),
+    currentReading: '',
+    remainingTonerPercent: '',
+  });
+
+  const { data: machineData, isLoading: machineLoading } = useQuery({
+    queryKey: ['machine', machineId],
+    queryFn: () => machinesApi.getOne(machineId).then((r) => r.data),
+    enabled: !!machineId,
+  });
+
+  const { data: historyData, isLoading: historyLoading } = useQuery({
+    queryKey: ['consumables-history', machineId, effectiveBranch],
+    queryFn: () => consumablesApi.getMachineHistory(machineId, effectiveBranch),
+    enabled: !!machineId,
+  });
+
+  const modelId = machineData?.machine?.modelId || machineData?.machine?.model?.id;
+  const { data: partsData } = useQuery({
+    queryKey: ['model-parts', modelId, effectiveBranch],
+    queryFn: () => consumablesApi.getModelParts(modelId, effectiveBranch),
+    enabled: !!modelId,
+  });
+
+  const recordMutation = useMutation({
+    mutationFn: (payload) => consumablesApi.recordPartOrder(payload),
+    onSuccess: () => {
+      toast.success('Part order recorded');
+      setShowOrderModal(false);
+      setOrderForm({ modelPartId: '', orderDate: new Date().toISOString().slice(0, 10), currentReading: '', remainingTonerPercent: '' });
+      queryClient.invalidateQueries(['consumables-history', machineId]);
+      queryClient.invalidateQueries(['consumables-summary']);
+      queryClient.invalidateQueries(['toner-alerts']);
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || 'Failed to record order');
+    },
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: (id) => consumablesApi.deletePartOrder(id),
+    onSuccess: () => {
+      toast.success('Part order deleted');
+      queryClient.invalidateQueries(['consumables-history', machineId]);
+      queryClient.invalidateQueries(['consumables-summary']);
+      queryClient.invalidateQueries(['toner-alerts']);
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete order');
+    },
+  });
+
+  const machine = machineData?.machine || historyData?.machine;
+  const replacements = historyData?.replacements || [];
+  const modelParts = partsData?.parts || [];
+
+  const generalParts = replacements.filter((r) => r.partType === 'general');
+  const tonerParts = replacements.filter((r) => r.partType === 'toner');
+
+  const handleSubmitOrder = (e) => {
+    e.preventDefault();
+    const part = modelParts.find((p) => p.id === orderForm.modelPartId);
+    if (!part) {
+      toast.error('Select a part');
+      return;
+    }
+    const currentReading = parseInt(orderForm.currentReading, 10);
+    if (isNaN(currentReading) || currentReading < 0) {
+      toast.error('Enter valid current reading');
+      return;
+    }
+    if (part.partType === 'toner' && orderForm.remainingTonerPercent !== '') {
+      const pct = parseFloat(orderForm.remainingTonerPercent);
+      if (isNaN(pct) || pct < 0 || pct > 100) {
+        toast.error('Toner % must be 0–100');
+        return;
+      }
+    }
+    recordMutation.mutate({
+      machineId,
+      modelPartId: orderForm.modelPartId,
+      orderDate: orderForm.orderDate,
+      currentReading,
+      remainingTonerPercent: part.partType === 'toner' ? (orderForm.remainingTonerPercent ? parseFloat(orderForm.remainingTonerPercent) : 0) : undefined,
+    });
+  };
+
+  if (machineLoading || historyLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+      </div>
+    );
+  }
+
+  if (!machine) {
+    return (
+      <div className="liquid-glass rounded-xl p-6">
+        <p className="text-red-600">Machine not found</p>
+        <Link to="/consumables/summary" className="text-red-600 hover:underline mt-2 inline-block">
+          ← Back to Summary
+        </Link>
+      </div>
+    );
+  }
+
+  const handleDeleteOrder = (r) => {
+    if (window.confirm(`Delete this part order record?\n\n${r.partName} • ${r.orderDate ? new Date(r.orderDate).toLocaleDateString() : ''}\n\nThis cannot be undone.`)) {
+      deleteOrderMutation.mutate(r.id);
+    }
+  };
+
+  const PartRow = ({ r }) => (
+    <tr className="border-b border-gray-100">
+      <td className="py-2 px-2 text-gray-700">{r.partName}</td>
+      <td className="py-2 px-2 text-gray-600">
+        {r.orderDate ? new Date(r.orderDate).toLocaleDateString() : '-'}
+      </td>
+      <td className="py-2 px-2 text-right">{r.priorReading?.toLocaleString() ?? '-'}</td>
+      <td className="py-2 px-2 text-right">{r.currentReading?.toLocaleString() ?? '-'}</td>
+      <td className="py-2 px-2 text-right">{r.usage?.toLocaleString() ?? '-'}</td>
+      {r.partType === 'toner' && (
+        <td className="py-2 px-2 text-center">
+          {r.remainingTonerPercent != null ? `${r.remainingTonerPercent}%` : '-'}
+        </td>
+      )}
+      <td className="py-2 px-2 text-center">
+        {r.yieldMet ? (
+          <CheckCircle className="h-5 w-5 text-green-600 inline" />
+        ) : (
+          <AlertTriangle className="h-5 w-5 text-amber-600 inline" />
+        )}
+      </td>
+      <td className="py-2 px-2 text-right">
+        {r.partType === 'toner' && r.adjustedShortfallClicks > 0 ? (
+          <span className="text-amber-700 font-medium">{r.adjustedShortfallClicks} clicks</span>
+        ) : r.shortfallClicks > 0 ? (
+          <span className="text-amber-700 font-medium">{r.shortfallClicks} clicks</span>
+        ) : (
+          <span className="text-gray-400">-</span>
+        )}
+      </td>
+      <td className="py-2 px-2 text-right font-medium">
+        {r.displayChargeRand > 0 ? (
+          <span className="text-amber-700">R{Number(r.displayChargeRand).toFixed(2)}</span>
+        ) : (
+          <span className="text-gray-400">-</span>
+        )}
+      </td>
+      {isAdmin && (
+        <td className="py-2 px-2">
+          <button
+            type="button"
+            onClick={() => handleDeleteOrder(r)}
+            disabled={deleteOrderMutation.isPending}
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+            title="Delete part order"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </td>
+      )}
+    </tr>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Link
+          to={(machine?.customer?.id || machine?.customerId) ? `/customers/${machine.customer?.id || machine.customerId}` : '/customers'}
+          className="flex items-center text-gray-600 hover:text-red-600"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          {(machine?.customer?.id || machine?.customerId) ? `Back to ${machine.customer?.name ?? machine.customer ?? 'Customer'}` : 'Back to Customers'}
+        </Link>
+        <button
+          onClick={() => setShowOrderModal(true)}
+          disabled={modelParts.length === 0}
+          className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Record part order
+        </button>
+      </div>
+
+      <div className="liquid-glass rounded-xl p-6">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 bg-red-50 rounded-lg">
+            <Printer className="h-8 w-8 text-red-600" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">{machine.machineSerialNumber}</h2>
+            <p className="text-gray-600">
+              {machine.model ? `${machine.model.make?.name || ''} ${machine.model.name || ''}`.trim() || 'No model' : 'No model'} • {(typeof machine.customer === 'string' ? machine.customer : machine.customer?.name) || 'No customer'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* General Parts */}
+      <div className="liquid-glass rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">General parts</h3>
+        {generalParts.length === 0 ? (
+          <p className="text-gray-500 py-4">No general part orders yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-2 font-medium">Part</th>
+                  <th className="text-left py-2 px-2 font-medium">Last order</th>
+                  <th className="text-right py-2 px-2 font-medium">Prior</th>
+                  <th className="text-right py-2 px-2 font-medium">Current</th>
+                  <th className="text-right py-2 px-2 font-medium">Usage</th>
+                  <th className="text-center py-2 px-2 font-medium">Status</th>
+                  <th className="text-right py-2 px-2 font-medium">Shortfall</th>
+                  <th className="text-right py-2 px-2 font-medium">Charge</th>
+                  {isAdmin && <th className="py-2 px-2 w-10"></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {generalParts.map((r) => (
+                  <PartRow key={r.id} r={r} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Toner */}
+      <div className="liquid-glass rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Toner</h3>
+        {tonerParts.length === 0 ? (
+          <p className="text-gray-500 py-4">No toner orders yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-2 font-medium">Part</th>
+                  <th className="text-left py-2 px-2 font-medium">Last order</th>
+                  <th className="text-right py-2 px-2 font-medium">Prior</th>
+                  <th className="text-right py-2 px-2 font-medium">Current</th>
+                  <th className="text-right py-2 px-2 font-medium">Usage</th>
+                  <th className="text-center py-2 px-2 font-medium">Toner %</th>
+                  <th className="text-center py-2 px-2 font-medium">Status</th>
+                  <th className="text-right py-2 px-2 font-medium">Adj. shortfall</th>
+                  <th className="text-right py-2 px-2 font-medium">Charge</th>
+                  {isAdmin && <th className="py-2 px-2 w-10"></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {tonerParts.map((r) => (
+                  <PartRow key={r.id} r={r} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Order modal */}
+      {showOrderModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="liquid-glass rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4">Record part order</h3>
+            <form onSubmit={handleSubmitOrder} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Part</label>
+                <select
+                  value={orderForm.modelPartId}
+                  onChange={(e) => setOrderForm((f) => ({ ...f, modelPartId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  required
+                >
+                  <option value="">Select part...</option>
+                  {modelParts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.partName} ({p.partType}) - Yield {p.expectedYield?.toLocaleString()}, R{Number(p.costRand || 0).toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Order date</label>
+                <input
+                  type="date"
+                  value={orderForm.orderDate}
+                  onChange={(e) => setOrderForm((f) => ({ ...f, orderDate: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Current meter reading</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={orderForm.currentReading}
+                  onChange={(e) => setOrderForm((f) => ({ ...f, currentReading: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="e.g. 118000"
+                  required
+                />
+              </div>
+              {modelParts.find((p) => p.id === orderForm.modelPartId)?.partType === 'toner' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Remaining toner % (0–100)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={orderForm.remainingTonerPercent}
+                    onChange={(e) => setOrderForm((f) => ({ ...f, remainingTonerPercent: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="e.g. 10"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Used to reduce shortfall charge when ordering early</p>
+                </div>
+              )}
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="submit"
+                  disabled={recordMutation.isPending}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  {recordMutation.isPending ? 'Saving...' : 'Record order'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowOrderModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {modelParts.length === 0 && machine.modelId && (
+        <div className="liquid-glass rounded-xl p-6 border-amber-200 bg-amber-50/50">
+          <p className="text-amber-800">
+            No consumable parts are defined for this model. An admin must add parts under Consumables → Model Parts.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ConsumableMachineDetail;

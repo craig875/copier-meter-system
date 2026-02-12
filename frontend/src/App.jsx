@@ -8,10 +8,16 @@ import Dashboard from './pages/Dashboard';
 import Capture from './pages/Capture';
 import History from './pages/History';
 import Machines from './pages/Machines';
-import MachineHistory from './pages/MachineHistory';
 import Users from './pages/Users';
 import ImportReadings from './pages/ImportReadings';
 import TransactionHistory from './pages/TransactionHistory';
+import ConsumablesSummary from './pages/ConsumablesSummary';
+import ConsumableMachineDetail from './pages/ConsumableMachineDetail';
+import MachineConfiguration from './pages/MachineConfiguration';
+import Customers from './pages/Customers';
+import CustomerDetail from './pages/CustomerDetail';
+import ConsumableOrders from './pages/ConsumableOrders';
+import CopierServiceDashboard from './pages/CopierServiceDashboard';
 
 function App() {
   const { user, loading } = useAuth();
@@ -81,12 +87,76 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      {/* Copier Service Dashboard */}
       <Route
-        path="/machines/:machineId/history"
+        path="/copier-service"
         element={
           <ProtectedRoute>
             <Layout>
-              <MachineHistory />
+              <CopierServiceDashboard />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Consumables Module Routes */}
+      <Route
+        path="/consumables"
+        element={<Navigate to="/consumables/orders" replace />}
+      />
+      <Route
+        path="/consumables/orders"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ConsumableOrders />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/consumables/summary"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ConsumablesSummary />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/consumables/machines/:machineId"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ConsumableMachineDetail />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/consumables/model-parts"
+        element={<Navigate to="/admin/machine-configuration" replace />}
+      />
+
+      {/* Admin Tools */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <MachineConfiguration />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/machine-configuration"
+        element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <MachineConfiguration />
             </Layout>
           </ProtectedRoute>
         }
@@ -99,6 +169,26 @@ function App() {
           <ProtectedRoute adminOnly>
             <Layout>
               <ImportReadings />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customers"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Customers />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customers/:customerId"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <CustomerDetail />
             </Layout>
           </ProtectedRoute>
         }

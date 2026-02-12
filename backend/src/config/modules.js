@@ -23,8 +23,19 @@ export const modules = [
     route: '/meter-readings',
     icon: '📊',
     enabled: true,
-    permissions: 'all', // 'all', 'admin', 'user', or custom function
+    permissions: 'all',
     apiRoutes: ['/api/machines', '/api/readings'],
+    category: 'Operations',
+  },
+  {
+    id: 'consumables',
+    name: 'Consumables',
+    description: 'Track consumable parts, validate yield, calculate charges in Rand',
+    route: '/consumables',
+    icon: '🖨️',
+    enabled: true,
+    permissions: 'all',
+    apiRoutes: ['/api/consumables', '/api/machines'],
     category: 'Operations',
   },
   // Future modules can be added here:
@@ -50,9 +61,9 @@ export function getAccessibleModules(userRole) {
   return modules.filter(module => {
     if (!module.enabled) return false;
     
-    // Meter users can only access meter readings module
+    // Meter users can access meter readings and consumables
     if (userRole === 'meter_user') {
-      return module.id === 'meter-readings';
+      return ['meter-readings', 'consumables'].includes(module.id);
     }
     
     // Admins can access all modules

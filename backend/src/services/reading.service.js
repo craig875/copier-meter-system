@@ -39,9 +39,10 @@ export class ReadingService {
     const machines = includeDecommissioned
       ? await this.machineRepo.findMany(machineWhere, { 
           orderBy: [
-            { customer: 'asc' },
+            { customer: { name: 'asc' } },
             { machineSerialNumber: 'asc' },
           ],
+          include: { model: { include: { make: true } }, customer: true },
         })
       : await this.machineRepo.findActive(branch, false);
 
@@ -280,10 +281,7 @@ export class ReadingService {
     if (branch) {
       const readings = await this.readingRepo.findMany(
         { machineId, branch },
-        {
-          ...options,
-          orderBy: [{ year: 'desc' }, { month: 'desc' }],
-        }
+        options
       );
       return { readings };
     }
@@ -314,9 +312,10 @@ export class ReadingService {
       const machines = includeDecommissioned
         ? await this.machineRepo.findMany({ branch }, { 
             orderBy: [
-              { customer: 'asc' },
+              { customer: { name: 'asc' } },
               { machineSerialNumber: 'asc' },
             ],
+            include: { model: { include: { make: true } }, customer: true },
           })
         : await this.machineRepo.findActive(branch, false);
 

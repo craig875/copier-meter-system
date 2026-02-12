@@ -6,11 +6,11 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
-  // Create admin user
+  // Create admin user (always update password so demo credentials work after re-seed)
   const adminPassword = await bcrypt.hash('admin123', 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@example.com' },
-    update: {},
+    update: { passwordHash: adminPassword, name: 'System Admin', role: 'admin' },
     create: {
       email: 'admin@example.com',
       passwordHash: adminPassword,
@@ -20,11 +20,11 @@ async function main() {
   });
   console.log('Created admin user:', admin.email);
 
-  // Create management user
+  // Create management user (always update password so demo credentials work after re-seed)
   const managementPassword = await bcrypt.hash('management123', 12);
   const management = await prisma.user.upsert({
     where: { email: 'management@example.com' },
-    update: {},
+    update: { passwordHash: managementPassword, name: 'Management User', role: 'management' },
     create: {
       email: 'management@example.com',
       passwordHash: managementPassword,
@@ -34,11 +34,11 @@ async function main() {
   });
   console.log('Created management user:', management.email);
 
-  // Create regular user
+  // Create regular user (always update password so demo credentials work after re-seed)
   const userPassword = await bcrypt.hash('user123', 12);
   const user = await prisma.user.upsert({
     where: { email: 'user@example.com' },
-    update: {},
+    update: { passwordHash: userPassword, name: 'Regular User', role: 'user' },
     create: {
       email: 'user@example.com',
       passwordHash: userPassword,
@@ -48,11 +48,11 @@ async function main() {
   });
   console.log('Created regular user:', user.email);
 
-  // Create meter user
+  // Create meter user (always update password so demo credentials work after re-seed)
   const meterUserPassword = await bcrypt.hash('meter123', 12);
   const meterUser = await prisma.user.upsert({
     where: { email: 'meter@example.com' },
-    update: {},
+    update: { passwordHash: meterUserPassword, name: 'Meter User', role: 'meter_user', branch: 'JHB' },
     create: {
       email: 'meter@example.com',
       passwordHash: meterUserPassword,
@@ -63,11 +63,11 @@ async function main() {
   });
   console.log('Created meter user:', meterUser.email);
 
-  // Create sales agent
+  // Create sales agent (always update password so demo credentials work after re-seed)
   const salesAgentPassword = await bcrypt.hash('sales123', 12);
   const salesAgent = await prisma.user.upsert({
     where: { email: 'sales@example.com' },
-    update: {},
+    update: { passwordHash: salesAgentPassword, name: 'Sales Agent', role: 'sales_agent', branch: 'JHB' },
     create: {
       email: 'sales@example.com',
       passwordHash: salesAgentPassword,
@@ -78,101 +78,46 @@ async function main() {
   });
   console.log('Created sales agent:', salesAgent.email);
 
-  // Create sample machines
+  // Create sample customers (find or create by name)
+  const customerNames = [
+    'Reception Area Copier',
+    'Finance Department',
+    'HR Department',
+    'Marketing Department',
+    'IT Department',
+    'Sales Floor - East',
+    'Sales Floor - West',
+    'Warehouse Office',
+    'Executive Suite',
+    'Legal Department',
+  ];
+  const customerMap = {};
+  for (const name of customerNames) {
+    let customer = await prisma.customer.findFirst({ where: { name, branch: 'JHB' } });
+    if (!customer) {
+      customer = await prisma.customer.create({ data: { name, branch: 'JHB' } });
+    }
+    customerMap[name] = customer.id;
+  }
+  console.log('Created/verified customers');
+
+  // Create sample machines (no makes/models - add via Admin Tools → Machine Configuration)
   const machines = [
-    {
-      machineSerialNumber: 'CPR-001',
-      customer: 'Reception Area Copier',
-      model: 'Canon iR-ADV C5535',
-      contractReference: 'CTR-2024-001',
-      monoEnabled: true,
-      colourEnabled: true,
-      scanEnabled: true,
-    },
-    {
-      machineSerialNumber: 'CPR-002',
-      customer: 'Finance Department',
-      model: 'Xerox VersaLink C7030',
-      contractReference: 'CTR-2024-001',
-      monoEnabled: true,
-      colourEnabled: true,
-      scanEnabled: true,
-    },
-    {
-      machineSerialNumber: 'CPR-003',
-      customer: 'HR Department',
-      model: 'HP LaserJet Pro M404dn',
-      contractReference: 'CTR-2024-002',
-      monoEnabled: true,
-      colourEnabled: false,
-      scanEnabled: false,
-    },
-    {
-      machineSerialNumber: 'CPR-004',
-      customer: 'Marketing Department',
-      model: 'Konica Minolta bizhub C658',
-      contractReference: 'CTR-2024-003',
-      monoEnabled: true,
-      colourEnabled: true,
-      scanEnabled: true,
-    },
-    {
-      machineSerialNumber: 'CPR-005',
-      customer: 'IT Department',
-      model: 'Brother MFC-L8900CDW',
-      contractReference: 'CTR-2024-002',
-      monoEnabled: true,
-      colourEnabled: true,
-      scanEnabled: false,
-    },
-    {
-      machineSerialNumber: 'CPR-006',
-      customer: 'Sales Floor - East',
-      model: 'Ricoh MP C4504',
-      contractReference: 'CTR-2024-004',
-      monoEnabled: true,
-      colourEnabled: true,
-      scanEnabled: true,
-    },
-    {
-      machineSerialNumber: 'CPR-007',
-      customer: 'Sales Floor - West',
-      model: 'Ricoh MP C4504',
-      contractReference: 'CTR-2024-004',
-      monoEnabled: true,
-      colourEnabled: true,
-      scanEnabled: true,
-    },
-    {
-      machineSerialNumber: 'CPR-008',
-      customer: 'Warehouse Office',
-      model: 'HP LaserJet Pro M404dn',
-      contractReference: 'CTR-2024-005',
-      monoEnabled: true,
-      colourEnabled: false,
-      scanEnabled: false,
-    },
-    {
-      machineSerialNumber: 'CPR-009',
-      customer: 'Executive Suite',
-      model: 'Canon imageRUNNER ADVANCE DX C5860i',
-      contractReference: 'CTR-2024-006',
-      monoEnabled: true,
-      colourEnabled: true,
-      scanEnabled: true,
-    },
-    {
-      machineSerialNumber: 'CPR-010',
-      customer: 'Legal Department',
-      model: 'Xerox AltaLink C8155',
-      contractReference: 'CTR-2024-007',
-      monoEnabled: true,
-      colourEnabled: true,
-      scanEnabled: true,
-    },
+    { machineSerialNumber: 'CPR-001', customerName: 'Reception Area Copier', contractReference: 'CTR-2024-001', monoEnabled: true, colourEnabled: true, scanEnabled: true },
+    { machineSerialNumber: 'CPR-002', customerName: 'Finance Department', contractReference: 'CTR-2024-001', monoEnabled: true, colourEnabled: true, scanEnabled: true },
+    { machineSerialNumber: 'CPR-003', customerName: 'HR Department', contractReference: 'CTR-2024-002', monoEnabled: true, colourEnabled: false, scanEnabled: false },
+    { machineSerialNumber: 'CPR-004', customerName: 'Marketing Department', contractReference: 'CTR-2024-003', monoEnabled: true, colourEnabled: true, scanEnabled: true },
+    { machineSerialNumber: 'CPR-005', customerName: 'IT Department', contractReference: 'CTR-2024-002', monoEnabled: true, colourEnabled: true, scanEnabled: false },
+    { machineSerialNumber: 'CPR-006', customerName: 'Sales Floor - East', contractReference: 'CTR-2024-004', monoEnabled: true, colourEnabled: true, scanEnabled: true },
+    { machineSerialNumber: 'CPR-007', customerName: 'Sales Floor - West', contractReference: 'CTR-2024-004', monoEnabled: true, colourEnabled: true, scanEnabled: true },
+    { machineSerialNumber: 'CPR-008', customerName: 'Warehouse Office', contractReference: 'CTR-2024-005', monoEnabled: true, colourEnabled: false, scanEnabled: false },
+    { machineSerialNumber: 'CPR-009', customerName: 'Executive Suite', contractReference: 'CTR-2024-006', monoEnabled: true, colourEnabled: true, scanEnabled: true },
+    { machineSerialNumber: 'CPR-010', customerName: 'Legal Department', contractReference: 'CTR-2024-007', monoEnabled: true, colourEnabled: true, scanEnabled: true },
   ];
 
-  for (const machineData of machines) {
+  for (const m of machines) {
+    const { customerName, ...rest } = m;
+    const machineData = { ...rest, customerId: customerMap[customerName] || null };
     const machine = await prisma.machine.upsert({
       where: { machineSerialNumber: machineData.machineSerialNumber },
       update: machineData,
@@ -216,6 +161,7 @@ async function main() {
   }
 
   console.log('Created historical readings for last month');
+  console.log('(Add makes/models via Admin Tools → Machine Configuration)');
   console.log('Seeding completed!');
   console.log('\nTest credentials:');
   console.log('  Admin: admin@example.com / admin123');

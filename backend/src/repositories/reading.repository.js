@@ -93,7 +93,6 @@ export class ReadingRepository extends BaseRepository {
     };
 
     // Prepare update data (only updatable fields - don't update capturedBy or branch)
-    // Include capturedAt so "saved" timestamp reflects when the reading was last saved (create or edit)
     const updateData = {
       monoReading: cleanData.monoReading,
       colourReading: cleanData.colourReading,
@@ -102,7 +101,6 @@ export class ReadingRepository extends BaseRepository {
       monoUsage: cleanData.monoUsage,
       colourUsage: cleanData.colourUsage,
       scanUsage: cleanData.scanUsage,
-      capturedAt: new Date(), // Record when this reading was last saved
     };
 
     return this.upsert(

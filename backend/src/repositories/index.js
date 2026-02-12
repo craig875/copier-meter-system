@@ -3,6 +3,9 @@ import { ReadingRepository } from './reading.repository.js';
 import { MachineRepository } from './machine.repository.js';
 import { UserRepository } from './user.repository.js';
 import { SubmissionRepository } from './submission.repository.js';
+import { ModelPartRepository } from './modelPart.repository.js';
+import { PartReplacementRepository } from './partReplacement.repository.js';
+import { CustomerRepository } from './customer.repository.js';
 
 /**
  * Repository Factory - Centralized repository creation
@@ -13,6 +16,9 @@ export const repositories = {
   machine: new MachineRepository(prisma),
   user: new UserRepository(prisma),
   submission: new SubmissionRepository(prisma),
+  modelPart: new ModelPartRepository(prisma),
+  partReplacement: new PartReplacementRepository(prisma),
+  customer: new CustomerRepository(prisma),
 };
 
 export {
@@ -20,4 +26,7 @@ export {
   MachineRepository,
   UserRepository,
   SubmissionRepository,
+  ModelPartRepository,
+  PartReplacementRepository,
+  CustomerRepository,
 };

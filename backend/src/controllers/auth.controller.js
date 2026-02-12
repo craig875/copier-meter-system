@@ -14,8 +14,16 @@ export class AuthController {
 
   login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    const result = await this.authService.login(email, password);
-    res.json(result);
+    try {
+      const result = await this.authService.login(email, password);
+      res.json(result);
+    } catch (err) {
+      // Re-throw known auth errors (UnauthorizedError → 401)
+      if (err.statusCode && err.statusCode !== 500) throw err;
+      // Log unexpected errors for debugging
+      console.error('Login error:', err);
+      throw err;
+    }
   });
 
   getMe = asyncHandler(async (req, res) => {
