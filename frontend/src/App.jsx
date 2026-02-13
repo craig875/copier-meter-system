@@ -14,6 +14,7 @@ import ImportReadings from './pages/ImportReadings';
 import TransactionHistory from './pages/TransactionHistory';
 import ConsumablesSummary from './pages/ConsumablesSummary';
 import ConsumableMachineDetail from './pages/ConsumableMachineDetail';
+import MachineReadingsHistory from './pages/MachineReadingsHistory';
 import MachineConfiguration from './pages/MachineConfiguration';
 import PartsPricing from './pages/PartsPricing';
 import Customers from './pages/Customers';
@@ -142,6 +143,18 @@ function App() {
             <CapturerRestrict>
               <Layout>
                 <ConsumableMachineDetail />
+              </Layout>
+            </CapturerRestrict>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/consumables/machines/:machineId/readings"
+        element={
+          <ProtectedRoute>
+            <CapturerRestrict>
+              <Layout>
+                <MachineReadingsHistory />
               </Layout>
             </CapturerRestrict>
           </ProtectedRoute>
