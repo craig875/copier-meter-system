@@ -127,9 +127,9 @@ const PartsPricing = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Item code</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-700">Make · Model</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-700">Part</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">Item code</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-700">Type</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-700">Expected yield</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-700">Cost (R)</th>
@@ -148,6 +148,7 @@ const PartsPricing = () => {
               ) : (
                 parts.map((part) => (
                   <tr key={part.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                    <td className="py-3 px-4 text-gray-600">{part.itemCode || '—'}</td>
                     <td className="py-3 px-4 text-gray-700">{modelDisplay(part)}</td>
                     <td className="py-3 px-4">
                       <span className="font-medium text-gray-900">{part.partName}</span>
@@ -155,7 +156,6 @@ const PartsPricing = () => {
                         <span className="ml-1.5 text-xs text-gray-500">({part.tonerColor})</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{part.itemCode || '—'}</td>
                     <td className="py-3 px-4">
                       <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
                         {part.partType}
