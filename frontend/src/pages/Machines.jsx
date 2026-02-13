@@ -16,7 +16,8 @@ import {
   Download,
   Archive,
   RotateCcw,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 import clsx from 'clsx';
 import MachineModal from '../components/MachineModal';
@@ -73,6 +74,43 @@ const Machines = () => {
 
   // API now returns response.data directly, so data is { machines, pagination }
   const machines = data?.machines || [];
+  const selectedModelId = searchParams.get('model');
+
+  // Group key: use __no_model__ when model is missing (deleted or unassigned)
+  const getModelKey = (m) => (m.model ? m.modelId : null) || '__no_model__';
+
+  const modelGroups = machines.reduce((acc, m) => {
+    const key = getModelKey(m);
+    if (!acc[key]) {
+      acc[key] = {
+        modelKey: key,
+        modelId: key === '__no_model__' ? null : m.modelId,
+        modelDisplay: m.model
+          ? `${m.model.make?.name || ''} ${m.model.name || ''}`.trim() || 'Unknown'
+          : 'No model',
+        paperSize: m.model?.paperSize || 'A4',
+        modelType: m.model?.modelType || 'mono',
+        count: 0,
+        machines: [],
+      };
+    }
+    acc[key].count += 1;
+    acc[key].machines.push(m);
+    return acc;
+  }, {});
+
+  const modelTiles = Object.values(modelGroups).sort((a, b) =>
+    a.modelDisplay.localeCompare(b.modelDisplay)
+  );
+
+  // Filtered machines for list view (when model selected); search is applied by API
+  const displayMachines = selectedModelId
+    ? machines.filter((m) => getModelKey(m) === selectedModelId)
+    : machines;
+
+  const selectedModelInfo = selectedModelId
+    ? modelTiles.find((t) => t.modelKey === selectedModelId)
+    : null;
 
   // Open edit modal when ?edit=<machineId> in URL (e.g. from Customer Detail)
   useEffect(() => {
@@ -82,7 +120,10 @@ const Machines = () => {
       if (machine) {
         setEditingMachine(machine);
         setShowModal(true);
-        setSearchParams({}, { replace: true });
+        // Preserve model param so user stays in list view for that model
+        const modelParam = searchParams.get('model');
+        const nextParams = modelParam ? { model: modelParam } : {};
+        setSearchParams(nextParams, { replace: true });
       }
     }
   }, [searchParams, machines, setSearchParams]);
@@ -191,10 +232,15 @@ const Machines = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Machines</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {selectedModelId ? `Machines – ${selectedModelInfo?.modelDisplay || 'Model'}` : 'Machines'}
+          </h1>
           <p className="text-gray-500">
             Manage copier machines and meter configurations
-            <span className="ml-2 text-gray-400 font-medium">· {machines.length} machine{machines.length !== 1 ? 's' : ''}</span>
+            <span className="ml-2 text-gray-400 font-medium">
+              · {displayMachines.length} machine{displayMachines.length !== 1 ? 's' : ''}
+              {selectedModelId ? ` in this model` : ` across ${modelTiles.length} model${modelTiles.length !== 1 ? 's' : ''}`}
+            </span>
           </p>
         </div>
         <div className="flex gap-2">
@@ -218,42 +264,99 @@ const Machines = () => {
         </div>
       </div>
 
+      {/* Back to models (list view only) */}
+      {selectedModelId && (
+        <Link
+          to="/machines"
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to models
+        </Link>
+      )}
+
       {/* Search */}
       <div data-tour="machines-search" className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
         <input
           type="text"
-          placeholder="Search machines..."
+          placeholder={selectedModelId ? 'Search within this model...' : 'Search machines...'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
 
-      {/* Table */}
-      <div data-tour="machines-table" className="liquid-glass rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial Number</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Model</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Branch</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Meters</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {machines.length === 0 ? (
+      {/* Tiles view (default) or Table (when model selected) */}
+      {!selectedModelId ? (
+        /* Tiles view */
+        <div className="space-y-4">
+          {modelTiles.length === 0 ? (
+            <div
+              data-tour="machines-table"
+              className="liquid-glass rounded-xl p-8 text-center text-gray-500"
+            >
+              <p className="mb-4">No machines found. {data ? 'Try adjusting your search or branch filter.' : 'Loading...'}</p>
+              {data && (
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Machine
+                </button>
+              )}
+            </div>
+          ) : (
+            <div
+              data-tour="machines-table"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              {modelTiles.map((tile) => (
+                <button
+                  key={tile.modelKey}
+                  onClick={() => setSearchParams({ model: tile.modelKey })}
+                  className="liquid-glass rounded-xl p-4 text-left hover:ring-2 hover:ring-red-500/50 transition-all"
+                >
+                  <div className="font-semibold text-gray-900">{tile.modelDisplay}</div>
+                  <div className="text-sm text-gray-500 mt-0.5">
+                    ({tile.paperSize} · {tile.modelType === 'colour' ? 'Colour' : 'Mono'})
+                  </div>
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="inline-flex px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">
+                      {tile.count} machine{tile.count !== 1 ? 's' : ''}
+                    </span>
+                    <MeterBlocks isColour={tile.modelType === 'colour'} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* List view */
+        <div data-tour="machines-table" className="liquid-glass rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                    No machines found. {data ? 'Try adjusting your search.' : 'Loading...'}
-                  </td>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial Number</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Branch</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Meters</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
-              ) : (
-                machines.map((machine) => (
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {displayMachines.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                      No machines in this model. {data ? 'Try adjusting your search.' : 'Loading...'}
+                    </td>
+                  </tr>
+                ) : (
+                  displayMachines.map((machine) => (
                 <tr key={machine.id} className={clsx(!machine.isActive && 'bg-gray-50 opacity-60')}>
                   <td className="px-4 py-3">
                     <Link
@@ -264,16 +367,6 @@ const Machines = () => {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-gray-500">{machine.customer?.name || '-'}</td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {machine.model ? (
-                      <>
-                        {`${machine.model.make?.name || ''} ${machine.model.name || ''}`.trim() || '-'}
-                        <span className="text-gray-500 text-xs ml-1">
-                          ({machine.model.paperSize || 'A4'} · {machine.model.modelType === 'colour' ? 'Colour' : 'Mono'})
-                        </span>
-                      </>
-                    ) : '-'}
-                  </td>
                   <td className="px-4 py-3 text-center">
                     <span className={clsx(
                       'inline-flex px-2 py-1 rounded-full text-xs font-medium',
