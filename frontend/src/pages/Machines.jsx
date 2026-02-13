@@ -455,6 +455,7 @@ const Machines = () => {
           </table>
         </div>
       </div>
+      )}
 
       {/* Modal */}
       {showModal && (
