@@ -13,6 +13,8 @@ import {
   Trash2,
   Copy,
   AlertCircle,
+  ChevronRight,
+  X,
 } from 'lucide-react';
 import { useState } from 'react';
 import MeterBlocks from '../components/MeterBlocks';
@@ -22,6 +24,7 @@ const ConsumableMachineDetail = () => {
   const queryClient = useQueryClient();
   const { effectiveBranch, isAdmin } = useAuth();
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showMeterHistoryModal, setShowMeterHistoryModal] = useState(false);
   const [orderForm, setOrderForm] = useState({
     modelPartId: '',
     orderDate: new Date().toISOString().slice(0, 10),
@@ -275,6 +278,54 @@ const ConsumableMachineDetail = () => {
         </div>
       )}
 
+      {/* Meter reading history - last 3 months tile (click for full) */}
+      <div
+        onClick={() => (readingsHistoryData?.readings?.length ?? 0) > 0 && setShowMeterHistoryModal(true)}
+        className={`liquid-glass rounded-xl p-6 cursor-pointer transition-colors ${(readingsHistoryData?.readings?.length ?? 0) > 0 ? 'hover:border-red-300 hover:bg-red-50/30' : 'cursor-default'}`}
+        role={(readingsHistoryData?.readings?.length ?? 0) > 0 ? 'button' : undefined}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Meter reading history</h3>
+          {(readingsHistoryData?.readings?.length ?? 0) > 0 && (
+            <span className="text-sm text-gray-500 flex items-center gap-1">
+              View all
+              <ChevronRight className="h-4 w-4" />
+            </span>
+          )}
+        </div>
+        {(readingsHistoryData?.readings?.length ?? 0) === 0 ? (
+          <p className="text-gray-500 py-4">No meter readings yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {(readingsHistoryData?.readings || []).slice(0, 3).map((r) => {
+              const usage = (r.monoUsage ?? 0) + (r.colourUsage ?? 0) + (r.scanUsage ?? 0);
+              const monthName = new Date(r.year, r.month - 1).toLocaleString('default', {
+                month: 'short',
+                year: 'numeric',
+              });
+              return (
+                <div
+                  key={r.id || `${r.machineId}-${r.year}-${r.month}`}
+                  className="p-3 bg-white border border-gray-200 rounded-lg text-sm"
+                >
+                  <div className="font-medium text-gray-900 mb-1">{monthName}</div>
+                  <div className="text-gray-600 space-y-0.5">
+                    <div>Mono: {r.monoReading?.toLocaleString() ?? '-'}</div>
+                    <div>Colour: {r.colourReading?.toLocaleString() ?? '-'}</div>
+                    <div className="font-medium">Usage: {usage.toLocaleString()}</div>
+                  </div>
+                  {r.capturedAt && (
+                    <div className="text-xs text-gray-500 mt-2">
+                      {new Date(r.capturedAt).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Toner */}
       <div className="liquid-glass rounded-xl p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Toner</h3>
@@ -338,57 +389,71 @@ const ConsumableMachineDetail = () => {
         )}
       </div>
 
-      {/* Meter reading history */}
-      <div className="liquid-glass rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Meter reading history</h3>
-        {(readingsHistoryData?.readings?.length ?? 0) === 0 ? (
-          <p className="text-gray-500 py-4">No meter readings yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-2 font-medium">Month/Year</th>
-                  <th className="text-right py-2 px-2 font-medium">Mono</th>
-                  <th className="text-right py-2 px-2 font-medium">Colour</th>
-                  <th className="text-right py-2 px-2 font-medium">Scan</th>
-                  <th className="text-right py-2 px-2 font-medium">Usage</th>
-                  <th className="text-center py-2 px-2 font-medium">Captured</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(readingsHistoryData?.readings || []).map((r) => {
-                  const usage = (r.monoUsage ?? 0) + (r.colourUsage ?? 0) + (r.scanUsage ?? 0);
-                  const monthName = new Date(r.year, r.month - 1).toLocaleString('default', {
-                    month: 'short',
-                    year: 'numeric',
-                  });
-                  return (
-                    <tr key={r.id || `${r.machineId}-${r.year}-${r.month}`} className="border-b border-gray-100">
-                      <td className="py-2 px-2 text-gray-700 font-medium">{monthName}</td>
-                      <td className="py-2 px-2 text-right">{r.monoReading?.toLocaleString() ?? '-'}</td>
-                      <td className="py-2 px-2 text-right">{r.colourReading?.toLocaleString() ?? '-'}</td>
-                      <td className="py-2 px-2 text-right">{r.scanReading?.toLocaleString() ?? '-'}</td>
-                      <td className="py-2 px-2 text-right">{usage.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-center text-gray-600">
-                        {r.capturedAt
-                          ? new Date(r.capturedAt).toLocaleString('en-ZA', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : '-'}
-                      </td>
+      {/* Meter reading history modal - full history */}
+      {showMeterHistoryModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="liquid-glass rounded-xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Meter reading history</h3>
+              <button
+                type="button"
+                onClick={() => setShowMeterHistoryModal(false)}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {(readingsHistoryData?.readings?.length ?? 0) === 0 ? (
+              <p className="text-gray-500 py-4">No meter readings yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-2 px-2 font-medium">Month/Year</th>
+                      <th className="text-right py-2 px-2 font-medium">Mono</th>
+                      <th className="text-right py-2 px-2 font-medium">Colour</th>
+                      <th className="text-right py-2 px-2 font-medium">Scan</th>
+                      <th className="text-right py-2 px-2 font-medium">Usage</th>
+                      <th className="text-center py-2 px-2 font-medium">Captured</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {(readingsHistoryData?.readings || []).map((r) => {
+                      const usage = (r.monoUsage ?? 0) + (r.colourUsage ?? 0) + (r.scanUsage ?? 0);
+                      const monthName = new Date(r.year, r.month - 1).toLocaleString('default', {
+                        month: 'short',
+                        year: 'numeric',
+                      });
+                      return (
+                        <tr key={r.id || `${r.machineId}-${r.year}-${r.month}`} className="border-b border-gray-100">
+                          <td className="py-2 px-2 text-gray-700 font-medium">{monthName}</td>
+                          <td className="py-2 px-2 text-right">{r.monoReading?.toLocaleString() ?? '-'}</td>
+                          <td className="py-2 px-2 text-right">{r.colourReading?.toLocaleString() ?? '-'}</td>
+                          <td className="py-2 px-2 text-right">{r.scanReading?.toLocaleString() ?? '-'}</td>
+                          <td className="py-2 px-2 text-right">{usage.toLocaleString()}</td>
+                          <td className="py-2 px-2 text-center text-gray-600">
+                            {r.capturedAt
+                              ? new Date(r.capturedAt).toLocaleString('en-ZA', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Order modal */}
       {showOrderModal && (
