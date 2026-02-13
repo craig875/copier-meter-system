@@ -13,7 +13,7 @@ import {
   getTonerAlerts,
 } from '../controllers/consumable.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
-import { requireMeterReadingAccess } from '../middleware/permissions.js';
+import { requireMeterReadingAccess, requireConsumableAccess } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import {
   recordPartOrderSchema,
@@ -25,7 +25,7 @@ import {
 const router = Router();
 
 router.use(authenticate);
-router.use(requireMeterReadingAccess);
+router.use(requireConsumableAccess);
 
 // Model part CRUD (admin) - define before /model-parts to avoid :id capturing "all"
 router.get('/model-parts/all', requireAdmin, getModelPartsAll);

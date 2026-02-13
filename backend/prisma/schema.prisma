@@ -16,6 +16,7 @@ enum Role {
   management
   meter_user
   sales_agent
+  capturer
 }
 
 enum Branch {

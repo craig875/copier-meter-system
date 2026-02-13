@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
           setUser(userData);
           // Initialize selectedBranch for admins or meter users with no branch assigned
           // (both can switch between branches)
-          if (userData.role === 'admin' || (userData.role === 'meter_user' && !userData.branch)) {
+          if (userData.role === 'admin' || ((userData.role === 'meter_user' || userData.role === 'capturer') && !userData.branch)) {
             const storedBranch = localStorage.getItem('selectedBranch');
             setSelectedBranch(storedBranch || userData.branch || 'JHB');
           }
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
     
     // Initialize selectedBranch for admins or meter users with no branch assigned
     // (both can switch between branches)
-    if (user.role === 'admin' || (user.role === 'meter_user' && !user.branch)) {
+    if (user.role === 'admin' || ((user.role === 'meter_user' || user.role === 'capturer') && !user.branch)) {
       const storedBranch = localStorage.getItem('selectedBranch');
       setSelectedBranch(storedBranch || user.branch || 'JHB');
     }
@@ -81,12 +81,14 @@ export const AuthProvider = ({ children }) => {
   
   // Check if user is a meter user
   const isMeterUser = user?.role === 'meter_user';
+  // Check if user is a capturer (capture-only)
+  const isCapturer = user?.role === 'capturer';
   
   // Get the effective branch: 
   // - For admins: use selectedBranch (can switch)
   // - For meter users with no branch assigned: use selectedBranch (can switch)
   // - For meter users with branch assigned: use their assigned branch (cannot switch)
-  const canSwitchBranches = isAdmin || (isMeterUser && !user?.branch);
+  const canSwitchBranches = isAdmin || ((isMeterUser || isCapturer) && !user?.branch);
   const effectiveBranch = canSwitchBranches ? (selectedBranch || 'JHB') : (user?.branch || null);
   
   // Helper to update selectedBranch and persist to localStorage
@@ -105,6 +107,7 @@ export const AuthProvider = ({ children }) => {
       logout, 
       isAdmin,
       isMeterUser,
+      isCapturer,
       selectedBranch,
       setSelectedBranch,
       effectiveBranch,

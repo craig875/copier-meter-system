@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import CapturerRestrict from './components/CapturerRestrict';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import HomeDashboard from './pages/HomeDashboard';
@@ -14,6 +15,7 @@ import TransactionHistory from './pages/TransactionHistory';
 import ConsumablesSummary from './pages/ConsumablesSummary';
 import ConsumableMachineDetail from './pages/ConsumableMachineDetail';
 import MachineConfiguration from './pages/MachineConfiguration';
+import PartsPricing from './pages/PartsPricing';
 import Customers from './pages/Customers';
 import CustomerDetail from './pages/CustomerDetail';
 import ConsumableOrders from './pages/ConsumableOrders';
@@ -81,9 +83,11 @@ function App() {
         path="/machines"
         element={
           <ProtectedRoute>
-            <Layout>
-              <Machines />
-            </Layout>
+            <CapturerRestrict>
+              <Layout>
+                <Machines />
+              </Layout>
+            </CapturerRestrict>
           </ProtectedRoute>
         }
       />
@@ -93,9 +97,11 @@ function App() {
         path="/copier-service"
         element={
           <ProtectedRoute>
-            <Layout>
-              <CopierServiceDashboard />
-            </Layout>
+            <CapturerRestrict>
+              <Layout>
+                <CopierServiceDashboard />
+              </Layout>
+            </CapturerRestrict>
           </ProtectedRoute>
         }
       />
@@ -109,9 +115,11 @@ function App() {
         path="/consumables/orders"
         element={
           <ProtectedRoute>
-            <Layout>
-              <ConsumableOrders />
-            </Layout>
+            <CapturerRestrict>
+              <Layout>
+                <ConsumableOrders />
+              </Layout>
+            </CapturerRestrict>
           </ProtectedRoute>
         }
       />
@@ -119,9 +127,11 @@ function App() {
         path="/consumables/summary"
         element={
           <ProtectedRoute>
-            <Layout>
-              <ConsumablesSummary />
-            </Layout>
+            <CapturerRestrict>
+              <Layout>
+                <ConsumablesSummary />
+              </Layout>
+            </CapturerRestrict>
           </ProtectedRoute>
         }
       />
@@ -129,9 +139,11 @@ function App() {
         path="/consumables/machines/:machineId"
         element={
           <ProtectedRoute>
-            <Layout>
-              <ConsumableMachineDetail />
-            </Layout>
+            <CapturerRestrict>
+              <Layout>
+                <ConsumableMachineDetail />
+              </Layout>
+            </CapturerRestrict>
           </ProtectedRoute>
         }
       />
@@ -147,6 +159,16 @@ function App() {
           <ProtectedRoute adminOnly>
             <Layout>
               <MachineConfiguration />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/parts-pricing"
+        element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <PartsPricing />
             </Layout>
           </ProtectedRoute>
         }
@@ -177,9 +199,11 @@ function App() {
         path="/customers"
         element={
           <ProtectedRoute>
-            <Layout>
-              <Customers />
-            </Layout>
+            <CapturerRestrict>
+              <Layout>
+                <Customers />
+              </Layout>
+            </CapturerRestrict>
           </ProtectedRoute>
         }
       />
@@ -187,9 +211,11 @@ function App() {
         path="/customers/:customerId"
         element={
           <ProtectedRoute>
-            <Layout>
-              <CustomerDetail />
-            </Layout>
+            <CapturerRestrict>
+              <Layout>
+                <CustomerDetail />
+              </Layout>
+            </CapturerRestrict>
           </ProtectedRoute>
         }
       />

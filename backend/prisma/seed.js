@@ -78,6 +78,21 @@ async function main() {
   });
   console.log('Created sales agent:', salesAgent.email);
 
+  // Create capturer (capture-only, no customers/consumables)
+  const capturerPassword = await bcrypt.hash('capturer123', 12);
+  const capturer = await prisma.user.upsert({
+    where: { email: 'capturer@example.com' },
+    update: { passwordHash: capturerPassword, name: 'Capturer', role: 'capturer', branch: 'JHB' },
+    create: {
+      email: 'capturer@example.com',
+      passwordHash: capturerPassword,
+      name: 'Capturer',
+      role: 'capturer',
+      branch: 'JHB',
+    },
+  });
+  console.log('Created capturer:', capturer.email);
+
   // Create sample customers (find or create by name)
   const customerNames = [
     'Reception Area Copier',
@@ -165,7 +180,8 @@ async function main() {
   console.log('Seeding completed!');
   console.log('\nTest credentials:');
   console.log('  Admin: admin@example.com / admin123');
-  console.log('  User:  user@example.com / user123');
+  console.log('  Meter User: meter@example.com / meter123');
+  console.log('  Capturer: capturer@example.com / capturer123');
 }
 
 main()

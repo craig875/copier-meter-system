@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { getCustomers, getCustomer, createCustomer, updateCustomer, deleteCustomer, archiveCustomer } from '../controllers/customer.controller.js';
 import { authenticate, requireAdmin, requireMeterOrAdmin } from '../middleware/auth.js';
-import { requireMeterReadingAccess } from '../middleware/permissions.js';
+import { requireCustomerAccess } from '../middleware/permissions.js';
 import { validate } from '../middleware/validate.js';
 import { createCustomerSchema, updateCustomerSchema } from '../schemas/customer.schema.js';
 
 const router = Router();
 
 router.use(authenticate);
-router.use(requireMeterReadingAccess);
+router.use(requireCustomerAccess);
 
 // List and view - any user with meter/consumables access
 router.get('/', getCustomers);

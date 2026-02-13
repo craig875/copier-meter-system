@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Printer } from 'lucide-react';
+import { Printer, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const modules = [
+const copierModules = [
   {
     id: 'copiers',
     name: 'Copiers',
@@ -12,11 +12,23 @@ const modules = [
     color: 'bg-red-50',
     iconColor: 'text-red-600',
   },
-  // Add more modules here as they are built
+];
+
+const capturerModules = [
+  {
+    id: 'meter-readings',
+    name: 'Meter Readings',
+    description: 'Capture monthly meter readings',
+    href: '/capture',
+    icon: LayoutDashboard,
+    color: 'bg-red-50',
+    iconColor: 'text-red-600',
+  },
 ];
 
 const HomeDashboard = () => {
-  const { user } = useAuth();
+  const { user, isCapturer } = useAuth();
+  const modules = isCapturer ? capturerModules : copierModules;
 
   return (
     <div className="space-y-6">

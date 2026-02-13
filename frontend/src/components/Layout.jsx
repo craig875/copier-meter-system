@@ -18,15 +18,15 @@ import {
   ChevronRight,
   ArrowLeft
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
 import logo from '../assets/logo.png';
 
 const Layout = ({ children }) => {
-  const { user, logout, isAdmin, isMeterUser, selectedBranch, updateSelectedBranch, effectiveBranch } = useAuth();
+  const { user, logout, isAdmin, isMeterUser, isCapturer, selectedBranch, updateSelectedBranch, effectiveBranch } = useAuth();
   const navigate = useNavigate();
-  // Show branch selector for admins or meter users with no branch assigned (can switch branches)
-  const canSwitchBranches = isAdmin || (isMeterUser && !user?.branch);
+  // Show branch selector for admins or meter users/capturers with no branch assigned (can switch branches)
+  const canSwitchBranches = isAdmin || ((isMeterUser || isCapturer) && !user?.branch);
   const location = useLocation();
   const showBackButton = location.pathname !== '/';
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -56,7 +56,20 @@ const Layout = ({ children }) => {
     }
   }, [location.pathname]);
 
-  const navigation = [
+  const navigation = isCapturer
+    ? [
+        { name: 'Home', href: '/', icon: Home },
+        { 
+          name: 'Meter Readings', 
+          href: '/meter-readings', 
+          icon: LayoutDashboard,
+          children: [
+            { name: 'Monthly Capture', href: '/capture', icon: LayoutDashboard },
+            { name: 'History', href: '/history', icon: ScrollText },
+          ]
+        },
+      ]
+    : [
     { name: 'Home', href: '/', icon: Home },
     { 
       name: 'Copier Service', 
@@ -76,6 +89,7 @@ const Layout = ({ children }) => {
         icon: Wrench,
         children: [
           { name: 'Machine Configuration', href: '/admin/machine-configuration', icon: Cog },
+          { name: 'Parts & Pricing', href: '/admin/parts-pricing', icon: Package },
           { name: 'Users', href: '/users', icon: Users },
           { name: 'Transaction History', href: '/transaction-history', icon: ScrollText },
         ]
@@ -100,9 +114,19 @@ const Layout = ({ children }) => {
 
   const isItemActive = (item) => isActive(item.href) || hasActiveChild(item);
 
+  // Prevent copy to clipboard
+  const handleCopy = useCallback((e) => {
+    e.preventDefault();
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('copy', handleCopy);
+    return () => document.removeEventListener('copy', handleCopy);
+  }, [handleCopy]);
+
   return (
     <div 
-      className="min-h-screen"
+      className="min-h-screen no-copy"
       style={{ 
         backgroundImage: 'linear-gradient(135deg, rgb(226 232 240), rgb(241 245 249), rgb(228 231 235))',
         backgroundSize: '100% 100%'

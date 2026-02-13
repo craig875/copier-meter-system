@@ -29,8 +29,8 @@ export class MachineController {
     let branch = null;
     if (hasAdminAccess(req.user.role)) {
       branch = validBranch || (req.user.branch ? String(req.user.branch).toUpperCase() : null) || null;
-    } else if (req.user.role === 'meter_user' && !req.user.branch) {
-      // Meter user with no branch - can switch, use UI selection
+    } else if ((req.user.role === 'meter_user' || req.user.role === 'capturer') && !req.user.branch) {
+      // Meter user / capturer with no branch - can switch, use UI selection
       branch = validBranch || null;
     } else {
       branch = req.user.branch ? String(req.user.branch).toUpperCase() : null;

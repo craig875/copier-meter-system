@@ -11,6 +11,7 @@ import {
   Plus,
   Printer,
   Trash2,
+  Copy,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -133,6 +134,28 @@ const ConsumableMachineDetail = () => {
     }
   };
 
+  const buildCopyLine = (r) => {
+    const date = r.orderDate ? new Date(r.orderDate).toLocaleDateString() : '-';
+    const prior = r.priorReading?.toLocaleString() ?? '-';
+    const current = r.currentReading?.toLocaleString() ?? '-';
+    const usage = r.usage?.toLocaleString() ?? '-';
+    const shortfall = r.partType === 'toner' && r.adjustedShortfallClicks > 0
+      ? r.adjustedShortfallClicks
+      : (r.shortfallClicks ?? 0);
+    const charge = r.displayChargeRand > 0 ? Number(r.displayChargeRand).toFixed(2) : '0';
+    return [r.partName, date, prior, current, usage, shortfall, `R${charge}`].join('\t');
+  };
+
+  const handleCopyLine = async (r) => {
+    try {
+      const line = buildCopyLine(r);
+      await navigator.clipboard.writeText(line);
+      toast.success('Copied to clipboard');
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
+
   const PartRow = ({ r }) => (
     <tr className="border-b border-gray-100">
       <td className="py-2 px-2 text-gray-700">{r.partName}</td>
@@ -170,19 +193,29 @@ const ConsumableMachineDetail = () => {
           <span className="text-gray-400">-</span>
         )}
       </td>
-      {isAdmin && (
-        <td className="py-2 px-2">
+      <td className="py-2 px-2">
+        <div className="flex items-center justify-center gap-1">
           <button
             type="button"
-            onClick={() => handleDeleteOrder(r)}
-            disabled={deleteOrderMutation.isPending}
-            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-            title="Delete part order"
+            onClick={() => handleCopyLine(r)}
+            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            title="Copy line for service software"
           >
-            <Trash2 className="h-4 w-4" />
+            <Copy className="h-4 w-4" />
           </button>
-        </td>
-      )}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => handleDeleteOrder(r)}
+              disabled={deleteOrderMutation.isPending}
+              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+              title="Delete part order"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </td>
     </tr>
   );
 
@@ -238,7 +271,7 @@ const ConsumableMachineDetail = () => {
                   <th className="text-center py-2 px-2 font-medium">Status</th>
                   <th className="text-right py-2 px-2 font-medium">Shortfall</th>
                   <th className="text-right py-2 px-2 font-medium">Charge</th>
-                  {isAdmin && <th className="py-2 px-2 w-10"></th>}
+                  <th className="py-2 px-2 w-20 text-center">Copy</th>
                 </tr>
               </thead>
               <tbody>
@@ -270,7 +303,7 @@ const ConsumableMachineDetail = () => {
                   <th className="text-center py-2 px-2 font-medium">Status</th>
                   <th className="text-right py-2 px-2 font-medium">Adj. shortfall</th>
                   <th className="text-right py-2 px-2 font-medium">Charge</th>
-                  {isAdmin && <th className="py-2 px-2 w-10"></th>}
+                  <th className="py-2 px-2 w-20 text-center">Copy</th>
                 </tr>
               </thead>
               <tbody>
