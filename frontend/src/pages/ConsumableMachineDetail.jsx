@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { consumablesApi, machinesApi } from '../services/api';
+import { consumablesApi, machinesApi, readingsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
@@ -12,14 +12,22 @@ import {
   Printer,
   Trash2,
   Copy,
+  AlertCircle,
+  Upload,
+  Download,
+  X,
 } from 'lucide-react';
 import { useState } from 'react';
+import MeterBlocks from '../components/MeterBlocks';
 
 const ConsumableMachineDetail = () => {
   const { machineId } = useParams();
   const queryClient = useQueryClient();
   const { effectiveBranch, isAdmin } = useAuth();
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
+  const [importErrors, setImportErrors] = useState([]);
   const [orderForm, setOrderForm] = useState({
     modelPartId: '',
     orderDate: new Date().toISOString().slice(0, 10),
@@ -40,6 +48,12 @@ const ConsumableMachineDetail = () => {
   });
 
   const modelId = machineData?.machine?.modelId || machineData?.machine?.model?.id;
+  const { data: readingsHistoryData } = useQuery({
+    queryKey: ['readings-history', machineId, effectiveBranch],
+    queryFn: () => readingsApi.getHistory(machineId, 24, effectiveBranch).then((r) => r.data),
+    enabled: !!machineId,
+  });
+
   const { data: partsData } = useQuery({
     queryKey: ['model-parts', modelId, effectiveBranch],
     queryFn: () => consumablesApi.getModelParts(modelId, effectiveBranch),
@@ -71,6 +85,27 @@ const ConsumableMachineDetail = () => {
     },
     onError: (err) => {
       toast.error(err?.response?.data?.error || 'Failed to delete order');
+    },
+  });
+
+  const importOrdersMutation = useMutation({
+    mutationFn: (data) => consumablesApi.importPartOrders(data),
+    onSuccess: (result) => {
+      const { succeeded, failed } = result;
+      if (failed.length > 0) {
+        toast(`${succeeded} imported, ${failed.length} failed`, { icon: succeeded > 0 ? '⚠️' : '❌' });
+      } else {
+        toast.success(`${succeeded} past order(s) imported`);
+      }
+      setShowImportModal(false);
+      setImportPreview(null);
+      setImportErrors([]);
+      queryClient.invalidateQueries(['consumables-history', machineId]);
+      queryClient.invalidateQueries(['consumables-summary']);
+      queryClient.invalidateQueries(['toner-alerts']);
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || 'Import failed');
     },
   });
 
@@ -127,6 +162,116 @@ const ConsumableMachineDetail = () => {
       </div>
     );
   }
+
+  const parseCSVLine = (line) => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') inQuotes = !inQuotes;
+      else if (c === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else current += c;
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const handleImportFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.name.endsWith('.csv')) {
+      setImportErrors(['Please select a CSV file']);
+      setImportPreview(null);
+      return;
+    }
+    setImportErrors([]);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target?.result || '';
+        const lines = text.split(/\r?\n/).filter((l) => l.trim());
+        if (lines.length < 2) {
+          setImportErrors(['CSV must have header row and at least one data row']);
+          setImportPreview(null);
+          return;
+        }
+        const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().replace(/^"|"$/g, '').trim());
+        const getVal = (row, keys) => {
+          for (const k of keys) {
+            const v = row[k];
+            if (v !== undefined && v !== '' && v !== null) return v;
+          }
+          return '';
+        };
+        const data = [];
+        for (let i = 1; i < lines.length; i++) {
+          const vals = parseCSVLine(lines[i]).map((v) => v.replace(/^"|"$/g, '').trim());
+          const raw = {};
+          headers.forEach((h, idx) => {
+            raw[h] = vals[idx] ?? '';
+          });
+          const serial = (getVal(raw, ['machine_serial_number', 'machine serial number', 'serial number', 'serial']) || '').trim();
+          if (!serial) continue;
+          const prior = parseInt(getVal(raw, ['prior_reading', 'prior reading']), 10);
+          const current = parseInt(getVal(raw, ['current_reading', 'current reading']), 10);
+          const itemCode = (getVal(raw, ['item_code', 'item code']) || '').trim();
+          const partName = (getVal(raw, ['part_name', 'part name']) || '').trim();
+          if (!itemCode && !partName) continue;
+          const orderDate = (getVal(raw, ['order_date', 'order date']) || '').trim() || new Date().toISOString().slice(0, 10);
+          const tonerPct = getVal(raw, ['toner_percent', 'toner percent']);
+          data.push({
+            machine_serial_number: serial,
+            item_code: itemCode || undefined,
+            part_name: partName || undefined,
+            order_date: orderDate,
+            prior_reading: isNaN(prior) ? 0 : prior,
+            current_reading: isNaN(current) ? 0 : current,
+            toner_percent: tonerPct !== '' ? parseFloat(tonerPct) : undefined,
+          });
+        }
+        if (data.length === 0) {
+          setImportErrors(['No valid rows found']);
+          setImportPreview(null);
+          return;
+        }
+        const invalid = data.filter((r) => !r.item_code && !r.part_name);
+        if (invalid.length > 0) {
+          setImportErrors(['Each row must have item_code or part_name']);
+          setImportPreview(null);
+          return;
+        }
+        setImportPreview({ data, totalRows: data.length });
+      } catch (err) {
+        setImportErrors([`Parse error: ${err.message}`]);
+        setImportPreview(null);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleImportSubmit = () => {
+    if (!importPreview?.data?.length) {
+      toast.error('No data to import');
+      return;
+    }
+    importOrdersMutation.mutate(importPreview.data);
+  };
+
+  const downloadImportTemplate = () => {
+    const csv = 'machine_serial_number,item_code,part_name,order_date,prior_reading,current_reading,toner_percent\n' +
+      (machine?.machineSerialNumber || 'CPR-001') + ',DR-101,,2024-06-15,95000,100000,\n' +
+      (machine?.machineSerialNumber || 'CPR-001') + ',CT-C,,2024-06-15,18000,20000,15';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'past-orders-import-template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleDeleteOrder = (r) => {
     if (window.confirm(`Delete this part order record?\n\n${r.partName} • ${r.orderDate ? new Date(r.orderDate).toLocaleDateString() : ''}\n\nThis cannot be undone.`)) {
@@ -229,20 +374,32 @@ const ConsumableMachineDetail = () => {
           <ArrowLeft className="h-5 w-5 mr-2" />
           {(machine?.customer?.id || machine?.customerId) ? `Back to ${machine.customer?.name ?? machine.customer ?? 'Customer'}` : 'Back to Customers'}
         </Link>
-        <button
-          onClick={() => setShowOrderModal(true)}
-          disabled={modelParts.length === 0}
-          className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Record part order
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowOrderModal(true)}
+            disabled={modelParts.length === 0}
+            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Record part order
+          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Upload className="h-5 w-5 mr-2" />
+              Import past orders
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="liquid-glass rounded-xl p-6">
         <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-red-50 rounded-lg">
+          <div className="p-3 bg-red-50 rounded-lg flex items-center gap-3">
             <Printer className="h-8 w-8 text-red-600" />
+            <MeterBlocks isColour={machine.model?.modelType === 'colour'} size="lg" />
           </div>
           <div>
             <h2 className="text-xl font-semibold text-gray-900">{machine.machineSerialNumber}</h2>
@@ -251,6 +408,71 @@ const ConsumableMachineDetail = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {machine.nearEndOfLife && (
+        <div className="liquid-glass rounded-xl p-4 border-amber-300 bg-amber-50/80 flex items-center gap-3">
+          <AlertCircle className="h-6 w-6 text-amber-600 flex-shrink-0" />
+          <div>
+            <p className="font-medium text-amber-900">Near end of life</p>
+            <p className="text-sm text-amber-800">
+              This machine has reached {machine.lifePercentUsed}% of its estimated lifespan
+              {machine.model?.machineLife ? ` (${machine.model.machineLife.toLocaleString()} pages)` : ''}.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Meter reading history */}
+      <div className="liquid-glass rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Meter reading history</h3>
+        {(readingsHistoryData?.readings?.length ?? 0) === 0 ? (
+          <p className="text-gray-500 py-4">No meter readings yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-2 font-medium">Month/Year</th>
+                  <th className="text-right py-2 px-2 font-medium">Mono</th>
+                  <th className="text-right py-2 px-2 font-medium">Colour</th>
+                  <th className="text-right py-2 px-2 font-medium">Scan</th>
+                  <th className="text-right py-2 px-2 font-medium">Usage</th>
+                  <th className="text-center py-2 px-2 font-medium">Captured</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(readingsHistoryData?.readings || []).map((r) => {
+                  const usage = (r.monoUsage ?? 0) + (r.colourUsage ?? 0) + (r.scanUsage ?? 0);
+                  const monthName = new Date(r.year, r.month - 1).toLocaleString('default', {
+                    month: 'short',
+                    year: 'numeric',
+                  });
+                  return (
+                    <tr key={r.id || `${r.machineId}-${r.year}-${r.month}`} className="border-b border-gray-100">
+                      <td className="py-2 px-2 text-gray-700 font-medium">{monthName}</td>
+                      <td className="py-2 px-2 text-right">{r.monoReading?.toLocaleString() ?? '-'}</td>
+                      <td className="py-2 px-2 text-right">{r.colourReading?.toLocaleString() ?? '-'}</td>
+                      <td className="py-2 px-2 text-right">{r.scanReading?.toLocaleString() ?? '-'}</td>
+                      <td className="py-2 px-2 text-right">{usage.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-center text-gray-600">
+                        {r.capturedAt
+                          ? new Date(r.capturedAt).toLocaleString('en-ZA', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* General Parts */}
@@ -402,6 +624,108 @@ const ConsumableMachineDetail = () => {
           <p className="text-amber-800">
             No consumable parts are defined for this model. An admin must add parts under Consumables → Model Parts.
           </p>
+        </div>
+      )}
+
+      {/* Import past orders modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="liquid-glass rounded-xl p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Import past toner orders</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportPreview(null);
+                  setImportErrors([]);
+                }}
+                className="p-1 text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Upload a CSV with past orders. Columns: machine_serial_number, item_code (or part_name), order_date,
+              prior_reading, current_reading, toner_percent (optional for toner).
+            </p>
+            {importErrors.length > 0 && (
+              <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {importErrors.join(', ')}
+              </div>
+            )}
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={downloadImportTemplate}
+                className="flex items-center gap-1 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg"
+              >
+                <Download className="h-4 w-4" />
+                Download template
+              </button>
+              <label className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
+                <Upload className="h-4 w-4" />
+                Select CSV
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={handleImportFileChange}
+                />
+              </label>
+            </div>
+            {importPreview && (
+              <>
+                <p className="text-sm text-gray-600 mb-2">
+                  {importPreview.totalRows} row(s) to import
+                </p>
+                <div className="max-h-48 overflow-y-auto border rounded mb-4">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-2 py-1 text-left">Serial</th>
+                        <th className="px-2 py-1 text-left">Part</th>
+                        <th className="px-2 py-1 text-left">Date</th>
+                        <th className="px-2 py-1 text-right">Prior</th>
+                        <th className="px-2 py-1 text-right">Current</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importPreview.data.slice(0, 10).map((r, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="px-2 py-1">{r.machine_serial_number}</td>
+                          <td className="px-2 py-1">{r.item_code || r.part_name || '-'}</td>
+                          <td className="px-2 py-1">{r.order_date}</td>
+                          <td className="px-2 py-1 text-right">{r.prior_reading?.toLocaleString()}</td>
+                          <td className="px-2 py-1 text-right">{r.current_reading?.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {importPreview.data.length > 10 && (
+                    <p className="px-2 py-1 text-xs text-gray-500">... and {importPreview.data.length - 10} more</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleImportSubmit}
+                    disabled={importOrdersMutation.isPending}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {importOrdersMutation.isPending ? 'Importing...' : `Import ${importPreview.data.length} order(s)`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImportPreview(null)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

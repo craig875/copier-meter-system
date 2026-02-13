@@ -15,10 +15,12 @@ import {
   FileSpreadsheet,
   Download,
   Archive,
-  RotateCcw
+  RotateCcw,
+  AlertCircle
 } from 'lucide-react';
 import clsx from 'clsx';
 import MachineModal from '../components/MachineModal';
+import MeterBlocks from '../components/MeterBlocks';
 
 const Machines = () => {
   const queryClient = useQueryClient();
@@ -281,25 +283,39 @@ const Machines = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex justify-center gap-1">
-                      <MeterBadge label="M" enabled={machine.monoEnabled} />
-                      <MeterBadge label="C" enabled={machine.colourEnabled} />
-                      <MeterBadge label="S" enabled={machine.scanEnabled} />
+                    <div className="flex justify-center items-center gap-2">
+                      <MeterBlocks isColour={machine.model?.modelType === 'colour'} />
+                      <div className="flex gap-1">
+                        <MeterBadge label="M" enabled={machine.monoEnabled} />
+                        <MeterBadge label="C" enabled={machine.colourEnabled} />
+                        <MeterBadge label="S" enabled={machine.scanEnabled} />
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {machine.isDecommissioned ? (
-                      <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                        Decommissioned
-                      </span>
-                    ) : (
-                      <span className={clsx(
-                        'inline-flex px-2 py-1 rounded-full text-xs font-medium',
-                        machine.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                      )}>
-                        {machine.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    )}
+                    <div className="flex flex-col items-center gap-1">
+                      {machine.isDecommissioned ? (
+                        <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                          Decommissioned
+                        </span>
+                      ) : (
+                        <span className={clsx(
+                          'inline-flex px-2 py-1 rounded-full text-xs font-medium',
+                          machine.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        )}>
+                          {machine.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      )}
+                      {machine.nearEndOfLife && (
+                        <span
+                          className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"
+                          title={`Near end of life (${machine.lifePercentUsed}% of lifespan)`}
+                        >
+                          <AlertCircle className="h-3 w-3" />
+                          Near end of life
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button

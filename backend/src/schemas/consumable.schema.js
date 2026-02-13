@@ -43,3 +43,21 @@ export const consumableSummaryQuerySchema = z.object({
   partType: partTypeEnum.optional(),
   complianceStatus: z.enum(['met', 'not_met']).optional(),
 });
+
+const pastOrderRowSchema = z
+  .object({
+    machine_serial_number: z.string().min(1, 'Machine serial number required'),
+    item_code: z.string().optional(),
+    part_name: z.string().optional(),
+    order_date: z.union([z.string(), z.coerce.date()]),
+    prior_reading: z.coerce.number().int().min(0),
+    current_reading: z.coerce.number().int().min(0),
+    toner_percent: z.coerce.number().min(0).max(100).optional(),
+  })
+  .refine((row) => (row.item_code?.trim() || row.part_name?.trim()), {
+    message: 'Each row must have item_code or part_name',
+  });
+
+export const importPartOrdersSchema = z.object({
+  data: z.array(pastOrderRowSchema).min(1, 'At least one row required'),
+});

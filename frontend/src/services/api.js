@@ -165,6 +165,7 @@ export const consumablesApi = {
   updateModelPart: (id, data) => api.put(`/consumables/model-parts/${id}`, data).then(res => res.data),
   deleteModelPart: (id) => api.delete(`/consumables/model-parts/${id}`).then(res => res.data),
   recordPartOrder: (data) => api.post('/consumables/orders', data).then(res => res.data),
+  importPartOrders: (data) => api.post('/consumables/orders/import', { data }).then(res => res.data),
   deletePartOrder: (id) => api.delete(`/consumables/orders/${id}`).then(res => res.data),
   getMachineHistory: (machineId, branch = null) => {
     const params = branch ? { branch } : {};

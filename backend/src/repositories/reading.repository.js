@@ -47,6 +47,24 @@ export class ReadingRepository extends BaseRepository {
     );
   }
 
+  /**
+   * Get the latest reading per machine (one reading per machineId)
+   * @param {string[]} machineIds
+   * @returns {Promise<Map<string, object>>} Map of machineId -> latest reading
+   */
+  async findLatestByMachineIds(machineIds) {
+    if (!machineIds?.length) return new Map();
+    const readings = await this.prisma.reading.findMany({
+      where: { machineId: { in: machineIds } },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+    });
+    const byMachine = new Map();
+    for (const r of readings) {
+      if (!byMachine.has(r.machineId)) byMachine.set(r.machineId, r);
+    }
+    return byMachine;
+  }
+
   async deleteByMachineIdAndYearMonth(machineId, year, month) {
     // Find the reading first to get its id, then delete
     const reading = await this.findOne({

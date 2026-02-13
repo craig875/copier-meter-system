@@ -3,11 +3,28 @@ import { repositories } from '../repositories/index.js';
 import { NotFoundError, ConflictError } from '../utils/errors.js';
 
 /**
+ * Compute life status from machine (with model.machineLife) and latest reading.
+ */
+function computeLifeStatus(machine, reading) {
+  const machineLife = machine?.model?.machineLife;
+  const mono = reading?.monoReading ?? 0;
+  const colour = reading?.colourReading ?? 0;
+  const totalReading = mono + colour;
+  if (!machineLife || machineLife <= 0) {
+    return { totalReading, lifePercentUsed: null, nearEndOfLife: false };
+  }
+  const lifePercentUsed = Math.round((totalReading / machineLife) * 100);
+  const nearEndOfLife = lifePercentUsed >= 80;
+  return { totalReading, lifePercentUsed, nearEndOfLife };
+}
+
+/**
  * Customer Service - Business logic for customers
  */
 export class CustomerService {
   constructor(repos = repositories) {
     this.customerRepo = repos.customer;
+    this.readingRepo = repos.reading;
     this.prisma = prisma;
   }
 
@@ -27,6 +44,16 @@ export class CustomerService {
       where: { id },
       include: { machines: { include: { model: { include: { make: true } } } } },
     });
+    if (customer?.machines?.length > 0) {
+      const latestByMachine = await this.readingRepo.findLatestByMachineIds(customer.machines.map((m) => m.id));
+      for (const m of customer.machines) {
+        const reading = latestByMachine.get(m.id) || null;
+        const life = computeLifeStatus(m, reading);
+        m.totalReading = life.totalReading;
+        m.lifePercentUsed = life.lifePercentUsed;
+        m.nearEndOfLife = life.nearEndOfLife;
+      }
+    }
     return { customer };
   }
 

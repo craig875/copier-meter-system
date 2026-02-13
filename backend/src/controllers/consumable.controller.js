@@ -78,6 +78,11 @@ export class ConsumableController {
     const result = await this.consumableService.getTonerAlertsByCustomer(branch);
     res.json(result);
   });
+
+  importPartOrders = asyncHandler(async (req, res) => {
+    const result = await this.consumableService.importPartOrders(req.body.data, req.user.id);
+    res.json(result);
+  });
 }
 
 const controller = new ConsumableController();
@@ -92,3 +97,4 @@ export const updateModelPart = controller.updateModelPart.bind(controller);
 export const deleteModelPart = controller.deleteModelPart.bind(controller);
 export const deletePartOrder = controller.deletePartOrder.bind(controller);
 export const getTonerAlerts = controller.getTonerAlerts.bind(controller);
+export const importPartOrders = controller.importPartOrders.bind(controller);

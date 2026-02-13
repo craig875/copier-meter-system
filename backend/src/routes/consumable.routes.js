@@ -11,6 +11,7 @@ import {
   updateModelPart,
   deleteModelPart,
   getTonerAlerts,
+  importPartOrders,
 } from '../controllers/consumable.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { requireMeterReadingAccess, requireConsumableAccess } from '../middleware/permissions.js';
@@ -20,6 +21,7 @@ import {
   createModelPartSchema,
   updateModelPartSchema,
   consumableSummaryQuerySchema,
+  importPartOrdersSchema,
 } from '../schemas/consumable.schema.js';
 
 const router = Router();
@@ -39,6 +41,9 @@ router.get('/model-parts', getModelParts);
 
 // Record a part order/replacement
 router.post('/orders', validate(recordPartOrderSchema), recordPartOrder);
+
+// Import past part orders from CSV (admin only)
+router.post('/orders/import', requireAdmin, validate(importPartOrdersSchema), importPartOrders);
 
 // Delete a part order record (admin only)
 router.delete('/orders/:id', requireAdmin, deletePartOrder);

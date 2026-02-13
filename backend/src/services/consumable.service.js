@@ -272,6 +272,106 @@ export class ConsumableService {
   }
 
   /**
+   * Import past part orders from CSV (admin only).
+   * Each row must have machine_serial_number, item_code or part_name, order_date, prior_reading, current_reading.
+   * @param {object[]} data - Array of row objects from CSV
+   * @param {string} userId - User performing the import
+   * @returns {{ succeeded: number, failed: Array<{ row: number, error: string }> }}
+   */
+  async importPartOrders(data, userId) {
+    const results = { succeeded: 0, failed: [] };
+    const branch = null;
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowNum = i + 1;
+      try {
+        const machine = await this.machineRepo.findBySerialNumber(
+          String(row.machine_serial_number || '').trim()
+        );
+        if (!machine) {
+          results.failed.push({ row: rowNum, error: `Machine not found: ${row.machine_serial_number}` });
+          continue;
+        }
+
+        const modelId = machine.modelId || machine.model?.id;
+        if (!modelId) {
+          results.failed.push({ row: rowNum, error: `Machine ${row.machine_serial_number} has no model` });
+          continue;
+        }
+
+        let modelPart = null;
+        const itemCode = (row.item_code || '').trim();
+        const partName = (row.part_name || '').trim();
+        if (itemCode) {
+          modelPart = await this.modelPartRepo.findByModelIdAndItemCode(modelId, itemCode, machine.branch);
+        }
+        if (!modelPart && partName) {
+          modelPart = await this.modelPartRepo.findByModelIdAndPartName(modelId, partName, machine.branch);
+        }
+        if (!modelPart) {
+          results.failed.push({
+            row: rowNum,
+            error: `Part not found for model: ${itemCode || partName || '?'}`,
+          });
+          continue;
+        }
+
+        const priorReading = parseInt(row.prior_reading, 10);
+        const currentReading = parseInt(row.current_reading, 10);
+        if (isNaN(priorReading) || priorReading < 0) {
+          results.failed.push({ row: rowNum, error: 'Invalid prior_reading' });
+          continue;
+        }
+        if (isNaN(currentReading) || currentReading < 0) {
+          results.failed.push({ row: rowNum, error: 'Invalid current_reading' });
+          continue;
+        }
+        const usage = Math.max(0, currentReading - priorReading);
+        const expectedYield = modelPart.expectedYield;
+        const costRand = Number(modelPart.costRand);
+
+        let calcResult;
+        if (modelPart.partType === 'toner') {
+          const pct = row.toner_percent != null ? Number(row.toner_percent) : 0;
+          calcResult = calcTonerPart(usage, expectedYield, costRand, pct);
+        } else {
+          calcResult = calcGeneralPart(usage, expectedYield, costRand);
+        }
+
+        await this.partReplacementRepo.create({
+          machineId: machine.id,
+          modelPartId: modelPart.id,
+          orderDate: new Date(row.order_date),
+          priorReading,
+          currentReading,
+          usage,
+          remainingTonerPercent:
+            modelPart.partType === 'toner' && row.toner_percent != null ? Number(row.toner_percent) : null,
+          yieldMet: calcResult.yieldMet,
+          shortfallClicks: calcResult.shortfallClicks,
+          adjustedShortfallClicks: calcResult.adjustedShortfallClicks,
+          costPerClick: calcResult.costPerClick,
+          displayChargeRand: calcResult.displayChargeRand,
+          expectedYieldSnapshot: expectedYield,
+          costRandSnapshot: costRand,
+          branch: machine.branch,
+          capturedBy: userId,
+        });
+
+        results.succeeded++;
+      } catch (err) {
+        results.failed.push({
+          row: rowNum,
+          error: err.message || String(err),
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
    * Delete a part order/replacement record (admin only)
    */
   async deletePartOrder(id) {

@@ -3,8 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { customersApi, consumablesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, ArrowLeft, Building2, Printer, Package, ChevronRight, Pencil, AlertTriangle, Plus } from 'lucide-react';
+import { Loader2, ArrowLeft, Building2, Printer, Package, ChevronRight, Pencil, AlertTriangle, Plus, AlertCircle } from 'lucide-react';
 import MachineModal from '../components/MachineModal';
+import MeterBlocks from '../components/MeterBlocks';
 
 const CustomerDetail = () => {
   const { customerId } = useParams();
@@ -113,12 +114,22 @@ const CustomerDetail = () => {
                   className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:border-red-300 transition-colors group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-red-100 transition-colors">
+                    <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-red-100 transition-colors flex items-center gap-2">
                       <Printer className="h-5 w-5 text-gray-600 group-hover:text-red-600" />
+                      <MeterBlocks isColour={machine.model?.modelType === 'colour'} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-gray-900">{machine.machineSerialNumber}</p>
+                        {machine.nearEndOfLife && (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300"
+                            title={`Near end of life (${machine.lifePercentUsed}% of ${machine.model?.machineLife?.toLocaleString()} lifespan)`}
+                          >
+                            <AlertCircle className="h-3 w-3" />
+                            Near end of life
+                          </span>
+                        )}
                         {partsDueByMachine[machine.id]?.length > 0 && (
                           <span
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200"

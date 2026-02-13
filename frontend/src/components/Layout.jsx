@@ -80,6 +80,7 @@ const Layout = ({ children }) => {
         { name: 'Meter Readings', href: '/meter-readings', icon: LayoutDashboard, activePaths: ['/capture', '/history', '/import-readings'] },
         { name: 'Machines', href: '/machines', icon: Printer },
         { name: 'Consumable Orders', href: '/consumables/orders', icon: Package, activePaths: ['/consumables'] },
+        { name: 'Consumable Summary', href: '/consumables/summary', icon: Package, activePaths: ['/consumables/summary'] },
       ]
     },
     ...(isAdmin ? [

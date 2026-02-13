@@ -179,13 +179,14 @@ const History = () => {
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Scan</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Usage</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Note</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Captured</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {machines.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
                     No machines found for this month. {isLoading ? 'Loading...' : 'Try selecting a different month or check your branch filter.'}
                   </td>
                 </tr>
@@ -273,6 +274,17 @@ const History = () => {
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-600">
+                      {currentReading?.capturedAt
+                        ? new Date(currentReading.capturedAt).toLocaleString('en-ZA', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : '-'}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {currentReading ? (

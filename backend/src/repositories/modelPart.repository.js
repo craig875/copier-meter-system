@@ -22,4 +22,16 @@ export class ModelPartRepository extends BaseRepository {
     if (branch) where.branch = branch;
     return this.findOne(where);
   }
+
+  async findByModelIdAndItemCode(modelId, itemCode, branch = null) {
+    const where = { modelId, itemCode, isActive: true };
+    if (branch) where.branch = branch;
+    return this.findOne(where);
+  }
+
+  async findByModelIdAndPartName(modelId, partName, branch = null) {
+    const where = { modelId, partName, isActive: true };
+    if (branch) where.branch = branch;
+    return this.findOne(where);
+  }
 }

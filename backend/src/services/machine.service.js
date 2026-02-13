@@ -2,12 +2,34 @@ import { repositories } from '../repositories/index.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
 
 /**
+ * Compute life status from machine (with model.machineLife) and latest reading.
+ * @param {object} machine - Machine with model
+ * @param {object|null} reading - Latest reading
+ * @returns {{ totalReading: number, lifePercentUsed: number|null, nearEndOfLife: boolean }}
+ */
+function computeLifeStatus(machine, reading) {
+  const machineLife = machine?.model?.machineLife;
+  const mono = reading?.monoReading ?? 0;
+  const colour = reading?.colourReading ?? 0;
+  const totalReading = mono + colour;
+
+  if (!machineLife || machineLife <= 0) {
+    return { totalReading, lifePercentUsed: null, nearEndOfLife: false };
+  }
+
+  const lifePercentUsed = Math.round((totalReading / machineLife) * 100);
+  const nearEndOfLife = lifePercentUsed >= 80;
+  return { totalReading, lifePercentUsed, nearEndOfLife };
+}
+
+/**
  * Machine Service - Business logic for machines
  * Single Responsibility: Business logic for machine operations
  */
 export class MachineService {
   constructor(repos = repositories) {
     this.machineRepo = repos.machine;
+    this.readingRepo = repos.reading;
   }
 
   /**
@@ -54,6 +76,18 @@ export class MachineService {
       this.machineRepo.count(whereClause),
     ]);
 
+    // Enrich with life status (totalReading, lifePercentUsed, nearEndOfLife)
+    if (machines.length > 0) {
+      const latestByMachine = await this.readingRepo.findLatestByMachineIds(machines.map((m) => m.id));
+      for (const m of machines) {
+        const reading = latestByMachine.get(m.id) || null;
+        const life = computeLifeStatus(m, reading);
+        m.totalReading = life.totalReading;
+        m.lifePercentUsed = life.lifePercentUsed;
+        m.nearEndOfLife = life.nearEndOfLife;
+      }
+    }
+
     return {
       machines,
       pagination: {
@@ -75,6 +109,11 @@ export class MachineService {
     if (!machine) {
       throw new NotFoundError('Machine');
     }
+    const [latestReading] = await this.readingRepo.findByMachineId(id, { take: 1 });
+    const life = computeLifeStatus(machine, latestReading || null);
+    machine.totalReading = life.totalReading;
+    machine.lifePercentUsed = life.lifePercentUsed;
+    machine.nearEndOfLife = life.nearEndOfLife;
     return { machine };
   }
 
