@@ -275,6 +275,69 @@ const ConsumableMachineDetail = () => {
         </div>
       )}
 
+      {/* Toner */}
+      <div className="liquid-glass rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Toner</h3>
+        {tonerParts.length === 0 ? (
+          <p className="text-gray-500 py-4">No toner orders yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-2 font-medium">Part</th>
+                  <th className="text-left py-2 px-2 font-medium">Last order</th>
+                  <th className="text-right py-2 px-2 font-medium">Prior</th>
+                  <th className="text-right py-2 px-2 font-medium">Current</th>
+                  <th className="text-right py-2 px-2 font-medium">Usage</th>
+                  <th className="text-center py-2 px-2 font-medium">Toner %</th>
+                  <th className="text-center py-2 px-2 font-medium">Status</th>
+                  <th className="text-right py-2 px-2 font-medium">Adj. shortfall</th>
+                  <th className="text-right py-2 px-2 font-medium">Charge</th>
+                  <th className="py-2 px-2 w-20 text-center">Copy</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tonerParts.map((r) => (
+                  <PartRow key={r.id} r={r} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* General Parts */}
+      <div className="liquid-glass rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">General parts</h3>
+        {generalParts.length === 0 ? (
+          <p className="text-gray-500 py-4">No general part orders yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-2 font-medium">Part</th>
+                  <th className="text-left py-2 px-2 font-medium">Last order</th>
+                  <th className="text-right py-2 px-2 font-medium">Prior</th>
+                  <th className="text-right py-2 px-2 font-medium">Current</th>
+                  <th className="text-right py-2 px-2 font-medium">Usage</th>
+                  <th className="text-center py-2 px-2 font-medium">Status</th>
+                  <th className="text-right py-2 px-2 font-medium">Shortfall</th>
+                  <th className="text-right py-2 px-2 font-medium">Charge</th>
+                  <th className="py-2 px-2 w-20 text-center">Copy</th>
+                </tr>
+              </thead>
+              <tbody>
+                {generalParts.map((r) => (
+                  <PartRow key={r.id} r={r} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Meter reading history */}
       <div className="liquid-glass rounded-xl p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Meter reading history</h3>
@@ -321,69 +384,6 @@ const ConsumableMachineDetail = () => {
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* General Parts */}
-      <div className="liquid-glass rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">General parts</h3>
-        {generalParts.length === 0 ? (
-          <p className="text-gray-500 py-4">No general part orders yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-2 font-medium">Part</th>
-                  <th className="text-left py-2 px-2 font-medium">Last order</th>
-                  <th className="text-right py-2 px-2 font-medium">Prior</th>
-                  <th className="text-right py-2 px-2 font-medium">Current</th>
-                  <th className="text-right py-2 px-2 font-medium">Usage</th>
-                  <th className="text-center py-2 px-2 font-medium">Status</th>
-                  <th className="text-right py-2 px-2 font-medium">Shortfall</th>
-                  <th className="text-right py-2 px-2 font-medium">Charge</th>
-                  <th className="py-2 px-2 w-20 text-center">Copy</th>
-                </tr>
-              </thead>
-              <tbody>
-                {generalParts.map((r) => (
-                  <PartRow key={r.id} r={r} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Toner */}
-      <div className="liquid-glass rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Toner</h3>
-        {tonerParts.length === 0 ? (
-          <p className="text-gray-500 py-4">No toner orders yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-2 font-medium">Part</th>
-                  <th className="text-left py-2 px-2 font-medium">Last order</th>
-                  <th className="text-right py-2 px-2 font-medium">Prior</th>
-                  <th className="text-right py-2 px-2 font-medium">Current</th>
-                  <th className="text-right py-2 px-2 font-medium">Usage</th>
-                  <th className="text-center py-2 px-2 font-medium">Toner %</th>
-                  <th className="text-center py-2 px-2 font-medium">Status</th>
-                  <th className="text-right py-2 px-2 font-medium">Adj. shortfall</th>
-                  <th className="text-right py-2 px-2 font-medium">Charge</th>
-                  <th className="py-2 px-2 w-20 text-center">Copy</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tonerParts.map((r) => (
-                  <PartRow key={r.id} r={r} />
-                ))}
               </tbody>
             </table>
           </div>
