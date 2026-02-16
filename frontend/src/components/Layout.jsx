@@ -73,7 +73,6 @@ const Layout = ({ children }) => {
   const navigation = isCapturer
     ? [
         { name: 'Home', href: '/', icon: Home },
-        { name: 'Security', href: '/security', icon: Shield },
         { 
           name: 'Meter Readings', 
           href: '/meter-readings', 
@@ -86,7 +85,6 @@ const Layout = ({ children }) => {
       ]
     : [
     { name: 'Home', href: '/', icon: Home },
-    { name: 'Security', href: '/security', icon: Shield },
     { 
       name: 'Copier Service', 
       href: '/copier-service', 
@@ -261,6 +259,20 @@ const Layout = ({ children }) => {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700 space-y-3">
+          {/* Security - bottom, just above user info, matches main nav style */}
+          <Link
+            to="/security"
+            onClick={() => setSidebarOpen(false)}
+            className={clsx(
+              'flex items-center px-4 py-3 mb-1 rounded-lg transition-colors',
+              location.pathname === '/security'
+                ? 'bg-red-600 text-white'
+                : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+            )}
+          >
+            <Shield className="h-5 w-5 mr-3" />
+            Security
+          </Link>
           {/* Branch Selector for Admins and Meter Users with All Branches Access */}
           {canSwitchBranches && (
             <div data-tour="branch-selector" className="mb-3">
