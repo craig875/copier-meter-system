@@ -11,7 +11,6 @@ export default function Setup2FAPrompt() {
   const show = !!user && !user.twoFactorEnabled && location.pathname !== '/security';
 
   const handleSetup = () => {
-    setShow(false);
     navigate('/security');
   };
 
