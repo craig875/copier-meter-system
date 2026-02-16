@@ -23,6 +23,7 @@ import {
 import { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
 import logo from '../assets/logo.png';
+import Setup2FAPrompt from './Setup2FAPrompt';
 
 const Layout = ({ children }) => {
   const { user, logout, isAdmin, isMeterUser, isCapturer, selectedBranch, updateSelectedBranch, effectiveBranch } = useAuth();
@@ -323,6 +324,9 @@ const Layout = ({ children }) => {
           {children}
         </main>
       </div>
+
+      {/* 2FA setup prompt (production only, when 2FA not enabled) */}
+      <Setup2FAPrompt />
     </div>
   );
 };

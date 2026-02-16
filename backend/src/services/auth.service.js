@@ -59,6 +59,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         branch: user.branch,
+        twoFactorEnabled: !!user.twoFactorEnabled,
       },
     };
   }
@@ -103,6 +104,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         branch: user.branch,
+        twoFactorEnabled: !!user.twoFactorEnabled,
       },
     };
   }
@@ -202,6 +204,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         branch: user.branch,
+        twoFactorEnabled: !!user.twoFactorEnabled,
       },
     };
   }

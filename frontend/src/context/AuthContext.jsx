@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const response = await authApi.getMe();
           const userData = response.data.user;
-          setUser(userData);
+          setUser({ ...userData, twoFactorEnabled: userData.twoFactorEnabled ?? false });
           // Initialize selectedBranch for admins or meter users with no branch assigned
           // (both can switch between branches)
           if (userData.role === 'admin' || ((userData.role === 'meter_user' || userData.role === 'capturer') && !userData.branch)) {
@@ -46,14 +46,15 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const completeLogin = (token, user) => {
+    const userWith2FA = { ...user, twoFactorEnabled: user.twoFactorEnabled ?? false };
     localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setUser(user);
-    if (user.role === 'admin' || ((user.role === 'meter_user' || user.role === 'capturer') && !user.branch)) {
+    localStorage.setItem('user', JSON.stringify(userWith2FA));
+    setUser(userWith2FA);
+    if (userWith2FA.role === 'admin' || ((userWith2FA.role === 'meter_user' || userWith2FA.role === 'capturer') && !userWith2FA.branch)) {
       const storedBranch = localStorage.getItem('selectedBranch');
-      setSelectedBranch(storedBranch || user.branch || 'JHB');
+      setSelectedBranch(storedBranch || userWith2FA.branch || 'JHB');
     }
-    return user;
+    return userWith2FA;
   };
 
   const login = async (email, password) => {
@@ -75,6 +76,18 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Invalid response from server.');
     }
     return completeLogin(data.token, data.user);
+  };
+
+  const refreshUser = async () => {
+    try {
+      const response = await authApi.getMe();
+      const userData = response.data.user;
+      const userWith2FA = { ...userData, twoFactorEnabled: userData.twoFactorEnabled ?? false };
+      setUser(userWith2FA);
+      localStorage.setItem('user', JSON.stringify(userWith2FA));
+    } catch {
+      // Ignore - user might have logged out
+    }
   };
 
   const logout = () => {
@@ -115,6 +128,7 @@ export const AuthProvider = ({ children }) => {
       loading, 
       login, 
       loginWith2FA,
+      refreshUser,
       logout, 
       isAdmin,
       isMeterUser,

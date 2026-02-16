@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { Shield, ShieldCheck, ShieldOff } from 'lucide-react';
 
 const SecuritySettings = () => {
+  const { refreshUser } = useAuth();
   const [status, setStatus] = useState({ enabled: false });
   const [loading, setLoading] = useState(true);
   const [setupLoading, setSetupLoading] = useState(false);
@@ -54,6 +56,7 @@ const SecuritySettings = () => {
       setQrCode(null);
       setSecret(null);
       setCode('');
+      await refreshUser();
       fetchStatus();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Invalid code. Please try again.');
