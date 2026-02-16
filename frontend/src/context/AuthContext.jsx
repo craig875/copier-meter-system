@@ -45,26 +45,36 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = async (email, password) => {
-    const response = await authApi.login({ email, password });
-    const data = response?.data;
-    if (!data?.token || !data?.user) {
-      throw new Error('Invalid response from server. Check that the backend is running and CORS is configured.');
-    }
-    const { token, user } = data;
-    
+  const completeLogin = (token, user) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     setUser(user);
-    
-    // Initialize selectedBranch for admins or meter users with no branch assigned
-    // (both can switch between branches)
     if (user.role === 'admin' || ((user.role === 'meter_user' || user.role === 'capturer') && !user.branch)) {
       const storedBranch = localStorage.getItem('selectedBranch');
       setSelectedBranch(storedBranch || user.branch || 'JHB');
     }
-    
     return user;
+  };
+
+  const login = async (email, password) => {
+    const response = await authApi.login({ email, password });
+    const data = response?.data;
+    if (data?.requires2FA && data?.tempToken) {
+      return { requires2FA: true, tempToken: data.tempToken };
+    }
+    if (!data?.token || !data?.user) {
+      throw new Error('Invalid response from server. Check that the backend is running and CORS is configured.');
+    }
+    return completeLogin(data.token, data.user);
+  };
+
+  const loginWith2FA = async (tempToken, code) => {
+    const response = await authApi.verify2FA({ tempToken, code });
+    const data = response?.data;
+    if (!data?.token || !data?.user) {
+      throw new Error('Invalid response from server.');
+    }
+    return completeLogin(data.token, data.user);
   };
 
   const logout = () => {
@@ -104,6 +114,7 @@ export const AuthProvider = ({ children }) => {
       user, 
       loading, 
       login, 
+      loginWith2FA,
       logout, 
       isAdmin,
       isMeterUser,

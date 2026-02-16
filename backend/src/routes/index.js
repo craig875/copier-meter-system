@@ -8,6 +8,7 @@ import auditRoutes from './audit.routes.js';
 import consumableRoutes from './consumable.routes.js';
 import makeModelRoutes from './makeModel.routes.js';
 import customerRoutes from './customer.routes.js';
+import notificationRoutes from './notification.routes.js';
 
 const router = Router();
 
@@ -33,6 +34,9 @@ router.use('/audit', auditRoutes);
 
 // User management
 router.use('/users', userRoutes);
+
+// Notifications (admin only)
+router.use('/notifications', notificationRoutes);
 
 // Health check
 router.get('/health', (req, res) => {

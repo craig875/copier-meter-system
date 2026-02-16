@@ -96,6 +96,7 @@ Use this checklist to ensure you have everything ready for cloud deployment.
 - [ ] Backend health check works
 - [ ] Frontend can connect to backend
 - [ ] Login works
+- [ ] 2FA works (Security page, enable/disable, login with code)
 - [ ] Database migrations ran successfully
 - [ ] CORS is configured correctly
 - [ ] All environment variables are set

@@ -5,6 +5,7 @@ import { ImportService } from './import.service.js';
 import { AuditService } from './audit.service.js';
 import { ConsumableService } from './consumable.service.js';
 import { CustomerService } from './customer.service.js';
+import { NotificationService } from './notification.service.js';
 
 /**
  * Service Factory - Centralized service creation
@@ -19,6 +20,7 @@ export const services = {
   audit: new AuditService(),
   consumable: new ConsumableService(),
   customer: new CustomerService(),
+  notification: new NotificationService(),
 };
 
 export {

@@ -21,6 +21,8 @@ import Customers from './pages/Customers';
 import CustomerDetail from './pages/CustomerDetail';
 import ConsumableOrders from './pages/ConsumableOrders';
 import CopierServiceDashboard from './pages/CopierServiceDashboard';
+import Notifications from './pages/Notifications';
+import SecuritySettings from './pages/SecuritySettings';
 
 function App() {
   const { user, loading } = useAuth();
@@ -248,6 +250,26 @@ function App() {
           <ProtectedRoute adminOnly>
             <Layout>
               <TransactionHistory />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <Notifications />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/security"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <SecuritySettings />
             </Layout>
           </ProtectedRoute>
         }

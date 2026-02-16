@@ -1,5 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 import { config } from '../config/index.js';
 import { repositories } from '../repositories/index.js';
 import { UnauthorizedError, ConflictError, NotFoundError } from '../utils/errors.js';
@@ -31,6 +33,18 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password');
     }
 
+    if (user.twoFactorEnabled) {
+      const tempToken = jwt.sign(
+        { userId: user.id, purpose: '2fa' },
+        config.jwtSecret,
+        { expiresIn: '5m' }
+      );
+      return {
+        requires2FA: true,
+        tempToken,
+      };
+    }
+
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       config.jwtSecret,
@@ -47,6 +61,128 @@ export class AuthService {
         branch: user.branch,
       },
     };
+  }
+
+  async verify2FA(tempToken, code) {
+    let payload;
+    try {
+      payload = jwt.verify(tempToken, config.jwtSecret);
+    } catch {
+      throw new UnauthorizedError('Invalid or expired verification. Please log in again.');
+    }
+    if (payload.purpose !== '2fa') {
+      throw new UnauthorizedError('Invalid token');
+    }
+
+    const user = await this.userRepo.findById(payload.userId);
+    if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new UnauthorizedError('2FA not enabled for this account');
+    }
+
+    const isValid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code,
+      window: 1,
+    });
+    if (!isValid) {
+      throw new UnauthorizedError('Invalid verification code');
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    );
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        branch: user.branch,
+      },
+    };
+  }
+
+  async get2FAStatus(userId) {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User');
+    }
+    return { enabled: !!user.twoFactorEnabled };
+  }
+
+  async setup2FA(userId) {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User');
+    }
+    if (user.twoFactorEnabled) {
+      throw new ConflictError('2FA is already enabled');
+    }
+
+    const secret = speakeasy.generateSecret({
+      name: `Internal Ops (${user.email})`,
+      length: 32,
+    });
+
+    const qrCode = await QRCode.toDataURL(secret.otpauth_url);
+    return {
+      secret: secret.base32,
+      qrCode,
+    };
+  }
+
+  async verify2FASetup(userId, code, secret) {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User');
+    }
+    if (user.twoFactorEnabled) {
+      throw new ConflictError('2FA is already enabled');
+    }
+
+    const isValid = speakeasy.totp.verify({
+      secret,
+      encoding: 'base32',
+      token: code,
+      window: 1,
+    });
+    if (!isValid) {
+      throw new UnauthorizedError('Invalid verification code');
+    }
+
+    await this.userRepo.update(userId, {
+      twoFactorSecret: secret,
+      twoFactorEnabled: true,
+    });
+
+    return { message: '2FA enabled successfully' };
+  }
+
+  async disable2FA(userId, password) {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User');
+    }
+    if (!user.twoFactorEnabled) {
+      throw new ConflictError('2FA is not enabled');
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!isValidPassword) {
+      throw new UnauthorizedError('Invalid password');
+    }
+
+    await this.userRepo.update(userId, {
+      twoFactorSecret: null,
+      twoFactorEnabled: false,
+    });
+
+    return { message: '2FA disabled successfully' };
   }
 
   /**

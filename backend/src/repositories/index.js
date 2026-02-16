@@ -6,6 +6,7 @@ import { SubmissionRepository } from './submission.repository.js';
 import { ModelPartRepository } from './modelPart.repository.js';
 import { PartReplacementRepository } from './partReplacement.repository.js';
 import { CustomerRepository } from './customer.repository.js';
+import notificationRepository from './notification.repository.js';
 
 /**
  * Repository Factory - Centralized repository creation
@@ -19,6 +20,7 @@ export const repositories = {
   modelPart: new ModelPartRepository(prisma),
   partReplacement: new PartReplacementRepository(prisma),
   customer: new CustomerRepository(prisma),
+  notification: notificationRepository,
 };
 
 export {

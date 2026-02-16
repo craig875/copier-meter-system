@@ -28,8 +28,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const isLoginRequest = error.config?.url?.includes('/auth/login');
-      if (!isLoginRequest) {
+      const isAuthStep = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/verify-2fa');
+      if (!isAuthStep) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
@@ -42,7 +42,12 @@ api.interceptors.response.use(
 // Auth API
 export const authApi = {
   login: (data) => api.post('/auth/login', data),
+  verify2FA: (data) => api.post('/auth/verify-2fa', data),
   getMe: () => api.get('/auth/me'),
+  get2FAStatus: () => api.get('/auth/2fa/status'),
+  setup2FA: () => api.post('/auth/2fa/setup'),
+  verify2FASetup: (data) => api.post('/auth/2fa/verify-setup', data),
+  disable2FA: (data) => api.post('/auth/2fa/disable', data),
 };
 
 // Users API
@@ -116,6 +121,14 @@ export const dashboardApi = {
 // Audit / Transaction History API (admin only)
 export const auditApi = {
   getHistory: (params = {}) => api.get('/audit', { params }).then(res => res.data),
+};
+
+// Notifications API (admin only)
+export const notificationsApi = {
+  getAll: (params = {}) => api.get('/notifications', { params }).then(res => res.data),
+  getUnreadCount: () => api.get('/notifications/unread-count').then(res => res.data),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllRead: () => api.post('/notifications/mark-all-read'),
 };
 
 // Customers API

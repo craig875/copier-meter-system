@@ -31,12 +31,15 @@ model User {
   name         String
   role         Role      @default(meter_user)
   branch       Branch?
+  twoFactorSecret   String?   @map("two_factor_secret")
+  twoFactorEnabled Boolean   @default(false) @map("two_factor_enabled")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   readings        Reading[]
   submissions     Submission[]
   auditLogs       AuditLog[]
   partReplacements PartReplacement[]
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -221,6 +224,26 @@ model ModelPart {
   @@index([modelId])
   @@index([branch])
   @@map("model_parts")
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  type       String    @map("type")
+  title      String    @map("title")
+  message    String?   @map("message")
+  linkUrl    String?   @map("link_url")
+  entityType String?   @map("entity_type")
+  entityId   String?   @map("entity_id")
+  readAt     DateTime? @map("read_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([readAt])
+  @@map("notifications")
 }
 
 model PartReplacement {

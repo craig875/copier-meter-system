@@ -52,6 +52,35 @@ export class ReadingController {
     const userId = req.user.id;
     const result = await this.readingService.submitReadings(year, month, branch, readings, userId);
     this.auditService.log(userId, 'reading_submit', 'reading', null, { year, month, branch, savedCount: result.savedCount });
+
+    // Notify admins when capturer adds a note to a reading (fire-and-forget, never affect response)
+    try {
+      const readingsWithNotes = readings.filter((r) => r.note && String(r.note).trim().length > 0);
+      if (readingsWithNotes.length > 0 && (req.user.role === 'capturer' || req.user.role === 'meter_user')) {
+        const { services } = await import('../services/index.js');
+        const { repositories } = await import('../repositories/index.js');
+        const machines = await repositories.machine.findByIds(readingsWithNotes.map((r) => r.machineId));
+        const machineMap = new Map((machines || []).map((m) => [m.id, m]));
+        const capturerName = req.user.name || req.user.email || 'A user';
+        for (const r of readingsWithNotes) {
+          const machine = machineMap.get(r.machineId);
+          if (machine) {
+            services.notification.notifyReadingNoteAdded({
+              machineSerialNumber: machine.machineSerialNumber,
+              machineId: r.machineId,
+              year: parseInt(year),
+              month: parseInt(month),
+              branch,
+              note: r.note.trim(),
+              capturerName,
+            }).catch((err) => console.error('Notification error:', err));
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to create notifications (readings still saved):', err);
+    }
+
     res.json(result);
   });
 

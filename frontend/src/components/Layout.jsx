@@ -1,9 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  LayoutDashboard, 
-  Printer, 
-  Users, 
+import {
+  LayoutDashboard,
+  Printer,
+  Users,
   LogOut,
   Menu,
   X,
@@ -16,7 +16,9 @@ import {
   Cog,
   ChevronDown,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Bell,
+  Shield
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
@@ -59,6 +61,7 @@ const Layout = ({ children }) => {
   const navigation = isCapturer
     ? [
         { name: 'Home', href: '/', icon: Home },
+        { name: 'Security', href: '/security', icon: Shield },
         { 
           name: 'Meter Readings', 
           href: '/meter-readings', 
@@ -71,6 +74,7 @@ const Layout = ({ children }) => {
       ]
     : [
     { name: 'Home', href: '/', icon: Home },
+    { name: 'Security', href: '/security', icon: Shield },
     { 
       name: 'Copier Service', 
       href: '/copier-service', 
@@ -84,6 +88,7 @@ const Layout = ({ children }) => {
       ]
     },
     ...(isAdmin ? [
+      { name: 'Notifications', href: '/notifications', icon: Bell },
       { 
         name: 'Admin Tools', 
         href: '/admin', 

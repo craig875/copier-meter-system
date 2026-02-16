@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { readingsApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -22,25 +23,32 @@ import clsx from 'clsx';
 
 const Capture = () => {
   const queryClient = useQueryClient();
-  const { isAdmin, effectiveBranch } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { isAdmin, effectiveBranch, updateSelectedBranch, canSwitchBranches } = useAuth();
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  const urlYear = searchParams.get('year');
+  const urlMonth = searchParams.get('month');
+  const urlBranch = searchParams.get('branch');
+  const highlightMachineId = searchParams.get('machineId');
+  const [year, setYear] = useState(urlYear ? parseInt(urlYear, 10) : now.getFullYear());
+  const [month, setMonth] = useState(urlMonth ? parseInt(urlMonth, 10) : now.getMonth() + 1);
   const [search, setSearch] = useState('');
   const [editedReadings, setEditedReadings] = useState({});
   const [errors, setErrors] = useState({});
 
+  const queryBranch = urlBranch && canSwitchBranches ? urlBranch : effectiveBranch;
+
   const { data, isLoading, error, isError } = useQuery({
-    queryKey: ['readings', year, month, effectiveBranch],
-    queryFn: () => readingsApi.get(year, month, false, effectiveBranch),
+    queryKey: ['readings', year, month, queryBranch],
+    queryFn: () => readingsApi.get(year, month, false, queryBranch),
     enabled: !!year && !!month, // Ensure query runs when year/month are set
   });
 
   const unlockMutation = useMutation({
-    mutationFn: () => readingsApi.unlock(year, month, effectiveBranch),
+    mutationFn: () => readingsApi.unlock(year, month, queryBranch),
     onSuccess: (response) => {
       toast.success(response.data.message || 'Month unlocked');
-      queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+      queryClient.invalidateQueries(['readings', year, month, queryBranch]);
     },
     onError: (error) => {
       const msg = error.response?.data?.message || error.response?.data?.error || 'Failed to unlock';
@@ -49,7 +57,7 @@ const Capture = () => {
   });
 
   const submitMutation = useMutation({
-    mutationFn: (readings) => readingsApi.submit({ year, month, readings, branch: effectiveBranch }),
+    mutationFn: (readings) => readingsApi.submit({ year, month, readings, branch: queryBranch }),
     onSuccess: (response) => {
       const { savedCount, skippedCount, skippedSerialNumbers } = response.data;
       toast.success(`Saved ${savedCount} readings${skippedCount ? `. ${skippedCount} skipped (wrong branch)` : ''}`);
@@ -58,7 +66,7 @@ const Capture = () => {
       }
       setEditedReadings({});
       setErrors({});
-      queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+      queryClient.invalidateQueries(['readings', year, month, queryBranch]);
       queryClient.invalidateQueries(['toner-alerts']);
     },
     onError: (error) => {
@@ -90,6 +98,38 @@ const Capture = () => {
     ? Math.round((summary.capturedCount / summary.totalMachines) * 100)
     : 0;
   const isComplete = summary.totalMachines > 0 && summary.capturedCount === summary.totalMachines;
+
+  // Sync year/month/branch from URL when they change (e.g. from notification link)
+  useEffect(() => {
+    if (urlYear && urlMonth) {
+      const y = parseInt(urlYear, 10);
+      const m = parseInt(urlMonth, 10);
+      if (!isNaN(y) && y >= 2000 && y <= 2100) setYear(y);
+      if (!isNaN(m) && m >= 1 && m <= 12) setMonth(m);
+    }
+    if (urlBranch && canSwitchBranches && (urlBranch === 'JHB' || urlBranch === 'CT')) {
+      updateSelectedBranch(urlBranch);
+    }
+  }, [urlYear, urlMonth, urlBranch, canSwitchBranches, updateSelectedBranch]);
+
+  // Scroll to machine row when arriving from notification link
+  useEffect(() => {
+    if (!highlightMachineId || machines.length === 0) return;
+    const timer = setTimeout(() => {
+      const row = document.querySelector(`[data-machine-id="${highlightMachineId}"]`);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.classList.add('ring-2', 'ring-red-400', 'ring-offset-2');
+        setTimeout(() => row.classList.remove('ring-2', 'ring-red-400', 'ring-offset-2'), 3000);
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('machineId');
+          return next;
+        }, { replace: true });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [highlightMachineId, machines.length, setSearchParams]);
 
   const filteredMachines = useMemo(() => {
     if (!search) return machines;
@@ -212,7 +252,7 @@ const Capture = () => {
     }
 
     try {
-      await readingsApi.submit({ year, month, readings: [reading], branch: effectiveBranch });
+      await readingsApi.submit({ year, month, readings: [reading], branch: queryBranch });
       toast.success(`Saved readings for ${machine.machine.machineSerialNumber}`);
       
       // Remove this machine from editedReadings
@@ -233,7 +273,7 @@ const Capture = () => {
         return newErrors;
       });
       
-      queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+      queryClient.invalidateQueries(['readings', year, month, queryBranch]);
       queryClient.invalidateQueries(['toner-alerts']);
     } catch (error) {
       if (error.response?.data?.errors) {
@@ -308,7 +348,7 @@ const Capture = () => {
         return newErrors;
       });
       
-      queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+      queryClient.invalidateQueries(['readings', year, month, queryBranch]);
       queryClient.invalidateQueries(['toner-alerts']);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to delete reading');
@@ -339,9 +379,9 @@ const Capture = () => {
 
       if (readingsToSubmit.length > 0) {
         try {
-          await readingsApi.submit({ year, month, readings: readingsToSubmit, branch: effectiveBranch });
+          await readingsApi.submit({ year, month, readings: readingsToSubmit, branch: queryBranch });
           setEditedReadings({});
-          queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+          queryClient.invalidateQueries(['readings', year, month, queryBranch]);
           queryClient.invalidateQueries(['toner-alerts']);
         } catch (error) {
           toast.error('Failed to save readings before export');
@@ -352,18 +392,18 @@ const Capture = () => {
 
     // Then export
     try {
-      const response = await readingsApi.export(year, month, effectiveBranch);
+      const response = await readingsApi.export(year, month, queryBranch);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `meter-readings-${effectiveBranch || 'all'}-${year}-${String(month).padStart(2, '0')}.xlsx`);
+      link.setAttribute('download', `meter-readings-${queryBranch || 'all'}-${year}-${String(month).padStart(2, '0')}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
       toast.success('Excel file exported successfully! Month has been locked.');
       // Refresh to get locked status
-      queryClient.invalidateQueries(['readings', year, month, effectiveBranch]);
+      queryClient.invalidateQueries(['readings', year, month, queryBranch]);
       queryClient.invalidateQueries(['toner-alerts']);
     } catch (error) {
       toast.error('Failed to export readings');
@@ -425,7 +465,7 @@ const Capture = () => {
                   {new Date(submission.submittedAt).toLocaleDateString()}
                 </span>
               </div>
-              {isAdmin && effectiveBranch && (
+              {isAdmin && queryBranch && (
                 <button
                   onClick={() => {
                     if (window.confirm('Unlock this month for editing? Anyone will be able to modify the readings.')) {
@@ -604,6 +644,7 @@ const Capture = () => {
               {filteredMachines.map(({ machine, currentReading, previousReading }) => (
                 <tr 
                   key={machine.id}
+                  data-machine-id={machine.id}
                   className={clsx(
                     editedReadings[machine.id] && 'bg-blue-50'
                   )}

@@ -7,6 +7,7 @@ This guide walks you through deploying the Copier Meter System so people in your
 ## What You'll Get
 
 - **Login page** – Users sign in with email and password
+- **Two-Factor Authentication (2FA)** – Optional TOTP (Google Authenticator) for extra security
 - **Capture screen** – Enter monthly meter readings
 - **History** – View and export past readings
 - **Machines** – Admins manage copier configurations
@@ -123,7 +124,10 @@ git push -u origin main
 3. Change the admin password:
    - Go to **Users** (admin menu).
    - Edit the admin user and set a new password.
-4. Add users for your team:
+4. (Optional) Enable 2FA for your account:
+   - Go to **Security** in the sidebar.
+   - Click **Enable 2FA**, scan the QR code with Google Authenticator or similar, then verify.
+5. Add users for your team:
    - **Users** → **Add User**.
    - Enter email, name, role (Meter User, Admin, etc.), branch.
 
