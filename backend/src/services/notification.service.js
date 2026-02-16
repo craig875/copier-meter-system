@@ -52,6 +52,35 @@ export class NotificationService {
   }
 
   /**
+   * Notify admins when a part order is captured
+   * @param {Object} params
+   * @param {string} params.machineId
+   * @param {string} params.partName
+   * @param {string} params.machineSerialNumber
+   * @param {string} [params.customerName]
+   * @param {string} params.capturedByName - name of user who captured the order
+   * @param {string} params.orderId - part replacement/order id for entity tracking
+   */
+  async notifyPartOrderCaptured({ machineId, partName, machineSerialNumber, customerName, capturedByName, orderId }) {
+    const adminIds = await this.getAdminUserIds();
+    if (adminIds.length === 0) return;
+
+    const linkUrl = `/consumables/machines/${machineId}`;
+    const customerStr = customerName ? ` (${customerName})` : '';
+    const title = `Part order: ${partName} - ${machineSerialNumber}${customerStr}`;
+    const message = `${capturedByName} recorded a new part order`;
+
+    await this.notificationRepo.createForUsers(adminIds, {
+      type: 'part_order_captured',
+      title,
+      message,
+      linkUrl,
+      entityType: 'part_order',
+      entityId: orderId,
+    });
+  }
+
+  /**
    * Get notifications for current user (admin)
    */
   async getForUser(userId, options = {}) {

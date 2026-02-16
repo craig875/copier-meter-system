@@ -21,9 +21,11 @@ import {
   Shield
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import logo from '../assets/logo.png';
 import Setup2FAPrompt from './Setup2FAPrompt';
+import { notificationsApi } from '../services/api';
 
 const Layout = ({ children }) => {
   const { user, logout, isAdmin, isMeterUser, isCapturer, selectedBranch, updateSelectedBranch, effectiveBranch } = useAuth();
@@ -34,6 +36,14 @@ const Layout = ({ children }) => {
   const showBackButton = location.pathname !== '/';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState(new Set());
+
+  const { data: unreadData } = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: () => notificationsApi.getUnreadCount(),
+    enabled: !!isAdmin,
+    refetchInterval: 30000, // refresh every 30s
+  });
+  const unreadCount = unreadData?.count ?? 0;
 
   const toggleSection = (name) => {
     setExpandedSections((prev) => {
@@ -177,7 +187,19 @@ const Layout = ({ children }) => {
                     : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                 )}
               >
-                <item.icon className="h-5 w-5 mr-3" />
+                {item.name === 'Notifications' ? (
+                  <span className="relative flex-shrink-0 mr-3">
+                    <Bell className={clsx('h-5 w-5', unreadCount > 0 && 'animate-bell-jingle')} />
+                    {unreadCount > 0 && (
+                      <span
+                        className="absolute -top-0.5 -right-1 w-2.5 h-2.5 rounded-full bg-red-500"
+                        aria-label={`${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`}
+                      />
+                    )}
+                  </span>
+                ) : (
+                  <item.icon className="h-5 w-5 mr-3" />
+                )}
                 {item.name}
               </Link>
               {item.children && isItemActive(item) && (

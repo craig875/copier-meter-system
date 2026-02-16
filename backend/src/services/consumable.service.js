@@ -100,7 +100,7 @@ export class ConsumableService {
 
     const withDetails = await prisma.partReplacement.findUnique({
       where: { id: replacement.id },
-      include: { modelPart: true, machine: true },
+      include: { modelPart: true, machine: { include: { customer: true } } },
     });
 
     return {

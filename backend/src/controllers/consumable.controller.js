@@ -20,6 +20,18 @@ export class ConsumableController {
   recordPartOrder = asyncHandler(async (req, res) => {
     const data = { ...req.body, capturedBy: req.user.id };
     const result = await this.consumableService.recordPartOrder(data);
+    // Notify admins (fire-and-forget)
+    const { replacement } = result;
+    if (replacement?.machineId && replacement?.modelPart?.partName) {
+      services.notification.notifyPartOrderCaptured({
+        machineId: replacement.machineId,
+        partName: replacement.modelPart.partName,
+        machineSerialNumber: replacement.machine?.machineSerialNumber || 'Unknown',
+        customerName: replacement.machine?.customer?.name || null,
+        capturedByName: req.user.name || req.user.email || 'A user',
+        orderId: replacement.id,
+      }).catch((err) => console.error('Part order notification error:', err));
+    }
     res.status(201).json(result);
   });
 

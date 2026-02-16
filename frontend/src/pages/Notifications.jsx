@@ -6,6 +6,7 @@ import {
   Bell,
   Loader2,
   MessageSquare,
+  Package,
   CheckCheck,
   ChevronRight,
 } from 'lucide-react';
@@ -24,12 +25,18 @@ const Notifications = () => {
 
   const markReadMutation = useMutation({
     mutationFn: (id) => notificationsApi.markRead(id),
-    onSuccess: () => queryClient.invalidateQueries(['notifications']),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['notifications']);
+      queryClient.invalidateQueries(['notifications', 'unread-count']);
+    },
   });
 
   const markAllReadMutation = useMutation({
     mutationFn: () => notificationsApi.markAllRead(),
-    onSuccess: () => queryClient.invalidateQueries(['notifications']),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['notifications']);
+      queryClient.invalidateQueries(['notifications', 'unread-count']);
+    },
   });
 
   const notifications = data?.notifications || [];
@@ -79,7 +86,7 @@ const Notifications = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
           <p className="text-gray-500 mt-1">
-            Alerts when capturers or meter users add notes to readings
+            Alerts when part orders are captured and when notes are added to readings
           </p>
         </div>
         {unreadCount > 0 && (
@@ -100,7 +107,7 @@ const Notifications = () => {
             <Bell className="h-12 w-12 mx-auto text-gray-300 mb-4" />
             <p>No notifications yet.</p>
             <p className="text-sm mt-1">
-              When a capturer or meter user adds a note to a meter reading, you&apos;ll see it here.
+              When part orders are captured or notes are added to readings, you&apos;ll see them here. Click to open.
             </p>
           </div>
         ) : (
@@ -120,7 +127,11 @@ const Notifications = () => {
                     !n.readAt ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
                   )}
                 >
-                  <MessageSquare className="h-5 w-5" />
+                  {n.type === 'part_order_captured' ? (
+                    <Package className="h-5 w-5" />
+                  ) : (
+                    <MessageSquare className="h-5 w-5" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className={clsx('font-medium', !n.readAt ? 'text-gray-900' : 'text-gray-700')}>
