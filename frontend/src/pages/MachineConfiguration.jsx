@@ -815,8 +815,8 @@ const PartEditModal = ({ part, onClose, onSave }) => {
     meterType: part.meterType || 'mono',
   });
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="liquid-glass rounded-xl p-6 max-w-md w-full">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="popup-panel p-6 max-w-md w-full">
         <h3 className="font-semibold mb-4">Edit part</h3>
         <div className="space-y-3">
           <input

@@ -284,8 +284,8 @@ const ConsumablesSummary = () => {
 
       {/* Import past orders modal */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="liquid-glass rounded-xl p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+          <div className="popup-panel p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Import past toner orders</h3>
               <button

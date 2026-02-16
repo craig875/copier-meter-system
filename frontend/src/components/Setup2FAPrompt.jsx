@@ -17,7 +17,7 @@ export default function Setup2FAPrompt() {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
       <div
         className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl border border-gray-200"
         style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}

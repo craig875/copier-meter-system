@@ -25,25 +25,44 @@ const Notifications = () => {
 
   const markReadMutation = useMutation({
     mutationFn: (id) => notificationsApi.markRead(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['notifications']);
-      queryClient.invalidateQueries(['notifications', 'unread-count']);
+    onSuccess: (_, notificationId) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      // Optimistically update notifications list - mark this one as read
+      queryClient.setQueryData(['notifications'], (old) => {
+        if (!old?.notifications) return old;
+        return {
+          notifications: old.notifications.map((n) =>
+            n.id === notificationId ? { ...n, readAt: new Date().toISOString() } : n
+          ),
+        };
+      });
+      // Optimistically update unread count so red dot disappears immediately
+      queryClient.setQueryData(['notifications', 'unread-count'], (old) => {
+        if (old && typeof old.count === 'number') {
+          return { count: Math.max(0, old.count - 1) };
+        }
+        return old;
+      });
     },
   });
 
   const markAllReadMutation = useMutation({
     mutationFn: () => notificationsApi.markAllRead(),
     onSuccess: () => {
-      queryClient.invalidateQueries(['notifications']);
-      queryClient.invalidateQueries(['notifications', 'unread-count']);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.setQueryData(['notifications', 'unread-count'], { count: 0 });
     },
   });
 
   const notifications = data?.notifications || [];
 
-  const handleNotificationClick = (n) => {
+  const handleNotificationClick = async (n) => {
     if (!n.readAt) {
-      markReadMutation.mutate(n.id);
+      try {
+        await markReadMutation.mutateAsync(n.id);
+      } catch (err) {
+        console.error('Failed to mark notification as read:', err);
+      }
     }
     if (n.linkUrl) {
       const path = n.linkUrl.startsWith('/') ? n.linkUrl : `/${n.linkUrl}`;

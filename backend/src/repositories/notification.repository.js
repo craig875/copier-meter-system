@@ -1,4 +1,5 @@
 import prisma from '../config/database.js';
+import { NotFoundError } from '../utils/errors.js';
 
 /**
  * Notification Repository - Data access for notifications
@@ -59,8 +60,10 @@ export class NotificationRepository {
    * Mark notification as read
    */
   async markRead(id, userId) {
-    return prisma.notification.updateMany({
-      where: { id, userId },
+    const existing = await prisma.notification.findFirst({ where: { id, userId } });
+    if (!existing) throw new NotFoundError('Notification');
+    return prisma.notification.update({
+      where: { id },
       data: { readAt: new Date() },
     });
   }

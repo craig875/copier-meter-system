@@ -41,7 +41,8 @@ const Layout = ({ children }) => {
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationsApi.getUnreadCount(),
     enabled: !!isAdmin,
-    refetchInterval: 30000, // refresh every 30s
+    refetchInterval: 60000, // refresh every 60s
+    staleTime: 0, // always consider stale so invalidations trigger refetch
   });
   const unreadCount = unreadData?.count ?? 0;
 

@@ -24,7 +24,19 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <ErrorBoundary>
         <AuthProvider>
           <App />
-          <Toaster position="top-right" />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#fff',
+                color: '#1f2937',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                border: '1px solid #e5e7eb',
+              },
+              success: { iconTheme: { primary: '#16a34a' } },
+              error: { iconTheme: { primary: '#dc2626' } },
+            }}
+          />
         </AuthProvider>
       </ErrorBoundary>
       </BrowserRouter>
