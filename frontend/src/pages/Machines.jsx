@@ -183,8 +183,8 @@ const Machines = () => {
             </p>
             <button
               onClick={() => {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
+                sessionStorage.removeItem('token');
+                sessionStorage.removeItem('user');
                 window.location.href = '/login';
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"

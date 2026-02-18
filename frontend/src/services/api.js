@@ -13,9 +13,9 @@ const api = axios.create({
   },
 });
 
-// Add auth token to requests
+// Add auth token to requests (sessionStorage = logout when tab closes)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -30,8 +30,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const isAuthStep = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/verify-2fa');
       if (!isAuthStep) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
         window.location.href = '/login';
       }
     }

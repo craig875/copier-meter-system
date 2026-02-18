@@ -20,8 +20,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
+      const token = sessionStorage.getItem('token');
+      const storedUser = sessionStorage.getItem('user');
       
       if (token && storedUser) {
         try {
@@ -35,8 +35,8 @@ export const AuthProvider = ({ children }) => {
             setSelectedBranch(storedBranch || userData.branch || 'JHB');
           }
         } catch (error) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
         }
       }
       setLoading(false);
@@ -47,8 +47,8 @@ export const AuthProvider = ({ children }) => {
 
   const completeLogin = (token, user) => {
     const userWith2FA = { ...user, twoFactorEnabled: user.twoFactorEnabled ?? false };
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userWith2FA));
+    sessionStorage.setItem('token', token);
+    sessionStorage.setItem('user', JSON.stringify(userWith2FA));
     setUser(userWith2FA);
     if (userWith2FA.role === 'admin' || ((userWith2FA.role === 'meter_user' || userWith2FA.role === 'capturer') && !userWith2FA.branch)) {
       const storedBranch = localStorage.getItem('selectedBranch');
@@ -84,15 +84,15 @@ export const AuthProvider = ({ children }) => {
       const userData = response.data.user;
       const userWith2FA = { ...userData, twoFactorEnabled: userData.twoFactorEnabled ?? false };
       setUser(userWith2FA);
-      localStorage.setItem('user', JSON.stringify(userWith2FA));
+      sessionStorage.setItem('user', JSON.stringify(userWith2FA));
     } catch {
       // Ignore - user might have logged out
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     localStorage.removeItem('selectedBranch');
     setUser(null);
     setSelectedBranch(null);
