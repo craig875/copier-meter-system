@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { customersApi, consumablesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, ArrowLeft, Building2, Printer, ChevronRight, AlertTriangle, Plus, AlertCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, Building2, Printer, AlertTriangle, Plus, AlertCircle } from 'lucide-react';
 import MachineModal from '../components/MachineModal';
 import MeterBlocks from '../components/MeterBlocks';
 
@@ -103,69 +103,51 @@ const CustomerDetail = () => {
             No machines linked to this customer. Add machines from the Machines page and link them to this customer.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {machines.map((machine) => {
               const modelDisplay = machine.model
                 ? `${machine.model.make?.name || ''} ${machine.model.name || ''}`.trim()
                 : 'No model';
+              const hasBadges = machine.nearEndOfLife || (partsDueByMachine[machine.id]?.length > 0);
               return (
                 <Link
                   key={machine.id}
                   to={`/consumables/machines/${machine.id}`}
-                  className="tile-card flex items-center gap-3 p-4 group"
+                  className="tile-card flex p-4 group min-h-[100px]"
                 >
-                  <div className="p-2 bg-gray-50 rounded-lg group-hover:bg-gray-100 transition-colors flex items-center gap-2">
-                    <Printer className="h-5 w-5 text-gray-600 group-hover:text-gray-900" />
-                    <MeterBlocks isColour={machine.model?.modelType === 'colour'} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-gray-900">{machine.machineSerialNumber}</p>
+                  {(hasBadges) && (
+                    <div className="flex flex-col items-center justify-center w-12 flex-shrink-0 pr-4 border-r border-gray-200 gap-1">
                       {machine.nearEndOfLife && (
                         <span
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300"
-                          title={`Near end of life (${machine.lifePercentUsed}% of ${machine.model?.machineLife?.toLocaleString()} lifespan)`}
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300"
+                          title={`Near end of life (${machine.lifePercentUsed}% of ${machine.model?.machineLife?.toLocaleString()} life cycle)`}
                         >
                           <AlertCircle className="h-3 w-3" />
-                          Near end of life
                         </span>
                       )}
                       {partsDueByMachine[machine.id]?.length > 0 && (
                         <span
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200"
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200"
                           title={partsDueByMachine[machine.id]
                             .map((p) => `${p.partName}: ${p.usage.toLocaleString()} / ${p.expectedYield.toLocaleString()} clicks (${p.percentUsed}% of yield)`)
                             .join('\n')}
                         >
-                          <span className="flex items-center gap-0.5">
-                            {partsDueByMachine[machine.id].map((p, i) => (
-                              <span
-                                key={i}
-                                className="w-2.5 h-2.5 rounded-full border border-white shadow-sm"
-                                style={{
-                                  backgroundColor:
-                                    p.tonerColor === 'black'
-                                      ? '#1f2937'
-                                      : p.tonerColor === 'cyan'
-                                        ? '#06b6d4'
-                                        : p.tonerColor === 'magenta'
-                                          ? '#ec4899'
-                                          : p.tonerColor === 'yellow'
-                                            ? '#eab308'
-                                            : '#6b7280',
-                                }}
-                                title={p.partName}
-                              />
-                            ))}
-                          </span>
-                          <AlertTriangle className="h-3 w-3 text-amber-600" />
-                          Toner due
+                          <AlertTriangle className="h-3 w-3" />
+                          {partsDueByMachine[machine.id].length}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 mt-0.5">{modelDisplay}</p>
+                  )}
+                  <div className={`flex-1 min-w-0 flex flex-col ${hasBadges ? 'pl-4' : ''}`}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="p-2 bg-gray-50 rounded-lg group-hover:bg-gray-100 transition-colors flex items-center gap-1.5">
+                        <Printer className="h-4 w-4 text-gray-600 group-hover:text-gray-900" />
+                        <MeterBlocks isColour={machine.model?.modelType === 'colour'} />
+                      </div>
+                      <p className="font-medium text-gray-900 truncate">{machine.machineSerialNumber}</p>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2 truncate">{modelDisplay}</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-900 flex-shrink-0" />
                 </Link>
               );
             })}
