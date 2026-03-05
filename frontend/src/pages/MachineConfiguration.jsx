@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { makesApi, modelsApi, consumablesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -47,6 +47,7 @@ const MachineConfiguration = () => {
   const [importFile, setImportFile] = useState(null);
   const [importPreview, setImportPreview] = useState(null);
   const [importErrors, setImportErrors] = useState([]);
+  const modelEditContainerRef = useRef(null);
 
   const { data: makesData, isLoading } = useQuery({
     queryKey: ['makes'],
@@ -542,29 +543,34 @@ const MachineConfiguration = () => {
                             <ChevronRight className="h-4 w-4 text-gray-500" />
                           )}
                           {editingModel === model.id ? (
-                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <div
+                              ref={modelEditContainerRef}
+                              className="flex items-center gap-2"
+                              onClick={(e) => e.stopPropagation()}
+                              onFocusOut={(e) => {
+                                if (modelEditContainerRef.current?.contains(e.relatedTarget)) return;
+                                const nameChanged = editingModelName.trim() && editingModelName !== model.name;
+                                const paperChanged = editingModelPaperSize !== (model.paperSize || 'A4');
+                                const typeChanged = editingModelType !== (model.modelType || 'mono');
+                                const currentLife = model.machineLife != null ? String(model.machineLife) : '';
+                                const lifeChanged = editingModelMachineLife !== currentLife;
+                                if (nameChanged || paperChanged || typeChanged || lifeChanged) {
+                                  updateModel.mutate({
+                                    id: model.id,
+                                    data: {
+                                      ...(nameChanged && { name: editingModelName.trim() }),
+                                      ...(paperChanged && { paperSize: editingModelPaperSize }),
+                                      ...(typeChanged && { modelType: editingModelType }),
+                                      ...(lifeChanged && { machineLife: editingModelMachineLife ? Number(editingModelMachineLife) : null }),
+                                    },
+                                  });
+                                }
+                                setEditingModel(null);
+                              }}
+                            >
                               <input
                                 value={editingModelName}
                                 onChange={(e) => setEditingModelName(e.target.value)}
-                                onBlur={() => {
-                                  const nameChanged = editingModelName.trim() && editingModelName !== model.name;
-                                  const paperChanged = editingModelPaperSize !== (model.paperSize || 'A4');
-                                  const typeChanged = editingModelType !== (model.modelType || 'mono');
-                                  const currentLife = model.machineLife != null ? String(model.machineLife) : '';
-                                  const lifeChanged = editingModelMachineLife !== currentLife;
-                                  if (nameChanged || paperChanged || typeChanged || lifeChanged) {
-                                    updateModel.mutate({
-                                      id: model.id,
-                                      data: {
-                                        ...(nameChanged && { name: editingModelName.trim() }),
-                                        ...(paperChanged && { paperSize: editingModelPaperSize }),
-                                        ...(typeChanged && { modelType: editingModelType }),
-                                        ...(lifeChanged && { machineLife: editingModelMachineLife ? Number(editingModelMachineLife) : null }),
-                                      },
-                                    });
-                                  }
-                                  setEditingModel(null);
-                                }}
                                 onKeyDown={(e) => e.key === 'Enter' && (document.activeElement?.blur?.())}
                                 className="px-2 py-1 border rounded text-sm w-40"
                                 autoFocus
