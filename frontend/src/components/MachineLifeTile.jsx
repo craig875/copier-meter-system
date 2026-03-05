@@ -17,10 +17,10 @@ const MachineLifeTile = ({
       <div className="tile-card p-4 w-64 h-64 flex flex-col">
         <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
           <Activity className="h-4 w-4 text-gray-500" />
-          Machine life
+          Machine Life Cycle
         </h3>
         <p className="text-gray-500 text-xs flex-1">
-          No lifespan configured for this model.
+          No life cycle configured for this model.
         </p>
       </div>
     );
@@ -35,7 +35,7 @@ const MachineLifeTile = ({
     <div className="tile-card p-4 w-64 h-64 flex flex-col overflow-hidden">
       <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
         <Activity className="h-4 w-4 text-gray-500" />
-        Machine life
+        Machine Life Cycle
       </h3>
       <div className="flex-1 flex flex-col justify-center space-y-4">
         <div className="space-y-1">
@@ -69,7 +69,7 @@ const MachineLifeTile = ({
           </p>
           <p className="text-[10px] text-gray-500 mt-0.5">pages remaining</p>
           <p className="text-xs text-gray-600 mt-1">
-            ({remainingPercent}% of lifespan left)
+            ({remainingPercent}% of life cycle left)
           </p>
         </div>
       </div>
