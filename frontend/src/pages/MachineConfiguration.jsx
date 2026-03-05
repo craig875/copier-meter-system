@@ -613,7 +613,12 @@ const MachineConfiguration = () => {
                         </div>
                         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={() => { setShowPartForm(model.id); setShowModelForm(null); resetPartForm(); }}
+                            onClick={() => {
+                              setShowPartForm(model.id);
+                              setShowModelForm(null);
+                              resetPartForm();
+                              setExpandedModels((prev) => new Set(prev).add(model.id));
+                            }}
                             className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
                           >
                             <Plus className="h-3 w-3" /> Add part
