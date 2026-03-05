@@ -329,6 +329,47 @@ const stepsByPath = {
       },
     },
   ],
+  '/admin/parts-pricing': [
+    {
+      popover: {
+        title: 'Parts & Pricing',
+        description: 'Update part costs without opening Machine Configuration. Search, filter by branch, or bulk-increase costs when suppliers raise prices.',
+        side: 'over',
+      },
+    },
+    {
+      element: '[data-tour="parts-pricing-search"]',
+      popover: {
+        title: 'Search',
+        description: 'Filter parts by part name, item code, make, or model.',
+        side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="parts-pricing-branch"]',
+      popover: {
+        title: 'Branch',
+        description: 'Show parts for a specific branch (JHB/CT) or all branches.',
+        side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="parts-pricing-increase"]',
+      popover: {
+        title: 'Increase costs by %',
+        description: 'Bulk-increase all part costs (or by make) by a percentage. Use when suppliers raise prices.',
+        side: 'left',
+      },
+    },
+    {
+      element: '[data-tour="parts-pricing-table"]',
+      popover: {
+        title: 'Parts table',
+        description: 'View all parts with make, model, type, yield, and cost. Click Edit to change a part\'s cost.',
+        side: 'top',
+      },
+    },
+  ],
   '/admin/machine-configuration': [
     {
       popover: {
@@ -413,6 +454,7 @@ function getStepsForPath(pathname, isAdmin) {
   if (pathname.startsWith('/notifications')) return isAdmin ? stepsByPath['/notifications'] : stepsByPath['/'];
   if (pathname.startsWith('/meter-readings')) return stepsByPath['/meter-readings'];
   if (pathname === '/copier-service') return stepsByPath['/copier-service'];
+  if (pathname.startsWith('/admin/parts-pricing')) return isAdmin ? stepsByPath['/admin/parts-pricing'] : stepsByPath['/'];
   if (pathname.startsWith('/admin/machine-configuration') || pathname === '/admin') return isAdmin ? stepsByPath['/admin/machine-configuration'] : stepsByPath['/'];
 
   return stepsByPath['/'];

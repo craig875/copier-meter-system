@@ -134,7 +134,7 @@ const PartsPricing = () => {
         <div className="flex flex-wrap items-end gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-            <div className="relative">
+            <div className="relative" data-tour="parts-pricing-search">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
@@ -145,7 +145,7 @@ const PartsPricing = () => {
               />
             </div>
           </div>
-          <div>
+          <div data-tour="parts-pricing-branch">
             <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
             <select
               value={branchFilter}
@@ -158,6 +158,7 @@ const PartsPricing = () => {
             </select>
           </div>
           <button
+            data-tour="parts-pricing-increase"
             onClick={() => setShowIncreaseModal(true)}
             disabled={allParts.length === 0}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -230,7 +231,7 @@ const PartsPricing = () => {
         </div>
       )}
 
-      <div className="liquid-glass rounded-xl overflow-hidden">
+      <div className="liquid-glass rounded-xl overflow-hidden" data-tour="parts-pricing-table">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
