@@ -45,11 +45,9 @@ const Login = () => {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ 
-        backgroundImage: 'linear-gradient(135deg, rgb(226 232 240), rgb(241 245 249), rgb(228 231 235))'
-      }}
+      style={{ backgroundImage: 'linear-gradient(135deg, rgb(226 232 240), rgb(241 245 249), rgb(228 231 235))' }}
     >
       <div className="max-w-md w-full">
         <div className="liquid-glass rounded-2xl p-8" style={{ boxShadow: '0 1px 0 0 rgba(255,255,255,0.5) inset, 0 24px 48px rgba(0,0,0,0.12)' }}>

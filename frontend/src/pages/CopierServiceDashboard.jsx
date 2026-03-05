@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Building2, LayoutDashboard, Package, Printer } from 'lucide-react';
+import { Building2, LayoutDashboard, Printer } from 'lucide-react';
 
 const CopierServiceDashboard = () => {
   const tiles = [
@@ -9,7 +9,7 @@ const CopierServiceDashboard = () => {
       href: '/customers',
       icon: Building2,
       color: 'bg-red-50',
-      iconColor: 'text-red-600',
+      iconColor: 'text-gray-900',
     },
     {
       name: 'Meter Readings',
@@ -27,14 +27,6 @@ const CopierServiceDashboard = () => {
       color: 'bg-green-50',
       iconColor: 'text-green-600',
     },
-    {
-      name: 'Consumable Orders',
-      description: 'Record part orders by customer',
-      href: '/consumables/orders',
-      icon: Package,
-      color: 'bg-amber-50',
-      iconColor: 'text-amber-600',
-    },
   ];
 
   return (
@@ -51,14 +43,14 @@ const CopierServiceDashboard = () => {
             <Link
               key={tile.name}
               to={tile.href}
-              className="liquid-glass rounded-xl p-8 hover:shadow-lg hover:border-red-200 transition-all group min-h-[140px]"
+              className="tile-card p-8 group min-h-[140px]"
             >
               <div className="flex items-start gap-6">
                 <div className={`p-5 rounded-xl ${tile.color} group-hover:scale-105 transition-transform flex-shrink-0`}>
                   <Icon className={`h-12 w-12 ${tile.iconColor}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-semibold text-gray-900 group-hover:text-red-600 transition-colors">
+                  <h2 className="text-xl font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">
                     {tile.name}
                   </h2>
                   <p className="text-base text-gray-500 mt-2">{tile.description}</p>

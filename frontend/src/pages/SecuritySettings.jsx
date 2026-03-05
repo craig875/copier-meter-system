@@ -99,7 +99,7 @@ const SecuritySettings = () => {
     <div className="max-w-2xl">
       <h2 className="text-xl font-semibold text-gray-800 mb-6">Two-Factor Authentication</h2>
 
-      <div className="liquid-glass rounded-xl p-6 mb-6" style={{ boxShadow: '0 1px 0 0 rgba(255,255,255,0.5) inset, 0 12px 24px rgba(0,0,0,0.08)' }}>
+      <div className="liquid-glass rounded-xl p-6 mb-6">
         <div className="flex items-center gap-4 mb-4">
           {status.enabled ? (
             <ShieldCheck className="h-8 w-8 text-green-600" />

@@ -26,7 +26,7 @@ const MachineReadingsHistory = () => {
   if (machineLoading || readingsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
       </div>
     );
   }
@@ -48,7 +48,7 @@ const MachineReadingsHistory = () => {
     <div className="space-y-6">
       <Link
         to={`/consumables/machines/${machineId}`}
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
+        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
       >
         <ArrowLeft className="h-5 w-5" />
         Back to machine

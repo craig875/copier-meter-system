@@ -18,10 +18,7 @@ export default function Setup2FAPrompt() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-      <div
-        className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl border border-gray-200"
-        style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
-      >
+      <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl border border-gray-200">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0 p-2 rounded-lg bg-amber-100">
             <Shield className="h-8 w-8 text-amber-600" />

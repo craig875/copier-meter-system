@@ -4,12 +4,12 @@ import { readingsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { 
-  Download, 
   ChevronLeft, 
   ChevronRight,
   CheckCircle,
   AlertTriangle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FileText
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -46,14 +46,15 @@ const History = () => {
     );
   }
 
-  const handleExport = async () => {
+  const handleExport = async (format = 'xlsx') => {
     setExporting(true);
+    const ext = format === 'txt' ? 'txt' : 'xlsx';
     try {
-      const response = await readingsApi.export(year, month, effectiveBranch);
+      const response = await readingsApi.export(year, month, effectiveBranch, format);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `meter-readings-${effectiveBranch || 'all'}-${year}-${String(month).padStart(2, '0')}.xlsx`);
+      link.setAttribute('download', `meter-readings-${effectiveBranch || 'all'}-${year}-${String(month).padStart(2, '0')}.${ext}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -112,7 +113,7 @@ const History = () => {
 
         <div className="flex items-center gap-4">
           {/* Month Navigation */}
-          <div data-tour="history-month-nav" className="flex items-center bg-white rounded-lg shadow-sm border">
+          <div data-tour="history-month-nav" className="flex items-center liquid-glass rounded-lg">
             <button
               onClick={() => changeMonth(-1)}
               disabled={year === 2026 && month === 1}
@@ -131,16 +132,26 @@ const History = () => {
             </button>
           </div>
 
-          {/* Export Button */}
-          <button
-            data-tour="history-export"
-            onClick={handleExport}
-            disabled={exporting || summary.capturedCount === 0}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            {exporting ? 'Exporting...' : 'Export Excel'}
-          </button>
+          {/* Export Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              data-tour="history-export"
+              onClick={() => handleExport('xlsx')}
+              disabled={exporting || summary.capturedCount === 0}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              {exporting ? 'Exporting...' : 'Export Excel'}
+            </button>
+            <button
+              onClick={() => handleExport('txt')}
+              disabled={exporting || summary.capturedCount === 0}
+              className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              {exporting ? 'Exporting...' : 'Export Text'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -327,7 +338,7 @@ const SummaryCard = ({ title, value, icon: Icon, color }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
+    <div className="liquid-glass rounded-lg p-4 flex items-center justify-between">
       <div>
         <p className="text-sm text-gray-500">{title}</p>
         <p className="text-2xl font-bold text-gray-900">{value}</p>

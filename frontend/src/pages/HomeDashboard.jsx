@@ -10,7 +10,7 @@ const copierModules = [
     href: '/copier-service',
     icon: Printer,
     color: 'bg-red-50',
-    iconColor: 'text-red-600',
+    iconColor: 'text-gray-900',
   },
 ];
 
@@ -22,7 +22,7 @@ const capturerModules = [
     href: '/capture',
     icon: LayoutDashboard,
     color: 'bg-red-50',
-    iconColor: 'text-red-600',
+    iconColor: 'text-gray-900',
   },
 ];
 
@@ -50,14 +50,14 @@ const HomeDashboard = () => {
               key={module.id}
               to={module.href}
               data-tour="module-card"
-              className="liquid-glass rounded-xl p-6 hover:shadow-lg hover:border-red-200 transition-all group"
+              className="tile-card p-6 group"
             >
               <div className="flex items-start gap-4">
                 <div className={`p-4 rounded-xl ${module.color} group-hover:scale-105 transition-transform`}>
                   <Icon className={`h-8 w-8 ${module.iconColor}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-semibold text-gray-900 group-hover:text-red-600 transition-colors">
+                  <h2 className="text-lg font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">
                     {module.name}
                   </h2>
                   <p className="text-sm text-gray-500 mt-1">{module.description}</p>

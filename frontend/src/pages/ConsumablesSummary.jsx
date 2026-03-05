@@ -155,7 +155,7 @@ const ConsumablesSummary = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
       </div>
     );
   }
@@ -237,7 +237,7 @@ const ConsumablesSummary = () => {
                     <td className="py-3 px-2">
                       <Link
                         to={`/consumables/machines/${row.machineId}`}
-                        className="font-medium text-red-600 hover:underline"
+                        className="font-medium text-gray-900 hover:underline"
                       >
                         {row.machineSerialNumber}
                       </Link>
@@ -269,7 +269,7 @@ const ConsumablesSummary = () => {
                     <td className="py-3 px-2">
                       <Link
                         to={`/consumables/machines/${row.machineId}`}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-gray-900 hover:text-gray-700"
                       >
                         <ChevronRight className="h-5 w-5" />
                       </Link>

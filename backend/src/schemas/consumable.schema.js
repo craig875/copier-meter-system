@@ -61,3 +61,9 @@ const pastOrderRowSchema = z
 export const importPartOrdersSchema = z.object({
   data: z.array(pastOrderRowSchema).min(1, 'At least one row required'),
 });
+
+export const increaseCostsSchema = z.object({
+  percentIncrease: z.number().min(0.01, 'Enter a positive percentage').max(200, 'Max 200%'),
+  branch: z.enum(['JHB', 'CT']).optional(),
+  makeId: z.string().uuid().optional(),
+});

@@ -93,7 +93,6 @@ const Layout = ({ children }) => {
         { name: 'Customers', href: '/customers', icon: Building2 },
         { name: 'Meter Readings', href: '/meter-readings', icon: LayoutDashboard, activePaths: ['/capture', '/history', '/import-readings'] },
         { name: 'Machines', href: '/machines', icon: Printer },
-        { name: 'Consumable Orders', href: '/consumables/orders', icon: Package, activePaths: ['/consumables'] },
         { name: 'Consumable Summary', href: '/consumables/summary', icon: Package, activePaths: ['/consumables/summary'] },
       ]
     },
@@ -141,16 +140,16 @@ const Layout = ({ children }) => {
   }, [handleCopy]);
 
   return (
-    <div 
+    <div
       className="min-h-screen no-copy"
-      style={{ 
+      style={{
         backgroundImage: 'linear-gradient(135deg, rgb(226 232 240), rgb(241 245 249), rgb(228 231 235))',
-        backgroundSize: '100% 100%'
+        backgroundSize: '100% 100%',
       }}
     >
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -309,7 +308,7 @@ const Layout = ({ children }) => {
             </div>
             <button
               onClick={logout}
-              className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+              className="p-2 text-gray-400 hover:text-gray-900 transition-colors"
               title="Logout"
             >
               <LogOut className="h-5 w-5" />
@@ -326,13 +325,13 @@ const Layout = ({ children }) => {
             {showBackButton && (
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 -ml-2 rounded-lg text-gray-600 hover:text-red-600 hover:bg-white/30 transition-colors"
+                className="p-2 -ml-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-white/30 transition-colors"
                 title="Back"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
             )}
-            <button 
+            <button
               className="lg:hidden"
               onClick={() => setSidebarOpen(true)}
             >
@@ -346,7 +345,7 @@ const Layout = ({ children }) => {
           </div>
           <button
             onClick={() => import('../services/tutorial').then((m) => m.startTutorial(location.pathname, isAdmin))}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 hover:bg-white/30 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-white/30 rounded-lg transition-colors"
             title="Take a tour"
           >
             <HelpCircle className="h-5 w-5" />

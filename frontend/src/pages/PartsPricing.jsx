@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { consumablesApi } from '../services/api';
+import { consumablesApi, makesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Loader2, Pencil, Check, X, Search } from 'lucide-react';
+import { Loader2, Pencil, Check, X, Search, Percent } from 'lucide-react';
 
 const PartsPricing = () => {
   const queryClient = useQueryClient();
@@ -12,6 +12,9 @@ const PartsPricing = () => {
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editCost, setEditCost] = useState('');
+  const [showIncreaseModal, setShowIncreaseModal] = useState(false);
+  const [increasePercent, setIncreasePercent] = useState('');
+  const [increaseMakeId, setIncreaseMakeId] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['model-parts-all', branchFilter || null],
@@ -28,6 +31,28 @@ const PartsPricing = () => {
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || 'Failed to update');
+    },
+  });
+
+  const { data: makesData } = useQuery({
+    queryKey: ['makes'],
+    queryFn: () => makesApi.getAll(),
+    enabled: showIncreaseModal,
+  });
+  const makes = makesData?.makes || [];
+
+  const increaseMutation = useMutation({
+    mutationFn: ({ percentIncrease, branch, makeId }) =>
+      consumablesApi.increaseCosts(percentIncrease, branch || null, makeId || null),
+    onSuccess: (result, { percentIncrease }) => {
+      toast.success(`Increased ${result.updatedCount} part cost(s) by ${percentIncrease}%`);
+      setShowIncreaseModal(false);
+      setIncreasePercent('');
+      setIncreaseMakeId('');
+      queryClient.invalidateQueries(['model-parts-all']);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Failed to increase costs');
     },
   });
 
@@ -67,6 +92,19 @@ const PartsPricing = () => {
     updateMutation.mutate({ id: editingId, costRand: cost });
   };
 
+  const handleIncreaseCosts = () => {
+    const pct = parseFloat(increasePercent);
+    if (isNaN(pct) || pct < 0.01 || pct > 200) {
+      toast.error('Enter a percentage between 0.01 and 200');
+      return;
+    }
+    increaseMutation.mutate({
+      percentIncrease: pct,
+      branch: branchFilter || null,
+      makeId: increaseMakeId || null,
+    });
+  };
+
   const modelDisplay = (part) => {
     const make = part.model?.make?.name || '';
     const model = part.model?.name || '';
@@ -76,7 +114,7 @@ const PartsPricing = () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
       </div>
     );
   }
@@ -119,8 +157,78 @@ const PartsPricing = () => {
               <option value="CT">CT</option>
             </select>
           </div>
+          <button
+            onClick={() => setShowIncreaseModal(true)}
+            disabled={allParts.length === 0}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Percent className="h-4 w-4" />
+            Increase costs by %
+          </button>
         </div>
       </div>
+
+      {showIncreaseModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+          <div className="popup-panel p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Increase costs by percentage</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Increase part costs{branchFilter ? ` (${branchFilter})` : ' (all branches)'}
+              {increaseMakeId ? ` for the selected make only` : ''} by a percentage. Use when suppliers raise prices.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Make (optional)</label>
+              <select
+                value={increaseMakeId}
+                onChange={(e) => setIncreaseMakeId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              >
+                <option value="">All makes</option>
+                {makes.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-0.5">Leave as &quot;All makes&quot; to affect all parts</p>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Percentage increase</label>
+              <input
+                type="number"
+                min="0.01"
+                max="200"
+                step="0.5"
+                value={increasePercent}
+                onChange={(e) => setIncreasePercent(e.target.value)}
+                placeholder="e.g. 5 for 5%"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowIncreaseModal(false);
+                  setIncreasePercent('');
+                  setIncreaseMakeId('');
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleIncreaseCosts}
+                disabled={increaseMutation.isPending || !increasePercent}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {increaseMutation.isPending ? 'Updating...' : 'Apply increase'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="liquid-glass rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -206,7 +314,7 @@ const PartsPricing = () => {
                       {editingId === part.id ? null : (
                         <button
                           onClick={() => handleStartEdit(part)}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
                           title="Edit cost"
                         >
                           <Pencil className="h-4 w-4" />

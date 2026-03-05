@@ -93,12 +93,12 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">
+      <div className="popup-panel max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white">
+          <h2 className="text-lg font-semibold text-gray-900">
             {isEditing ? 'Edit Machine' : 'Add Machine'}
           </h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-600">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -114,7 +114,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
               value={formData.machineSerialNumber}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             />
           </div>
 
@@ -127,7 +127,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
                 name="customerId"
                 value={formData.customerId}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
               >
                 <option value="">No customer</option>
                 {customers.map((c) => (
@@ -145,7 +145,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
               name="makeId"
               value={formData.makeId}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
               <option value="">Select make...</option>
               {makes.map((m) => (
@@ -162,7 +162,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
               value={formData.modelId}
               onChange={handleChange}
               disabled={!formData.makeId}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-50"
             >
               <option value="">Select model...</option>
               {models.map((m) => (
@@ -183,7 +183,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
                 value={formData.branch}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
               >
                 <option value="JHB">Johannesburg (JHB)</option>
                 <option value="CT">Cape Town (CT)</option>
@@ -202,7 +202,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
                   name="monoEnabled"
                   checked={formData.monoEnabled}
                   onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 rounded"
+                  className="h-4 w-4 text-gray-900 rounded"
                 />
                 <span className="ml-2 text-sm">Mono</span>
               </label>
@@ -212,7 +212,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
                   name="colourEnabled"
                   checked={formData.colourEnabled}
                   onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 rounded"
+                  className="h-4 w-4 text-gray-900 rounded"
                 />
                 <span className="ml-2 text-sm">Colour</span>
               </label>
@@ -222,7 +222,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
                   name="scanEnabled"
                   checked={formData.scanEnabled}
                   onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 rounded"
+                  className="h-4 w-4 text-gray-900 rounded"
                 />
                 <span className="ml-2 text-sm">Scan</span>
               </label>
@@ -236,13 +236,13 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
                 name="isActive"
                 checked={formData.isActive}
                 onChange={handleChange}
-                className="h-4 w-4 text-blue-600 rounded"
+                className="h-4 w-4 text-gray-900 rounded"
               />
               <span className="ml-2 text-sm font-medium">Active</span>
             </label>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}

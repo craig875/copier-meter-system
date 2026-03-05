@@ -201,6 +201,38 @@ export class ConsumableService {
   }
 
   /**
+   * Increase part costs by a percentage (e.g. for supplier price increases)
+   * @param {number} percentIncrease - e.g. 5 for 5%
+   * @param {string|null} branch - Optional branch filter (JHB, CT)
+   * @param {string|null} makeId - Optional make filter - only parts for models under this make
+   * @returns {{ updatedCount: number }}
+   */
+  async increaseCostsByPercent(percentIncrease, branch = null, makeId = null) {
+    const where = { isActive: true };
+    if (branch) where.branch = branch;
+    if (makeId) where.model = { makeId };
+    const parts = await prisma.modelPart.findMany({
+      where,
+      include: { model: { include: { make: true } } },
+    });
+    if (parts.length === 0) {
+      return { updatedCount: 0 };
+    }
+    const multiplier = 1 + percentIncrease / 100;
+    await prisma.$transaction(
+      parts.map((p) => {
+        const oldCost = Number(p.costRand) || 0;
+        const newCost = Math.round(oldCost * multiplier * 100) / 100;
+        return prisma.modelPart.update({
+          where: { id: p.id },
+          data: { costRand: newCost },
+        });
+      })
+    );
+    return { updatedCount: parts.length };
+  }
+
+  /**
    * Get summary: all machines with consumable status, filters
    */
   async getConsumableSummary(filters = {}) {

@@ -89,8 +89,8 @@ export const readingsApi = {
     return api.get('/readings', { params });
   },
   submit: (data) => api.post('/readings', data),
-  export: (year, month, branch = null) => {
-    const params = { year, month };
+  export: (year, month, branch = null, format = 'xlsx') => {
+    const params = { year, month, format };
     if (branch) params.branch = branch;
     return api.get('/readings/export', { 
       params,
@@ -177,6 +177,12 @@ export const consumablesApi = {
   createModelPart: (data) => api.post('/consumables/model-parts', data).then(res => res.data),
   updateModelPart: (id, data) => api.put(`/consumables/model-parts/${id}`, data).then(res => res.data),
   deleteModelPart: (id) => api.delete(`/consumables/model-parts/${id}`).then(res => res.data),
+  increaseCosts: (percentIncrease, branch = null, makeId = null) =>
+    api.post('/consumables/model-parts/increase-costs', {
+      percentIncrease,
+      branch: branch || undefined,
+      makeId: makeId || undefined,
+    }).then(res => res.data),
   recordPartOrder: (data) => api.post('/consumables/orders', data).then(res => res.data),
   importPartOrders: (data) => api.post('/consumables/orders/import', { data }).then(res => res.data),
   deletePartOrder: (id) => api.delete(`/consumables/orders/${id}`).then(res => res.data),

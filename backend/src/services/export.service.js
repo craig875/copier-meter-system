@@ -60,6 +60,38 @@ export const generateExcelExport = async (
 };
 
 /**
+ * Generate plain text (TSV) export for meter readings
+ * @param {Array} machines - All machines
+ * @param {Map} currentReadingMap - Map of machineId -> current reading
+ * @param {number} year - Year
+ * @param {number} month - Month
+ * @returns {string} Text content
+ */
+export const generateTextExport = (
+  machines,
+  currentReadingMap,
+  year,
+  month
+) => {
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const header = `Meter Readings - ${monthNames[month - 1]} ${year}`;
+  const lines = [header, '', 'Code\tMono\tColour\tScan'];
+
+  for (const machine of machines) {
+    const current = currentReadingMap.get(machine.id);
+    const mono = machine.monoEnabled ? (current?.monoReading ?? '') : '';
+    const colour = machine.colourEnabled ? (current?.colourReading ?? '') : '';
+    const scan = machine.scanEnabled ? (current?.scanReading ?? '') : '';
+    lines.push(`${machine.machineSerialNumber || ''}\t${mono}\t${colour}\t${scan}`);
+  }
+
+  return lines.join('\n');
+};
+
+/**
  * Generate Excel export for meter readings split by branch
  * Creates separate worksheets for each branch
  * @param {Object} branchData - Object with branch keys containing { machines, currentReadingMap }

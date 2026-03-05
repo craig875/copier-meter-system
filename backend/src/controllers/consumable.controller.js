@@ -80,6 +80,16 @@ export class ConsumableController {
     res.json(result);
   });
 
+  increaseCosts = asyncHandler(async (req, res) => {
+    const { percentIncrease, branch, makeId } = req.body;
+    const result = await this.consumableService.increaseCostsByPercent(
+      percentIncrease,
+      branch || null,
+      makeId || null
+    );
+    res.json(result);
+  });
+
   deletePartOrder = asyncHandler(async (req, res) => {
     const result = await this.consumableService.deletePartOrder(req.params.id);
     res.json(result);
@@ -107,6 +117,7 @@ export const getModelPartById = controller.getModelPartById.bind(controller);
 export const createModelPart = controller.createModelPart.bind(controller);
 export const updateModelPart = controller.updateModelPart.bind(controller);
 export const deleteModelPart = controller.deleteModelPart.bind(controller);
+export const increaseCosts = controller.increaseCosts.bind(controller);
 export const deletePartOrder = controller.deletePartOrder.bind(controller);
 export const getTonerAlerts = controller.getTonerAlerts.bind(controller);
 export const importPartOrders = controller.importPartOrders.bind(controller);

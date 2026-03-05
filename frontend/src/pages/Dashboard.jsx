@@ -137,7 +137,7 @@ const Dashboard = () => {
             className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
           >
             <div className="p-3 bg-red-50 rounded-lg mr-4">
-              <FileSpreadsheet className="h-6 w-6 text-red-600" />
+              <FileSpreadsheet className="h-6 w-6 text-gray-900" />
             </div>
             <div>
               <p className="font-medium text-gray-900">Monthly Capture</p>
@@ -176,7 +176,7 @@ const Dashboard = () => {
               to="/import-readings"
               className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
             >
-              <div className="p-3 bg-amber-50 rounded-lg mr-4">
+              <div className="p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg mr-4">
                 <Upload className="h-6 w-6 text-amber-600" />
               </div>
               <div>

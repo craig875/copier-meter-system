@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { makesApi, modelsApi, consumablesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -11,11 +11,11 @@ import {
   ChevronDown,
   ChevronRight,
   Printer,
-  Package,
   Upload,
   Download,
   FileSpreadsheet,
 } from 'lucide-react';
+import MeterBlocks from '../components/MeterBlocks';
 
 const MachineConfiguration = () => {
   const queryClient = useQueryClient();
@@ -23,31 +23,18 @@ const MachineConfiguration = () => {
   const [expandedMakes, setExpandedMakes] = useState(new Set());
   const [expandedModels, setExpandedModels] = useState(new Set());
   const [editingMake, setEditingMake] = useState(null);
-  const [editingModel, setEditingModel] = useState(null);
-  const [editingModelName, setEditingModelName] = useState('');
-  const [editingModelPaperSize, setEditingModelPaperSize] = useState('A4');
-  const [editingModelType, setEditingModelType] = useState('mono');
-  const [editingModelMachineLife, setEditingModelMachineLife] = useState('');
+  const [editingModel, setEditingModel] = useState(null); // model object when editing
+  const [editingModelMake, setEditingModelMake] = useState(null); // make when editing model
   const [editingPart, setEditingPart] = useState(null);
   const [showMakeForm, setShowMakeForm] = useState(false);
-  const [showModelForm, setShowModelForm] = useState(null); // makeId
-  const [showPartForm, setShowPartForm] = useState(null); // modelId
+  const [showModelForm, setShowModelForm] = useState(null); // makeId when adding model
+  const [addPartModel, setAddPartModel] = useState(null); // { model, make } when Add part modal is open
   const [makeForm, setMakeForm] = useState({ name: '' });
   const [modelForm, setModelForm] = useState({ makeId: '', name: '', paperSize: 'A4', modelType: 'mono', machineLife: '' });
-  const [partForm, setPartForm] = useState({
-    partName: '',
-    itemCode: '',
-    partType: 'general',
-    tonerColor: '',
-    expectedYield: '',
-    costRand: '',
-    meterType: 'mono',
-  });
   const [showImport, setShowImport] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importPreview, setImportPreview] = useState(null);
   const [importErrors, setImportErrors] = useState([]);
-  const modelEditContainerRef = useRef(null);
 
   const { data: makesData, isLoading } = useQuery({
     queryKey: ['makes'],
@@ -67,6 +54,24 @@ const MachineConfiguration = () => {
     acc[mid].push(p);
     return acc;
   }, {});
+
+  const toggleMake = (id) => {
+    setExpandedMakes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleModel = (id) => {
+    setExpandedModels((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const createMake = useMutation({
     mutationFn: makesApi.create,
@@ -115,6 +120,7 @@ const MachineConfiguration = () => {
     onSuccess: () => {
       toast.success('Model updated');
       setEditingModel(null);
+      setEditingModelMake(null);
       queryClient.invalidateQueries(['makes']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
@@ -134,8 +140,7 @@ const MachineConfiguration = () => {
     mutationFn: consumablesApi.createModelPart,
     onSuccess: () => {
       toast.success('Part added');
-      setShowPartForm(null);
-      resetPartForm();
+      setAddPartModel(null);
       queryClient.invalidateQueries(['model-parts-all']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
@@ -179,35 +184,6 @@ const MachineConfiguration = () => {
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
 
-  const resetPartForm = () => {
-    setPartForm({
-      partName: '',
-      itemCode: '',
-      partType: 'general',
-      tonerColor: '',
-      expectedYield: '',
-      costRand: '',
-      meterType: 'mono',
-    });
-  };
-
-  const toggleMake = (id) => {
-    setExpandedMakes((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleModel = (id) => {
-    setExpandedModels((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   const parseCSVLine = (line) => {
     const result = [];
@@ -300,7 +276,7 @@ const MachineConfiguration = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
       </div>
     );
   }
@@ -312,7 +288,7 @@ const MachineConfiguration = () => {
         <button
           type="button"
           onClick={() => setShowImport(!showImport)}
-          className="flex items-center gap-2 text-gray-700 hover:text-red-600"
+          className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
         >
           {showImport ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
           <Upload className="h-5 w-5" />
@@ -393,14 +369,16 @@ const MachineConfiguration = () => {
         )}
       </div>
 
+      {/* Main config: refined accordion */}
       <div className="liquid-glass rounded-xl p-6">
-        <p className="text-gray-600 mb-4">
-          Configure machine makes, models, and consumable parts. Client-level machines are then assigned a make and model when adding or editing in <strong>Meter Readings → Machines</strong>.
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Machine Configuration</h1>
+        <p className="text-gray-500 mb-6">
+          Configure machine makes, models, and consumable parts. Client-level machines are assigned a make and model in <strong>Meter Readings → Machines</strong>.
         </p>
 
         {showMakeForm && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-medium mb-2">Add make</h3>
+          <div className="mb-6 p-5 bg-gray-50/50 rounded-lg border border-gray-200 space-y-4">
+            <h3 className="font-medium">Add make</h3>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -427,16 +405,16 @@ const MachineConfiguration = () => {
           {makes.map((make) => (
             <div key={make.id} className="border border-gray-200 rounded-lg overflow-hidden">
               <div
-                className="flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 cursor-pointer"
+                className="flex items-center justify-between px-4 py-4 bg-white hover:bg-gray-50 cursor-pointer"
                 onClick={() => toggleMake(make.id)}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {expandedMakes.has(make.id) ? (
-                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                    <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0" />
                   ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-500" />
+                    <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0" />
                   )}
-                  <Printer className="h-5 w-5 text-red-600" />
+                  <Printer className="h-5 w-5 text-gray-900 flex-shrink-0" />
                   {editingMake === make.id ? (
                     <input
                       type="text"
@@ -448,37 +426,45 @@ const MachineConfiguration = () => {
                       }}
                       onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
                       onClick={(e) => e.stopPropagation()}
-                      className="px-2 py-1 border rounded"
+                      className="px-2 py-1 border rounded font-medium"
                       autoFocus
                     />
                   ) : (
-                    <span className="font-medium">{make.name}</span>
+                    <span className="font-semibold text-gray-900">{make.name}</span>
                   )}
+                  <span className="inline-flex px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">
+                    {(make.models || []).length} model{(make.models || []).length !== 1 ? 's' : ''}
+                  </span>
                 </div>
-                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => setEditingMake(make.id)}
-                    className="p-2 text-gray-500 hover:text-red-600"
+                    className="px-2 py-1.5 text-gray-500 hover:text-gray-900 rounded text-sm"
                     title="Edit"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-4 w-4 inline" />
                   </button>
                   <button
                     onClick={() => {
                       const modelCount = make.models?.length ?? 0;
-                      const msg = modelCount > 0
-                        ? `Delete ${make.name}? This will also delete ${modelCount} model(s) and their parts.`
-                        : `Delete ${make.name}?`;
+                      const msg =
+                        modelCount > 0
+                          ? `Delete ${make.name}? This will also delete ${modelCount} model(s) and their parts.`
+                          : `Delete ${make.name}?`;
                       if (window.confirm(msg)) deleteMake.mutate(make.id);
                     }}
-                    className="p-2 text-gray-500 hover:text-red-600"
+                    className="px-2 py-1.5 text-gray-500 hover:text-gray-900 rounded text-sm"
                     title="Delete"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 inline" />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setShowModelForm(make.id); setModelForm({ makeId: make.id, name: '', paperSize: 'A4', modelType: 'mono', machineLife: '' }); }}
-                    className="flex items-center gap-1 px-2 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowModelForm(make.id);
+                      setModelForm({ makeId: make.id, name: '', paperSize: 'A4', modelType: 'mono', machineLife: '' });
+                    }}
+                    className="flex items-center gap-1 px-2 py-1.5 text-sm text-gray-900 hover:bg-gray-100 rounded"
                   >
                     <Plus className="h-4 w-4" /> Add model
                   </button>
@@ -486,9 +472,9 @@ const MachineConfiguration = () => {
               </div>
 
               {expandedMakes.has(make.id) && (
-                <div className="border-t bg-gray-50/50 p-4 space-y-3">
+                <div className="border-t bg-gray-50/50 p-5 pl-6 space-y-4">
                   {showModelForm === make.id && (
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <div className="flex flex-wrap items-center gap-2 p-4 bg-white rounded-lg border border-gray-200">
                       <input
                         type="text"
                         value={modelForm.name}
@@ -521,257 +507,153 @@ const MachineConfiguration = () => {
                         className="w-28 px-3 py-2 border rounded-lg"
                       />
                       <button
-                        onClick={() => createModel.mutate({ ...modelForm, makeId: make.id, machineLife: modelForm.machineLife || null })}
+                        onClick={() =>
+                          createModel.mutate({
+                            ...modelForm,
+                            makeId: make.id,
+                            machineLife: modelForm.machineLife || null,
+                          })
+                        }
                         disabled={!modelForm.name.trim() || createModel.isPending}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg"
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                       >
                         Add
                       </button>
-                      <button onClick={() => setShowModelForm(null)} className="px-4 py-2 border rounded-lg">Cancel</button>
+                      <button onClick={() => setShowModelForm(null)} className="px-4 py-2 border rounded-lg">
+                        Cancel
+                      </button>
                     </div>
                   )}
                   {(make.models || []).map((model) => (
-                    <div key={model.id} className="border rounded-lg bg-white overflow-hidden">
+                    <div key={model.id} className="border border-gray-200 rounded-lg bg-white overflow-hidden">
                       <div
-                        className="flex items-center justify-between px-4 py-2 cursor-pointer hover:bg-gray-50"
+                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50"
                         onClick={() => toggleModel(model.id)}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           {expandedModels.has(model.id) ? (
-                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                            <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
                           ) : (
-                            <ChevronRight className="h-4 w-4 text-gray-500" />
+                            <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
                           )}
-                          {editingModel === model.id ? (
-                            <div
-                              ref={modelEditContainerRef}
-                              className="flex items-center gap-2"
-                              onClick={(e) => e.stopPropagation()}
-                              onFocusOut={(e) => {
-                                if (modelEditContainerRef.current?.contains(e.relatedTarget)) return;
-                                const nameChanged = editingModelName.trim() && editingModelName !== model.name;
-                                const paperChanged = editingModelPaperSize !== (model.paperSize || 'A4');
-                                const typeChanged = editingModelType !== (model.modelType || 'mono');
-                                const currentLife = model.machineLife != null ? String(model.machineLife) : '';
-                                const lifeChanged = editingModelMachineLife !== currentLife;
-                                if (nameChanged || paperChanged || typeChanged || lifeChanged) {
-                                  updateModel.mutate({
-                                    id: model.id,
-                                    data: {
-                                      ...(nameChanged && { name: editingModelName.trim() }),
-                                      ...(paperChanged && { paperSize: editingModelPaperSize }),
-                                      ...(typeChanged && { modelType: editingModelType }),
-                                      ...(lifeChanged && { machineLife: editingModelMachineLife ? Number(editingModelMachineLife) : null }),
-                                    },
-                                  });
-                                }
-                                setEditingModel(null);
-                              }}
-                            >
-                              <input
-                                value={editingModelName}
-                                onChange={(e) => setEditingModelName(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && (document.activeElement?.blur?.())}
-                                className="px-2 py-1 border rounded text-sm w-40"
-                                autoFocus
-                              />
-                              <select
-                                value={editingModelPaperSize}
-                                onChange={(e) => setEditingModelPaperSize(e.target.value)}
-                                className="px-2 py-1 border rounded text-sm"
-                              >
-                                <option value="A3">A3</option>
-                                <option value="A4">A4</option>
-                              </select>
-                              <select
-                                value={editingModelType}
-                                onChange={(e) => setEditingModelType(e.target.value)}
-                                className="px-2 py-1 border rounded text-sm"
-                              >
-                                <option value="mono">Mono</option>
-                                <option value="colour">Colour</option>
-                              </select>
-                              <input
-                                type="number"
-                                min="1"
-                                value={editingModelMachineLife}
-                                onChange={(e) => setEditingModelMachineLife(e.target.value)}
-                                placeholder="Machine life"
-                                className="w-24 px-2 py-1 border rounded text-sm"
-                              />
-                            </div>
-                          ) : (
-                            <span className="font-medium">
-                              {make.name} {model.name}
-                              <span className="ml-2 text-xs font-normal text-gray-500">
-                                ({model.paperSize || 'A4'} · {model.modelType === 'colour' ? 'Colour' : 'Mono'}
-                                {model.machineLife != null ? ` · ${model.machineLife.toLocaleString()}` : ''})
-                              </span>
-                            </span>
-                          )}
-                          <span className="text-xs text-gray-500">({(partsByModel[model.id] || []).length} parts)</span>
+                          <span className="font-medium text-gray-900">
+                            {make.name} {model.name}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            ({model.paperSize || 'A4'} · {model.modelType === 'colour' ? 'Colour' : 'Mono'}
+                            {model.machineLife != null ? ` · ${model.machineLife.toLocaleString()}` : ''})
+                          </span>
+                          <span className="inline-flex px-2 py-0.5 rounded text-sm font-medium bg-red-100 text-red-700">
+                            {(partsByModel[model.id] || []).length} part{(partsByModel[model.id] || []).length !== 1 ? 's' : ''}
+                          </span>
+                          <MeterBlocks isColour={model.modelType === 'colour'} />
                         </div>
-                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => {
-                              setShowPartForm(model.id);
-                              setShowModelForm(null);
-                              resetPartForm();
-                              setExpandedModels((prev) => new Set(prev).add(model.id));
+                              setAddPartModel({ model, make });
                             }}
-                            className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                            className="flex items-center gap-1 px-2 py-1 text-xs text-gray-900 hover:bg-gray-100 rounded"
                           >
                             <Plus className="h-3 w-3" /> Add part
                           </button>
                           <button
                             onClick={() => {
-                              setEditingModel(model.id);
-                              setEditingModelName(model.name);
-                              setEditingModelPaperSize(model.paperSize || 'A4');
-                              setEditingModelType(model.modelType || 'mono');
-                              setEditingModelMachineLife(model.machineLife != null ? String(model.machineLife) : '');
+                              setEditingModel(model);
+                              setEditingModelMake(make);
                             }}
-                            className="p-1 text-gray-500 hover:text-red-600"
+                            className="px-2 py-1 text-gray-500 hover:text-gray-900 rounded text-sm"
+                            title="Edit model"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil className="h-4 w-4 inline" />
                           </button>
                           <button
                             onClick={() => {
                               const partCount = (partsByModel[model.id] || []).length;
-                              const msg = partCount > 0
-                                ? `Delete ${model.name}? This will also delete ${partCount} part(s). Assigned machines will be unassigned.`
-                                : `Delete ${model.name}? Assigned machines will be unassigned.`;
+                              const msg =
+                                partCount > 0
+                                  ? `Delete ${model.name}? This will also delete ${partCount} part(s). Assigned machines will be unassigned.`
+                                  : `Delete ${model.name}? Assigned machines will be unassigned.`;
                               if (window.confirm(msg)) deleteModel.mutate(model.id);
                             }}
-                            className="p-1 text-gray-500 hover:text-red-600"
+                            className="px-2 py-1 text-gray-500 hover:text-gray-900 rounded text-sm"
+                            title="Delete model"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 inline" />
                           </button>
                         </div>
                       </div>
 
                       {expandedModels.has(model.id) && (
-                        <div className="border-t p-4 space-y-2">
-                          {showPartForm === model.id && (
-                            <div className="p-4 bg-amber-50 rounded-lg space-y-3 mb-4">
-                              <h4 className="font-medium">Add consumable part</h4>
-                              <div className="grid grid-cols-2 gap-3">
-                                <input
-                                  placeholder="Part name (e.g. Black Toner)"
-                                  value={partForm.partName}
-                                  onChange={(e) => setPartForm((f) => ({ ...f, partName: e.target.value }))}
-                                  className="px-3 py-2 border rounded-lg"
-                                />
-                                <input
-                                  placeholder="Item code"
-                                  value={partForm.itemCode}
-                                  onChange={(e) => setPartForm((f) => ({ ...f, itemCode: e.target.value }))}
-                                  className="px-3 py-2 border rounded-lg"
-                                />
-                                <select
-                                  value={partForm.partType}
-                                  onChange={(e) => setPartForm((f) => ({ ...f, partType: e.target.value, tonerColor: e.target.value === 'toner' ? f.tonerColor : '' }))}
-                                  className="px-3 py-2 border rounded-lg"
-                                >
-                                  <option value="general">General</option>
-                                  <option value="toner">Toner</option>
-                                </select>
-                                {partForm.partType === 'toner' && (
-                                  <select
-                                    value={partForm.tonerColor}
-                                    onChange={(e) => setPartForm((f) => ({ ...f, tonerColor: e.target.value }))}
-                                    className="px-3 py-2 border rounded-lg"
-                                  >
-                                    <option value="">Select colour...</option>
-                                    <option value="black">Black</option>
-                                    <option value="cyan">Cyan</option>
-                                    <option value="magenta">Magenta</option>
-                                    <option value="yellow">Yellow</option>
-                                  </select>
+                        <div className="border-t bg-gray-50/30 p-5 pl-8">
+                          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-gray-200 bg-gray-50">
+                                  <th className="text-left py-3 px-4 font-medium text-gray-700">Part name</th>
+                                  <th className="text-left py-3 px-4 font-medium text-gray-700">Item code</th>
+                                  <th className="text-left py-3 px-4 font-medium text-gray-700">Type</th>
+                                  <th className="text-right py-3 px-4 font-medium text-gray-700">Expected yield</th>
+                                  <th className="text-right py-3 px-4 font-medium text-gray-700">Cost (R)</th>
+                                  <th className="text-center py-3 px-4 font-medium text-gray-700 w-24">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(partsByModel[model.id] || []).length === 0 ? (
+                                  <tr>
+                                    <td colSpan={6} className="py-8 text-center text-gray-500">
+                                      No parts configured. Click &quot;Add part&quot; to add toners and consumables.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  (partsByModel[model.id] || []).map((p) => (
+                                    <tr key={p.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
+                                      <td className="py-2 px-4">
+                                        <span className="font-medium text-gray-900">{p.partName}</span>
+                                        {p.tonerColor && (
+                                          <span className="ml-1.5 text-xs text-gray-500">({p.tonerColor})</span>
+                                        )}
+                                      </td>
+                                      <td className="py-2 px-4 text-gray-600">{p.itemCode || '—'}</td>
+                                      <td className="py-2 px-4">
+                                        <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                          {p.partType}
+                                        </span>
+                                      </td>
+                                      <td className="py-2 px-4 text-right text-gray-600">
+                                        {p.expectedYield?.toLocaleString() ?? '—'}
+                                      </td>
+                                      <td className="py-2 px-4 text-right">R{Number(p.costRand || 0).toFixed(2)}</td>
+                                      <td className="py-2 px-4">
+                                        <div className="flex items-center justify-center gap-1">
+                                          <button
+                                            onClick={() => setEditingPart(p)}
+                                            className="p-1.5 text-gray-500 hover:text-gray-900 rounded"
+                                            title="Edit"
+                                          >
+                                            <Pencil className="h-4 w-4" />
+                                          </button>
+                                          <button
+                                            onClick={() => window.confirm('Delete part?') && deletePart.mutate(p.id)}
+                                            className="p-1.5 text-gray-500 hover:text-gray-900 rounded"
+                                            title="Delete"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))
                                 )}
-                                <input
-                                  type="number"
-                                  placeholder="Expected yield (clicks)"
-                                  value={partForm.expectedYield}
-                                  onChange={(e) => setPartForm((f) => ({ ...f, expectedYield: e.target.value }))}
-                                  className="px-3 py-2 border rounded-lg"
-                                />
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="Cost (Rand)"
-                                  value={partForm.costRand}
-                                  onChange={(e) => setPartForm((f) => ({ ...f, costRand: e.target.value }))}
-                                  className="px-3 py-2 border rounded-lg"
-                                />
-                                <select
-                                  value={partForm.meterType}
-                                  onChange={(e) => setPartForm((f) => ({ ...f, meterType: e.target.value }))}
-                                  className="px-3 py-2 border rounded-lg"
-                                >
-                                  <option value="mono">Mono</option>
-                                  <option value="colour">Colour</option>
-                                  <option value="total">Total (mono + colour)</option>
-                                </select>
-                              </div>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => createPart.mutate({
-                                    modelId: model.id,
-                                    partName: partForm.partName.trim(),
-                                    itemCode: partForm.itemCode?.trim() || null,
-                                    partType: partForm.partType,
-                                    tonerColor: partForm.partType === 'toner' && partForm.tonerColor ? partForm.tonerColor : null,
-                                    expectedYield: parseInt(partForm.expectedYield, 10) || 0,
-                                    costRand: parseFloat(partForm.costRand) || 0,
-                                    meterType: partForm.meterType,
-                                    branch: effectiveBranch || 'JHB',
-                                  })}
-                                  disabled={!partForm.partName.trim() || createPart.isPending}
-                                  className="px-4 py-2 bg-red-600 text-white rounded-lg"
-                                >
-                                  Add part
-                                </button>
-                                <button onClick={() => setShowPartForm(null)} className="px-4 py-2 border rounded-lg">Cancel</button>
-                              </div>
-                            </div>
-                          )}
-                          {(partsByModel[model.id] || []).map((p) => (
-                            <div
-                              key={p.id}
-                              className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded text-sm"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Package className="h-4 w-4 text-gray-500" />
-                                <span className="font-medium">{p.partName}</span>
-                                {p.itemCode && <span className="text-gray-500 text-xs">{p.itemCode}</span>}
-                                <span className="text-gray-500">
-                                  ({p.partType}{p.partType === 'toner' && p.tonerColor ? ` · ${p.tonerColor.charAt(0).toUpperCase() + p.tonerColor.slice(1)}` : ''})
-                                </span>
-                                <span className="text-gray-500">Yield: {p.expectedYield?.toLocaleString()} • R{Number(p.costRand || 0).toFixed(2)}</span>
-                              </div>
-                              <div className="flex gap-1">
-                                <button onClick={() => setEditingPart(p)} className="p-1 text-gray-500 hover:text-red-600">
-                                  <Pencil className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => window.confirm('Delete part?') && deletePart.mutate(p.id)}
-                                  className="p-1 text-gray-500 hover:text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                          {(partsByModel[model.id] || []).length === 0 && showPartForm !== model.id && (
-                            <p className="text-gray-500 text-sm py-2">No parts configured. Click &quot;Add part&quot; to add toners and consumables.</p>
-                          )}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       )}
                     </div>
                   ))}
                   {(make.models || []).length === 0 && showModelForm !== make.id && (
-                    <p className="text-gray-500 text-sm py-2">No models. Click &quot;Add model&quot; to add one.</p>
+                    <p className="text-gray-500 text-sm py-4 pl-6">No models. Click &quot;Add model&quot; to add one.</p>
                   )}
                 </div>
               )}
@@ -782,7 +664,7 @@ const MachineConfiguration = () => {
         {!showMakeForm && (
           <button
             onClick={() => setShowMakeForm(true)}
-            className="mt-4 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-red-500 hover:text-red-600"
+            className="mt-6 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-colors"
           >
             <Plus className="h-5 w-5" />
             Add make
@@ -790,6 +672,28 @@ const MachineConfiguration = () => {
         )}
       </div>
 
+      {editingModel && (
+        <ModelEditModal
+          model={editingModel}
+          makeName={editingModelMake?.name || ''}
+          onClose={() => {
+            setEditingModel(null);
+            setEditingModelMake(null);
+          }}
+          onSave={(formData) => {
+            updateModel.mutate({
+              id: editingModel.id,
+              data: {
+                name: formData.name.trim(),
+                paperSize: formData.paperSize,
+                modelType: formData.modelType,
+                machineLife: formData.machineLife ? Number(formData.machineLife) : null,
+              },
+            });
+            setEditingModel(null);
+          }}
+        />
+      )}
       {editingPart && (
         <PartEditModal
           part={editingPart}
@@ -811,6 +715,171 @@ const MachineConfiguration = () => {
           }}
         />
       )}
+
+      {addPartModel && (
+        <AddPartModal
+          model={addPartModel.model}
+          make={addPartModel.make}
+          onCreate={(formData) =>
+            createPart.mutate({
+              modelId: addPartModel.model.id,
+              partName: formData.partName.trim(),
+              itemCode: formData.itemCode?.trim() || null,
+              partType: formData.partType,
+              tonerColor: formData.partType === 'toner' && formData.tonerColor ? formData.tonerColor : null,
+              expectedYield: parseInt(formData.expectedYield, 10) || 0,
+              costRand: parseFloat(formData.costRand) || 0,
+              meterType: formData.meterType,
+              branch: effectiveBranch || 'JHB',
+            })
+          }
+          onClose={() => setAddPartModel(null)}
+          isPending={createPart.isPending}
+        />
+      )}
+    </div>
+  );
+};
+
+const AddPartModal = ({ model, make, onCreate, onClose, isPending }) => {
+  const [form, setForm] = useState({
+    partName: '',
+    itemCode: '',
+    partType: 'general',
+    tonerColor: '',
+    expectedYield: '',
+    costRand: '',
+    meterType: 'mono',
+  });
+  const modelLabel = model ? `${model.make?.name || make?.name || ''} ${model.name || ''}`.trim() || 'Model' : 'Model';
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="popup-panel p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <h3 className="font-semibold mb-1">Add consumable part</h3>
+        <p className="text-sm text-gray-500 mb-4">to {modelLabel}</p>
+        <div className="space-y-3">
+          <input
+            value={form.partName}
+            onChange={(e) => setForm((f) => ({ ...f, partName: e.target.value }))}
+            placeholder="Part name (e.g. Black Toner)"
+            className="w-full px-3 py-2 border rounded-lg"
+          />
+          <input
+            value={form.itemCode}
+            onChange={(e) => setForm((f) => ({ ...f, itemCode: e.target.value }))}
+            placeholder="Item code"
+            className="w-full px-3 py-2 border rounded-lg"
+          />
+          <select
+            value={form.partType}
+            onChange={(e) => setForm((f) => ({ ...f, partType: e.target.value, tonerColor: e.target.value === 'toner' ? f.tonerColor : '' }))}
+            className="w-full px-3 py-2 border rounded-lg"
+          >
+            <option value="general">General</option>
+            <option value="toner">Toner</option>
+          </select>
+          {form.partType === 'toner' && (
+            <select value={form.tonerColor} onChange={(e) => setForm((f) => ({ ...f, tonerColor: e.target.value }))} className="w-full px-3 py-2 border rounded-lg">
+              <option value="">Select colour...</option>
+              <option value="black">Black</option>
+              <option value="cyan">Cyan</option>
+              <option value="magenta">Magenta</option>
+              <option value="yellow">Yellow</option>
+            </select>
+          )}
+          <input
+            type="number"
+            value={form.expectedYield}
+            onChange={(e) => setForm((f) => ({ ...f, expectedYield: e.target.value }))}
+            placeholder="Expected yield (clicks)"
+            className="w-full px-3 py-2 border rounded-lg"
+          />
+          <input
+            type="number"
+            step="0.01"
+            value={form.costRand}
+            onChange={(e) => setForm((f) => ({ ...f, costRand: e.target.value }))}
+            placeholder="Cost (Rand)"
+            className="w-full px-3 py-2 border rounded-lg"
+          />
+          <select value={form.meterType} onChange={(e) => setForm((f) => ({ ...f, meterType: e.target.value }))} className="w-full px-3 py-2 border rounded-lg">
+            <option value="mono">Mono</option>
+            <option value="colour">Colour</option>
+            <option value="total">Total (mono + colour)</option>
+          </select>
+        </div>
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={() => onCreate(form)}
+            disabled={!form.partName.trim() || isPending}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+          >
+            {isPending ? 'Adding...' : 'Add part'}
+          </button>
+          <button onClick={onClose} className="px-4 py-2 border rounded-lg">Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ModelEditModal = ({ model, makeName, onClose, onSave }) => {
+  const [form, setForm] = useState({
+    name: model.name,
+    paperSize: model.paperSize || 'A4',
+    modelType: model.modelType || 'mono',
+    machineLife: String(model.machineLife ?? ''),
+  });
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="popup-panel p-6 max-w-md w-full">
+        <h3 className="font-semibold mb-4">Edit model</h3>
+        <p className="text-sm text-gray-500 mb-3">{makeName} {model.name}</p>
+        <div className="space-y-3">
+          <input
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            placeholder="Model name"
+            className="w-full px-3 py-2 border rounded-lg"
+          />
+          <select
+            value={form.paperSize}
+            onChange={(e) => setForm((f) => ({ ...f, paperSize: e.target.value }))}
+            className="w-full px-3 py-2 border rounded-lg"
+          >
+            <option value="A3">A3</option>
+            <option value="A4">A4</option>
+          </select>
+          <select
+            value={form.modelType}
+            onChange={(e) => setForm((f) => ({ ...f, modelType: e.target.value }))}
+            className="w-full px-3 py-2 border rounded-lg"
+          >
+            <option value="mono">Mono</option>
+            <option value="colour">Colour</option>
+          </select>
+          <input
+            type="number"
+            min="1"
+            value={form.machineLife}
+            onChange={(e) => setForm((f) => ({ ...f, machineLife: e.target.value }))}
+            placeholder="Machine life (optional)"
+            className="w-full px-3 py-2 border rounded-lg"
+          />
+        </div>
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={() => onSave(form)}
+            disabled={!form.name.trim()}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+          >
+            Save
+          </button>
+          <button onClick={onClose} className="px-4 py-2 border rounded-lg">
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

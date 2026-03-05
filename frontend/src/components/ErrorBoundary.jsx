@@ -18,10 +18,10 @@ export class ErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
-          <div className="max-w-lg w-full bg-white rounded-lg shadow-lg p-6">
-            <h1 className="text-xl font-bold text-red-600 mb-2">Something went wrong</h1>
-            <p className="text-gray-700 mb-4 font-mono text-sm break-all">
+        <div className="min-h-screen flex items-center justify-center bg-black p-6">
+          <div className="max-w-lg w-full popup-panel p-6">
+            <h1 className="text-xl font-bold text-red-400 mb-2">Something went wrong</h1>
+            <p className="text-gray-300 mb-4 font-mono text-sm break-all">
               {this.state.error?.message || String(this.state.error)}
             </p>
             <p className="text-sm text-gray-500 mb-4">

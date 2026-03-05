@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customersApi, consumablesApi } from '../services/api';
@@ -10,12 +10,10 @@ import {
   Trash2,
   X,
   Check,
-  Building2,
-  Printer,
-  ChevronRight,
   AlertTriangle,
   Archive,
   RotateCcw,
+  MoreVertical,
 } from 'lucide-react';
 
 const Customers = ({ title = 'Customers' }) => {
@@ -24,6 +22,18 @@ const Customers = ({ title = 'Customers' }) => {
   const canArchive = isAdmin || isMeterUser;
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (openMenuId && menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openMenuId]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['customers', effectiveBranch],
@@ -93,7 +103,7 @@ const Customers = ({ title = 'Customers' }) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
   }
@@ -125,124 +135,118 @@ const Customers = ({ title = 'Customers' }) => {
         {customers.map((customer) => (
           <div
             key={customer.id}
-            className={`rounded-lg shadow-sm p-4 border transition-colors relative group ${
-              customer.isArchived
-                ? 'bg-gray-50 border-gray-200 opacity-75'
-                : 'bg-white border-gray-200 hover:border-red-200'
+            className={`tile-card p-4 relative group ${
+              customer.isArchived ? '!bg-gray-50 opacity-75' : ''
             }`}
           >
             <Link
               to={`/customers/${customer.id}`}
-              className="block"
+              className="block flex"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center flex-1 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
-                    <Building2 className="h-5 w-5 text-red-600" />
-                  </div>
-                  <div className="ml-3 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-gray-900 group-hover:text-red-600 truncate">{customer.name}</p>
-                      {customer.isArchived && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
-                          Archived
-                        </span>
-                      )}
-                      {tonerAlertsByCustomer[customer.id] && (
-                        <span
-                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 flex-shrink-0"
-                          title={tonerAlertsByCustomer[customer.id].partsDue
-                            .map((p) => `${p.partName} (${p.machineSerialNumber}): ${p.usage.toLocaleString()} / ${p.expectedYield.toLocaleString()} clicks (${p.percentUsed}% of yield)`)
-                            .join('\n')}
-                        >
-                          <span className="flex items-center gap-0.5">
-                            {tonerAlertsByCustomer[customer.id].partsDue.map((p, i) => (
-                              <span
-                                key={i}
-                                className="w-2.5 h-2.5 rounded-full border border-white shadow-sm"
-                                style={{
-                                  backgroundColor:
-                                    p.tonerColor === 'black'
-                                      ? '#1f2937'
-                                      : p.tonerColor === 'cyan'
-                                        ? '#06b6d4'
-                                        : p.tonerColor === 'magenta'
-                                          ? '#ec4899'
-                                          : p.tonerColor === 'yellow'
-                                            ? '#eab308'
-                                            : '#6b7280',
-                                }}
-                                title={p.partName}
-                              />
-                            ))}
-                          </span>
-                          <AlertTriangle className="h-3 w-3 text-amber-600" />
-                          {tonerAlertsByCustomer[customer.id].alertCount === 1
-                            ? 'Toner due'
-                            : `${tonerAlertsByCustomer[customer.id].alertCount} toners due`}
-                        </span>
-                      )}
-                    </div>
-                    {customer.contactName && (
-                      <p className="text-sm text-gray-500 truncate">{customer.contactName}</p>
-                    )}
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-red-600 flex-shrink-0 ml-2" />
-              </div>
-              <div className="mt-3 pt-3 border-t space-y-2">
-                {customer.email && (
-                  <p className="text-sm text-gray-600 truncate">{customer.email}</p>
-                )}
-                {customer.phone && (
-                  <p className="text-sm text-gray-600">{customer.phone}</p>
-                )}
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-                    <Printer className="h-3.5 w-3" />
-                    {customer._count?.machines ?? 0} machine(s)
-                  </span>
-                  {customer.branch && (
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                      {customer.branch}
+              {/* Left: status badges only (no icon) */}
+              {(customer.isArchived || tonerAlertsByCustomer[customer.id]) && (
+                <div className="flex flex-col items-center justify-center w-14 flex-shrink-0 pr-4 border-r border-gray-200 gap-1">
+                  {customer.isArchived && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-600">
+                      Archived
+                    </span>
+                  )}
+                  {tonerAlertsByCustomer[customer.id] && (
+                    <span
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200"
+                      title={tonerAlertsByCustomer[customer.id].partsDue
+                        .map((p) => `${p.partName} (${p.machineSerialNumber}): ${p.usage.toLocaleString()} / ${p.expectedYield.toLocaleString()} clicks (${p.percentUsed}% of yield)`)
+                        .join('\n')}
+                    >
+                      <AlertTriangle className="h-3 w-3" />
+                      {tonerAlertsByCustomer[customer.id].alertCount}
                     </span>
                   )}
                 </div>
+              )}
+              {/* Right: content - pr-10 reserves space for ellipsis button */}
+              <div className={`flex-1 min-w-0 flex flex-col pr-10 ${(customer.isArchived || tonerAlertsByCustomer[customer.id]) ? 'pl-4' : ''}`}>
+                <p className="font-medium text-gray-900 truncate">{customer.name}</p>
+                {customer.contactName && (
+                  <p className="text-sm text-gray-500 truncate mt-0.5">{customer.contactName}</p>
+                )}
+                {(customer.email || customer.phone) && (
+                  <p className="text-sm text-gray-600 truncate mt-1">
+                    {[customer.email, customer.phone].filter(Boolean).join(' · ')}
+                  </p>
+                )}
+                <p className="text-xs text-gray-400 mt-2">
+                  {customer._count?.machines === 0 ? 'No machines' : `${customer._count?.machines ?? 0} machine(s)`}
+                </p>
               </div>
             </Link>
             {(isAdmin || canArchive) && (
-              <div className="absolute top-2 right-2 flex gap-1" onClick={(e) => e.preventDefault()}>
-                {isAdmin && (
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEdit(customer); }}
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                    title="Edit"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                )}
-                {canArchive && (
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleArchive(customer); }}
-                    disabled={archiveMutation.isPending}
-                    className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors disabled:opacity-50"
-                    title={customer.isArchived ? 'Unarchive' : 'Archive'}
-                  >
-                    {customer.isArchived ? (
-                      <RotateCcw className="h-4 w-4" />
-                    ) : (
-                      <Archive className="h-4 w-4" />
+              <div
+                ref={openMenuId === customer.id ? menuRef : null}
+                className="absolute top-2 right-2"
+                onClick={(e) => e.preventDefault()}
+              >
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setOpenMenuId(openMenuId === customer.id ? null : customer.id);
+                  }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-900 hover:bg-gray-100 border border-gray-200 transition-colors"
+                  title="Options"
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </button>
+                {openMenuId === customer.id && (
+                  <div className="absolute right-0 top-full mt-1 py-1 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[140px] z-10">
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleEdit(customer);
+                          setOpenMenuId(null);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </button>
                     )}
-                  </button>
-                )}
-                {isAdmin && (
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(customer); }}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-30"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                    {canArchive && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleArchive(customer);
+                          setOpenMenuId(null);
+                        }}
+                        disabled={archiveMutation.isPending}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        {customer.isArchived ? (
+                          <RotateCcw className="h-4 w-4" />
+                        ) : (
+                          <Archive className="h-4 w-4" />
+                        )}
+                        {customer.isArchived ? 'Unarchive' : 'Archive'}
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDelete(customer);
+                          setOpenMenuId(null);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -305,12 +309,12 @@ const CustomerModal = ({ customer, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
-          <h2 className="text-lg font-semibold">
+      <div className="popup-panel max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white">
+          <h2 className="text-lg font-semibold text-gray-900">
             {isEditing ? 'Edit Customer' : 'Add Customer'}
           </h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-600">
             <X className="h-5 w-5" />
           </button>
         </div>

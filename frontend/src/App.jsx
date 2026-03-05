@@ -19,7 +19,6 @@ import MachineConfiguration from './pages/MachineConfiguration';
 import PartsPricing from './pages/PartsPricing';
 import Customers from './pages/Customers';
 import CustomerDetail from './pages/CustomerDetail';
-import ConsumableOrders from './pages/ConsumableOrders';
 import CopierServiceDashboard from './pages/CopierServiceDashboard';
 import Notifications from './pages/Notifications';
 import SecuritySettings from './pages/SecuritySettings';
@@ -29,7 +28,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
       </div>
     );
@@ -112,19 +111,11 @@ function App() {
       {/* Consumables Module Routes */}
       <Route
         path="/consumables"
-        element={<Navigate to="/consumables/orders" replace />}
+        element={<Navigate to="/consumables/summary" replace />}
       />
       <Route
         path="/consumables/orders"
-        element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <ConsumableOrders />
-              </Layout>
-            </CapturerRestrict>
-          </ProtectedRoute>
-        }
+        element={<Navigate to="/customers" replace />}
       />
       <Route
         path="/consumables/summary"

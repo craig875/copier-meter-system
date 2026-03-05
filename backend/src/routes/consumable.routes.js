@@ -10,6 +10,7 @@ import {
   createModelPart,
   updateModelPart,
   deleteModelPart,
+  increaseCosts,
   getTonerAlerts,
   importPartOrders,
 } from '../controllers/consumable.controller.js';
@@ -20,6 +21,7 @@ import {
   recordPartOrderSchema,
   createModelPartSchema,
   updateModelPartSchema,
+  increaseCostsSchema,
   consumableSummaryQuerySchema,
   importPartOrdersSchema,
 } from '../schemas/consumable.schema.js';
@@ -31,6 +33,7 @@ router.use(requireConsumableAccess);
 
 // Model part CRUD (admin) - define before /model-parts to avoid :id capturing "all"
 router.get('/model-parts/all', requireAdmin, getModelPartsAll);
+router.post('/model-parts/increase-costs', requireAdmin, validate(increaseCostsSchema), increaseCosts);
 router.get('/model-parts/:id', requireAdmin, getModelPartById);
 router.post('/model-parts', requireAdmin, validate(createModelPartSchema), createModelPart);
 router.put('/model-parts/:id', requireAdmin, validate(updateModelPartSchema), updateModelPart);

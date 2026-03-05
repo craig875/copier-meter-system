@@ -1,6 +1,6 @@
 import { repositories } from '../repositories/index.js';
 import { validateReadings } from './validation.service.js';
-import { generateExcelExport, generateExcelExportSplitByBranch } from './export.service.js';
+import { generateExcelExport, generateTextExport, generateExcelExportSplitByBranch } from './export.service.js';
 import { getPreviousMonth } from '../utils/date.utils.js';
 import { calculateReadingMetrics } from '../utils/reading.utils.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
@@ -218,14 +218,15 @@ export class ReadingService {
   }
 
   /**
-   * Export readings to Excel and lock the month
+   * Export readings to Excel or text and lock the month
    * @param {number} year
    * @param {number} month
    * @param {string} branch
    * @param {string} userId
-   * @returns {Promise<Buffer>}
+   * @param {string} format - 'xlsx' (default) or 'txt'
+   * @returns {Promise<Buffer|string>}
    */
-  async exportReadings(year, month, branch, userId) {
+  async exportReadings(year, month, branch, userId, format = 'xlsx') {
     const targetYear = parseInt(year);
     const targetMonth = parseInt(month);
 
@@ -238,13 +239,21 @@ export class ReadingService {
 
     const currentReadingMap = new Map(currentReadings.map(r => [r.machineId, r]));
 
-    // Generate Excel
-    const buffer = await generateExcelExport(
-      machines,
-      currentReadingMap,
-      targetYear,
-      targetMonth
-    );
+    // Generate export based on format
+    let result;
+    if (format === 'txt') {
+      result = Buffer.from(
+        generateTextExport(machines, currentReadingMap, targetYear, targetMonth),
+        'utf8'
+      );
+    } else {
+      result = await generateExcelExport(
+        machines,
+        currentReadingMap,
+        targetYear,
+        targetMonth
+      );
+    }
 
     // Mark month as submitted (non-blocking)
     // Only create submission if branch is provided (submissions are branch-specific)
@@ -257,7 +266,7 @@ export class ReadingService {
       }
     }
 
-    return buffer;
+    return result;
   }
 
   /**

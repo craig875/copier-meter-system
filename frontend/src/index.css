@@ -28,6 +28,13 @@ body {
     @apply bg-white/20 backdrop-blur-3xl border border-white/30;
     box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.5) inset, 0 8px 32px rgba(0, 0, 0, 0.08);
   }
+  /* Tile/card style matching Customers page - light theme, minimal */
+  .tile-card {
+    @apply rounded-xl border border-gray-200 bg-white transition-colors;
+  }
+  .tile-card:hover {
+    @apply border-gray-300 bg-gray-50/50;
+  }
   /* Solid popup/modal content - opaque, easy to read */
   .popup-panel {
     @apply bg-white rounded-xl border border-gray-200;

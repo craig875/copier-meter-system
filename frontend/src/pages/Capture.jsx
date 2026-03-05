@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Download,
   FileSpreadsheet,
+  FileText,
   X,
   Trash2,
   MessageSquare,
@@ -355,7 +356,7 @@ const Capture = () => {
     }
   };
 
-  const handleSubmitAndExport = async () => {
+  const handleSubmitAndExport = async (format = 'xlsx') => {
     // First, save any pending changes
     if (Object.keys(editedReadings).length > 0) {
       const readingsToSubmit = [];
@@ -390,18 +391,19 @@ const Capture = () => {
       }
     }
 
-    // Then export
+    // Then export (format is passed as argument: 'xlsx' or 'txt')
+    const ext = format === 'txt' ? 'txt' : 'xlsx';
     try {
-      const response = await readingsApi.export(year, month, queryBranch);
+      const response = await readingsApi.export(year, month, queryBranch, format);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `meter-readings-${queryBranch || 'all'}-${year}-${String(month).padStart(2, '0')}.xlsx`);
+      link.setAttribute('download', `meter-readings-${queryBranch || 'all'}-${year}-${String(month).padStart(2, '0')}.${ext}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Excel file exported successfully! Month has been locked.');
+      toast.success(`${format === 'txt' ? 'Text' : 'Excel'} file exported successfully! Month has been locked.`);
       // Refresh to get locked status
       queryClient.invalidateQueries(['readings', year, month, queryBranch]);
       queryClient.invalidateQueries(['toner-alerts']);
@@ -508,25 +510,44 @@ const Capture = () => {
           {!isLocked && (isComplete || isAdmin) ? (
             <div data-tour="submit-buttons" className="flex items-center gap-2">
               {isComplete ? (
-                // Show export button for all users when 100% complete
-                <button
-                  onClick={handleSubmitAndExport}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md"
-                >
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Submit & Export Excel
-                </button>
-              ) : (
-                // Show export button only for admins when not complete
-                <>
+                // Show export buttons for all users when 100% complete
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={handleSubmitAndExport}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
-                    title="Admin: Export available even if not 100% complete"
+                    onClick={() => handleSubmitAndExport('xlsx')}
+                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md"
                   >
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
-                    Export Excel (Admin)
+                    Export Excel
                   </button>
+                  <button
+                    onClick={() => handleSubmitAndExport('txt')}
+                    className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-md"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export Text
+                  </button>
+                </div>
+              ) : (
+                // Show export buttons only for admins when not complete
+                <>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSubmitAndExport('xlsx')}
+                      className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+                      title="Admin: Export available even if not 100% complete"
+                    >
+                      <FileSpreadsheet className="h-4 w-4 mr-2" />
+                      Export Excel
+                    </button>
+                    <button
+                      onClick={() => handleSubmitAndExport('txt')}
+                      className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-md"
+                      title="Admin: Export available even if not 100% complete"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export Text
+                    </button>
+                  </div>
                   <button
                     onClick={handleSave}
                     disabled={!hasChanges || submitMutation.isPending || isLocked}

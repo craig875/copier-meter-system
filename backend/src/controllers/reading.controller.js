@@ -85,8 +85,10 @@ export class ReadingController {
   });
 
   exportReadings = asyncHandler(async (req, res) => {
-    const { year, month, branch: queryBranch } = req.query;
-    
+    const { year, month, branch: queryBranch, format = 'xlsx' } = req.query;
+
+    const exportFormat = String(format).toLowerCase() === 'txt' ? 'txt' : 'xlsx';
+
     // Admins can specify branch or use their branch, or see all if not specified
     // Non-admins use query branch if provided, otherwise their assigned branch, or see all if no branch assigned
     let branch = null;
@@ -98,11 +100,12 @@ export class ReadingController {
     }
 
     const userId = req.user.id;
-    const buffer = await this.readingService.exportReadings(year, month, branch, userId);
-    this.auditService.log(userId, 'reading_export', 'reading', null, { year, month, branch: branch || 'all' });
+    const buffer = await this.readingService.exportReadings(year, month, branch, userId, exportFormat);
+    this.auditService.log(userId, 'reading_export', 'reading', null, { year, month, branch: branch || 'all', format: exportFormat });
 
-    const filename = `meter-readings-${branch || 'all'}-${year}-${String(month).padStart(2, '0')}.xlsx`;
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    const ext = exportFormat === 'txt' ? 'txt' : 'xlsx';
+    const filename = `meter-readings-${branch || 'all'}-${year}-${String(month).padStart(2, '0')}.${ext}`;
+    res.setHeader('Content-Type', exportFormat === 'txt' ? 'text/plain; charset=utf-8' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(buffer);
   });

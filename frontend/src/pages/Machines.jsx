@@ -268,7 +268,7 @@ const Machines = () => {
       {selectedModelId && (
         <Link
           to="/machines"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to models
@@ -294,7 +294,7 @@ const Machines = () => {
           {modelTiles.length === 0 ? (
             <div
               data-tour="machines-table"
-              className="liquid-glass rounded-xl p-8 text-center text-gray-500"
+              className="tile-card p-8 text-center text-gray-500"
             >
               <p className="mb-4">No machines found. {data ? 'Try adjusting your search or branch filter.' : 'Loading...'}</p>
               {data && (
@@ -316,7 +316,7 @@ const Machines = () => {
                 <button
                   key={tile.modelKey}
                   onClick={() => setSearchParams({ model: tile.modelKey })}
-                  className="liquid-glass rounded-xl p-4 text-left hover:ring-2 hover:ring-red-500/50 transition-all"
+                  className="tile-card p-4 text-left"
                 >
                   <div className="font-semibold text-gray-900">{tile.modelDisplay}</div>
                   <div className="text-sm text-gray-500 mt-0.5">
@@ -335,7 +335,7 @@ const Machines = () => {
         </div>
       ) : (
         /* List view */
-        <div data-tour="machines-table" className="liquid-glass rounded-xl overflow-hidden">
+        <div data-tour="machines-table" className="tile-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -357,7 +357,7 @@ const Machines = () => {
                   </tr>
                 ) : (
                   displayMachines.map((machine) => (
-                <tr key={machine.id} className={clsx(!machine.isActive && 'bg-gray-50 opacity-60')}>
+                <tr key={machine.id} className={clsx(!machine.isActive && 'bg-gray-800/80 opacity-60')}>
                   <td className="px-4 py-3">
                     <Link
                       to={`/consumables/machines/${machine.id}`}
@@ -441,7 +441,7 @@ const Machines = () => {
                     {isAdmin && (
                       <button
                         onClick={() => handleDelete(machine)}
-                        className="p-1 text-gray-500 hover:text-red-600 transition-colors ml-2"
+                        className="p-1 text-gray-500 hover:text-gray-900 transition-colors ml-2"
                         title="Delete"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -730,23 +730,23 @@ const ImportModal = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Import Machines</h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="popup-panel max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-gray-800">
+          <h2 className="text-lg font-semibold text-gray-100">Import Machines</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-800 rounded text-gray-400 hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="p-4 space-y-4">
           {/* Instructions */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
             <div className="flex items-start justify-between mb-2">
               <div>
-                <h3 className="font-semibold text-blue-900 mb-2">CSV Format Required:</h3>
-                <p className="text-sm text-blue-800 mb-2">Columns (in order):</p>
-                <ol className="text-sm text-blue-800 list-decimal list-inside space-y-1">
+                <h3 className="font-semibold text-blue-300 mb-2">CSV Format Required:</h3>
+                <p className="text-sm text-blue-200/90 mb-2">Columns (in order):</p>
+                <ol className="text-sm text-blue-200/90 list-decimal list-inside space-y-1">
                   <li>Serial Number (required – also used as contract reference)</li>
                   <li>Customer (optional)</li>
                   <li>Model (optional)</li>

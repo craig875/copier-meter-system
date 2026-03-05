@@ -9,6 +9,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Plus,
+  Pencil,
   Printer,
   Trash2,
   Copy,
@@ -18,13 +19,19 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import MeterBlocks from '../components/MeterBlocks';
+import MachineStatsTile from '../components/MachineStatsTile';
+import MachineLifeTile from '../components/MachineLifeTile';
+import MonthlyUsageCycleTile from '../components/MonthlyUsageCycleTile';
+import MachineModal from '../components/MachineModal';
 
 const ConsumableMachineDetail = () => {
   const { machineId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { effectiveBranch, isAdmin } = useAuth();
+  const { effectiveBranch, isAdmin, isMeterUser } = useAuth();
+  const canEditMachine = isAdmin || isMeterUser;
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showEditMachine, setShowEditMachine] = useState(false);
   const [orderForm, setOrderForm] = useState({
     modelPartId: '',
     orderDate: new Date().toISOString().slice(0, 10),
@@ -123,14 +130,14 @@ const ConsumableMachineDetail = () => {
   if (machineLoading || historyLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
       </div>
     );
   }
 
   if (!machine) {
     return (
-      <div className="liquid-glass rounded-xl p-6">
+      <div className="tile-card p-6">
         <p className="text-red-600">Machine not found</p>
         <Link to="/consumables/summary" className="text-red-600 hover:underline mt-2 inline-block">
           ← Back to Summary
@@ -219,7 +226,7 @@ const ConsumableMachineDetail = () => {
               type="button"
               onClick={() => handleDeleteOrder(r)}
               disabled={deleteOrderMutation.isPending}
-              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+              className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
               title="Delete part order"
             >
               <Trash2 className="h-4 w-4" />
@@ -235,25 +242,36 @@ const ConsumableMachineDetail = () => {
       <div className="flex items-center justify-between">
         <Link
           to={(machine?.customer?.id || machine?.customerId) ? `/customers/${machine.customer?.id || machine.customerId}` : '/customers'}
-          className="flex items-center text-gray-600 hover:text-red-600"
+          className="flex items-center text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           {(machine?.customer?.id || machine?.customerId) ? `Back to ${machine.customer?.name ?? machine.customer ?? 'Customer'}` : 'Back to Customers'}
         </Link>
-        <button
-          onClick={() => setShowOrderModal(true)}
-          disabled={modelParts.length === 0}
-          className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Record part order
-        </button>
+        <div className="flex items-center gap-2">
+          {canEditMachine && (
+            <button
+              onClick={() => setShowEditMachine(true)}
+              className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Pencil className="h-5 w-5 mr-2" />
+              Edit machine
+            </button>
+          )}
+          <button
+            onClick={() => setShowOrderModal(true)}
+            disabled={modelParts.length === 0}
+            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Order consumable
+          </button>
+        </div>
       </div>
 
-      <div className="liquid-glass rounded-xl p-6">
+      <div className="tile-card p-6">
         <div className="flex items-center gap-4 mb-6">
           <div className="p-3 bg-red-50 rounded-lg flex items-center gap-3">
-            <Printer className="h-8 w-8 text-red-600" />
+            <Printer className="h-8 w-8 text-gray-900" />
             <MeterBlocks isColour={machine.model?.modelType === 'colour'} size="lg" />
           </div>
           <div>
@@ -265,8 +283,30 @@ const ConsumableMachineDetail = () => {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-4">
+        <MachineStatsTile
+          readings={readingsHistoryData?.readings || []}
+          isColour={machine.model?.modelType === 'colour'}
+        />
+        <MachineLifeTile
+          totalReading={
+            machine.totalReading ??
+            (readingsHistoryData?.readings?.[0]
+              ? (readingsHistoryData.readings[0].monoReading ?? 0) +
+                (readingsHistoryData.readings[0].colourReading ?? 0)
+              : 0)
+          }
+          machineLife={machine.model?.machineLife ?? null}
+          lifePercentUsed={machine.lifePercentUsed ?? null}
+        />
+        <MonthlyUsageCycleTile
+          machineLife={machine.model?.machineLife ?? null}
+          readings={readingsHistoryData?.readings || []}
+        />
+      </div>
+
       {machine.nearEndOfLife && (
-        <div className="liquid-glass rounded-xl p-4 border-amber-300 bg-amber-50/80 flex items-center gap-3">
+        <div className="liquid-glass rounded-xl p-4 border-amber-700/50 bg-amber-900/30 flex items-center gap-3">
           <AlertCircle className="h-6 w-6 text-amber-600 flex-shrink-0" />
           <div>
             <p className="font-medium text-amber-900">Near end of life</p>
@@ -279,7 +319,7 @@ const ConsumableMachineDetail = () => {
       )}
 
       {/* Meter reading history - list with link to full page */}
-      <div className="liquid-glass rounded-xl p-6">
+      <div className="tile-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Meter reading history</h3>
           {(readingsHistoryData?.readings?.length ?? 0) > 0 && (
@@ -346,7 +386,7 @@ const ConsumableMachineDetail = () => {
       </div>
 
       {/* Toner */}
-      <div className="liquid-glass rounded-xl p-6">
+      <div id="toner-section" className="tile-card p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Toner</h3>
         {tonerParts.length === 0 ? (
           <p className="text-gray-500 py-4">No toner orders yet.</p>
@@ -378,7 +418,7 @@ const ConsumableMachineDetail = () => {
       </div>
 
       {/* General Parts */}
-      <div className="liquid-glass rounded-xl p-6">
+      <div className="tile-card p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">General parts</h3>
         {generalParts.length === 0 ? (
           <p className="text-gray-500 py-4">No general part orders yet.</p>
@@ -412,7 +452,7 @@ const ConsumableMachineDetail = () => {
       {showOrderModal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
           <div className="popup-panel p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Record part order</h3>
+            <h3 className="text-lg font-semibold mb-4">Order consumable</h3>
             <form onSubmit={handleSubmitOrder} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Part</label>
@@ -489,8 +529,19 @@ const ConsumableMachineDetail = () => {
         </div>
       )}
 
+      {showEditMachine && machineData?.machine && (
+        <MachineModal
+          machine={machineData.machine}
+          onClose={() => {
+            setShowEditMachine(false);
+            queryClient.invalidateQueries(['machine', machineId]);
+            queryClient.invalidateQueries(['consumables-history', machineId]);
+          }}
+        />
+      )}
+
       {modelParts.length === 0 && machine.modelId && (
-        <div className="liquid-glass rounded-xl p-6 border-amber-200 bg-amber-50/50">
+        <div className="liquid-glass rounded-xl p-6 border-amber-700/50 bg-amber-900/30">
           <p className="text-amber-800">
             No consumable parts are defined for this model. An admin must add parts under Consumables → Model Parts.
           </p>
