@@ -101,7 +101,7 @@ const Notifications = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div data-tour="notifications-header" className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
           <p className="text-gray-500 mt-1">
@@ -110,6 +110,7 @@ const Notifications = () => {
         </div>
         {unreadCount > 0 && (
           <button
+            data-tour="notifications-mark-all"
             onClick={() => markAllReadMutation.mutate()}
             disabled={markAllReadMutation.isPending}
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
@@ -120,7 +121,7 @@ const Notifications = () => {
         )}
       </div>
 
-      <div className="liquid-glass rounded-xl overflow-hidden">
+      <div data-tour="notifications-list" className="liquid-glass rounded-xl overflow-hidden">
         {notifications.length === 0 ? (
           <div className="p-12 text-center text-gray-500">
             <Bell className="h-12 w-12 mx-auto text-gray-300 mb-4" />

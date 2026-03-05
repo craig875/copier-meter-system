@@ -170,7 +170,7 @@ const ConsumablesSummary = () => {
 
   return (
     <div className="space-y-6">
-      <div className="liquid-glass rounded-xl p-6">
+      <div data-tour="consumables-summary" className="liquid-glass rounded-xl p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Consumable Summary</h2>

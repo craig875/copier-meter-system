@@ -157,10 +157,10 @@ const Layout = ({ children }) => {
 
       {/* Sidebar - glass effect */}
       <aside data-tour="sidebar" className={clsx(
-        'fixed inset-y-0 left-0 z-30 w-64 bg-gray-900/95 backdrop-blur-xl border-r border-white/10 shadow-xl transform transition-transform duration-300 lg:translate-x-0',
+        'fixed inset-y-0 left-0 z-30 w-64 bg-gray-900/95 backdrop-blur-xl border-r border-white/10 shadow-xl transform transition-transform duration-300 lg:translate-x-0 flex flex-col',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-700">
+        <div className="flex-shrink-0 flex items-center justify-between h-16 px-6 border-b border-gray-700">
           <Link to="/" className="flex items-center">
             <img src={logo} alt="Pancom" className="h-8 w-auto" />
           </Link>
@@ -172,7 +172,7 @@ const Layout = ({ children }) => {
           </button>
         </div>
 
-        <nav className="mt-6 px-3">
+        <nav className="flex-1 overflow-y-auto mt-6 px-3 min-h-0">
           {navigation.map((item) => (
             <div key={item.name}>
                 <Link
@@ -257,7 +257,7 @@ const Layout = ({ children }) => {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700 space-y-3">
+        <div className="flex-shrink-0 p-4 border-t border-gray-700 space-y-3 bg-gray-900/95">
           {/* Security - bottom, just above user info, matches main nav style */}
           <Link
             to="/security"
@@ -344,7 +344,12 @@ const Layout = ({ children }) => {
             </h2>
           </div>
           <button
-            onClick={() => import('../services/tutorial').then((m) => m.startTutorial(location.pathname, isAdmin))}
+            onClick={() => {
+              import('../services/tutorial').then((m) => m.startTutorial(location.pathname, isAdmin)).catch((err) => {
+                console.error('Tutorial failed to load:', err);
+                import('react-hot-toast').then(({ default: toast }) => toast.error('Could not load tour'));
+              });
+            }}
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-white/30 rounded-lg transition-colors"
             title="Take a tour"
           >

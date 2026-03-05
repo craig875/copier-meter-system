@@ -284,7 +284,7 @@ const MachineConfiguration = () => {
   return (
     <div className="space-y-6">
       {/* Import section */}
-      <div className="liquid-glass rounded-xl p-6">
+      <div data-tour="machine-config-import" className="liquid-glass rounded-xl p-6">
         <button
           type="button"
           onClick={() => setShowImport(!showImport)}
@@ -370,7 +370,7 @@ const MachineConfiguration = () => {
       </div>
 
       {/* Main config: refined accordion */}
-      <div className="liquid-glass rounded-xl p-6">
+      <div data-tour="machine-config-makes" className="liquid-glass rounded-xl p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Machine Configuration</h1>
         <p className="text-gray-500 mb-6">
           Configure machine makes, models, and consumable parts. Client-level machines are assigned a make and model in <strong>Meter Readings → Machines</strong>.
@@ -663,6 +663,7 @@ const MachineConfiguration = () => {
 
         {!showMakeForm && (
           <button
+            data-tour="machine-config-add-make"
             onClick={() => setShowMakeForm(true)}
             className="mt-6 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-colors"
           >

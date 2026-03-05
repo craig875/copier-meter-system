@@ -10,6 +10,7 @@ const CopierServiceDashboard = () => {
       icon: Building2,
       color: 'bg-red-50',
       iconColor: 'text-gray-900',
+      tourId: 'copier-tile-customers',
     },
     {
       name: 'Meter Readings',
@@ -18,6 +19,7 @@ const CopierServiceDashboard = () => {
       icon: LayoutDashboard,
       color: 'bg-blue-50',
       iconColor: 'text-blue-600',
+      tourId: 'copier-tile-meter-readings',
     },
     {
       name: 'Machines',
@@ -26,6 +28,7 @@ const CopierServiceDashboard = () => {
       icon: Printer,
       color: 'bg-green-50',
       iconColor: 'text-green-600',
+      tourId: 'copier-tile-machines',
     },
   ];
 
@@ -36,13 +39,14 @@ const CopierServiceDashboard = () => {
         <p className="text-gray-500">Select an area to get started</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+      <div data-tour="copier-tiles" className="grid grid-cols-1 sm:grid-cols-2 gap-8">
         {tiles.map((tile) => {
           const Icon = tile.icon;
           return (
             <Link
               key={tile.name}
               to={tile.href}
+              data-tour={tile.tourId}
               className="tile-card p-8 group min-h-[140px]"
             >
               <div className="flex items-start gap-6">

@@ -134,6 +134,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
             to="/capture"
+            data-tour="meter-action-capture"
             className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
           >
             <div className="p-3 bg-red-50 rounded-lg mr-4">
@@ -147,6 +148,7 @@ const Dashboard = () => {
 
           <Link
             to="/history"
+            data-tour="meter-action-history"
             className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
           >
             <div className="p-3 bg-green-50 rounded-lg mr-4">
@@ -160,6 +162,7 @@ const Dashboard = () => {
 
           <Link
             to="/machines"
+            data-tour="meter-action-machines"
             className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
           >
             <div className="p-3 bg-blue-50 rounded-lg mr-4">
@@ -174,6 +177,7 @@ const Dashboard = () => {
           {isAdmin && (
             <Link
               to="/import-readings"
+              data-tour="meter-action-import"
               className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
             >
               <div className="p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg mr-4">

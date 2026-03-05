@@ -156,7 +156,7 @@ const History = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div data-tour="history-summary" className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <SummaryCard
           title="Total Machines"
           value={summary.totalMachines}
