@@ -28,6 +28,11 @@ router.use('/readings', readingRoutes);
 // Consumable Tracker
 router.use('/consumables', consumableRoutes);
 
+// Public health (before makeModel mount, which applies auth to /api/*)
+router.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Makes & Models (read for forms; CRUD via makeModel routes)
 router.use('/', makeModelRoutes);
 
@@ -44,10 +49,5 @@ router.use('/notifications', notificationRoutes);
 if (config.connectivityModuleEnabled) {
   router.use('/connectivity', connectivityRoutes);
 }
-
-// Health check
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 export default router;
