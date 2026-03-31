@@ -162,6 +162,25 @@ export const modelsApi = {
   delete: (id) => api.delete(`/models/${id}`).then((r) => r.data),
 };
 
+// Connectivity Monitoring API
+export const connectivityApi = {
+  getDashboard: () => api.get('/connectivity/dashboard').then((r) => r.data),
+  getSummary: () => api.get('/connectivity/summary').then((r) => r.data),
+  getTargets: (params = {}) => api.get('/connectivity/targets', { params }).then((r) => r.data),
+  getTarget: (id, params = {}) => api.get(`/connectivity/targets/${id}`, { params }).then((r) => r.data),
+  checkTarget: (id) => api.post(`/connectivity/targets/${id}/check`).then((r) => r.data),
+  createTarget: (data) => api.post('/connectivity/targets', data).then((r) => r.data),
+  updateTarget: (id, data) => api.put(`/connectivity/targets/${id}`, data).then((r) => r.data),
+  deleteTarget: (id) => api.delete(`/connectivity/targets/${id}`).then((r) => r.data),
+  setTargetStatus: (id, status) => api.patch(`/connectivity/targets/${id}/status`, { status }).then((r) => r.data),
+  getTimeWindows: () => api.get('/connectivity/time-windows').then((r) => r.data),
+  createOrUpdateTimeWindow: (data) => api.post('/connectivity/time-windows', data).then((r) => r.data),
+  getUptimeReport: (params) => api.get('/connectivity/reports/uptime', { params }).then((r) => r.data),
+  getSlaReport: (params) => api.get('/connectivity/reports/sla', { params }).then((r) => r.data),
+  exportReport: (params) => api.get('/connectivity/reports/export', { params, responseType: 'blob' }),
+  getOutages: (params = {}) => api.get('/connectivity/outages', { params }).then((r) => r.data),
+};
+
 // Consumables API
 export const consumablesApi = {
   getModelParts: (modelId, branch = null) => {

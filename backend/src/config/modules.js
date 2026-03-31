@@ -1,3 +1,5 @@
+import { config } from './index.js';
+
 /**
  * Module Registry - Centralized configuration for all platform modules
  * 
@@ -38,6 +40,17 @@ export const modules = [
     apiRoutes: ['/api/consumables', '/api/machines'],
     category: 'Operations',
   },
+  {
+    id: 'connectivity-monitoring',
+    name: 'Connectivity Monitoring',
+    description: 'Monitor customer internet links, uptime, SLA, and alerts',
+    route: '/connectivity',
+    icon: '🌐',
+    enabled: config.connectivityModuleEnabled,
+    permissions: ['admin', 'viewer'],
+    apiRoutes: ['/api/connectivity'],
+    category: 'Operations',
+  },
   // Future modules can be added here:
   // {
   //   id: 'inventory',
@@ -66,6 +79,11 @@ export function getAccessibleModules(userRole) {
       return ['meter-readings', 'consumables'].includes(module.id);
     }
     
+    // Viewers can access connectivity only
+    if (userRole === 'viewer') {
+      return ['connectivity-monitoring'].includes(module.id);
+    }
+    
     // Admins can access all modules
     if (userRole === 'admin') {
       return true;
@@ -73,6 +91,7 @@ export function getAccessibleModules(userRole) {
     
     if (module.permissions === 'all') return true;
     if (module.permissions === 'admin' && userRole === 'admin') return true;
+    if (Array.isArray(module.permissions) && module.permissions.includes(userRole)) return true;
     if (typeof module.permissions === 'function') {
       return module.permissions(userRole);
     }

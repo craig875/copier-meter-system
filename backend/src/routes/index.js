@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { config } from '../config/index.js';
 import authRoutes from './auth.routes.js';
 import userRoutes from './user.routes.js';
 import machineRoutes from './machine.routes.js';
@@ -9,6 +10,7 @@ import consumableRoutes from './consumable.routes.js';
 import makeModelRoutes from './makeModel.routes.js';
 import customerRoutes from './customer.routes.js';
 import notificationRoutes from './notification.routes.js';
+import connectivityRoutes from '../connectivity/connectivity.routes.js';
 
 const router = Router();
 
@@ -37,6 +39,11 @@ router.use('/users', userRoutes);
 
 // Notifications (admin only)
 router.use('/notifications', notificationRoutes);
+
+// Connectivity monitoring (when enabled)
+if (config.connectivityModuleEnabled) {
+  router.use('/connectivity', connectivityRoutes);
+}
 
 // Health check
 router.get('/health', (req, res) => {

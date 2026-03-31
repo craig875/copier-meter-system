@@ -81,6 +81,41 @@ export class NotificationService {
   }
 
   /**
+   * Notify admins when a connectivity link goes down, is restored, or has DNS failure
+   * @param {Object} target - MonitoringTarget with id, customerName, siteName, monitoringTarget
+   * @param {string} alertType - down, restored, dns_failure
+   * @param {Object} details - { duration, message }
+   */
+  async notifyConnectivityLinkDown(target, alertType, details = {}) {
+    const adminIds = await this.getAdminUserIds();
+    if (adminIds.length === 0) return;
+
+    const typeMap = {
+      down: 'connectivity_link_down',
+      restored: 'connectivity_link_restored',
+      dns_failure: 'connectivity_dns_failure',
+    };
+    const type = typeMap[alertType] ?? 'connectivity_link_down';
+
+    const label = alertType === 'down' ? 'Link down' : alertType === 'restored' ? 'Link restored' : 'DNS failure';
+    const title = `${label}: ${target.customerName} - ${target.siteName}`;
+    let message = `Target ${target.monitoringTarget}`;
+    if (details.duration) message += ` (down for ${details.duration})`;
+    else if (details.message) message += ` - ${details.message}`;
+
+    const linkUrl = `/connectivity/targets/${target.id}`;
+
+    await this.notificationRepo.createForUsers(adminIds, {
+      type,
+      title,
+      message,
+      linkUrl,
+      entityType: 'connectivity_target',
+      entityId: target.id,
+    });
+  }
+
+  /**
    * Get notifications for current user (admin)
    */
   async getForUser(userId, options = {}) {

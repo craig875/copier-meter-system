@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { consumablesApi, makesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { trimLeading } from '../utils/string';
 import toast from 'react-hot-toast';
 import { Loader2, Pencil, Check, X, Search, Percent } from 'lucide-react';
 
@@ -140,7 +141,7 @@ const PartsPricing = () => {
                 type="text"
                 placeholder="Part name, item code, make, model..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => setSearch(trimLeading(e.target.value))}
                 className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent w-64"
               />
             </div>
@@ -201,7 +202,7 @@ const PartsPricing = () => {
                 max="200"
                 step="0.5"
                 value={increasePercent}
-                onChange={(e) => setIncreasePercent(e.target.value)}
+                onChange={(e) => setIncreasePercent(trimLeading(e.target.value))}
                 placeholder="e.g. 5 for 5%"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 autoFocus
@@ -281,7 +282,7 @@ const PartsPricing = () => {
                             min="0"
                             step="0.01"
                             value={editCost}
-                            onChange={(e) => setEditCost(e.target.value)}
+                            onChange={(e) => setEditCost(trimLeading(e.target.value))}
                             className="w-24 px-2 py-1 border border-gray-300 rounded text-right focus:ring-2 focus:ring-red-500 focus:border-transparent"
                             autoFocus
                             onKeyDown={(e) => {

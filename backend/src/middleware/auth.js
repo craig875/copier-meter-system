@@ -15,7 +15,7 @@ export const authenticate = async (req, res, next) => {
     
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, name: true, role: true, branch: true }
+      select: { id: true, email: true, name: true, role: true, branch: true, modules: true }
     });
 
     if (!user) {
@@ -54,15 +54,14 @@ export const authenticate = async (req, res, next) => {
 };
 
 export const requireAdmin = (req, res, next) => {
-  // Only admins have full access
-  if (req.user?.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required' });
+  if (req.user?.role !== 'admin' && req.user?.role !== 'manager') {
+    return res.status(403).json({ error: 'Administrator or manager access required' });
   }
   next();
 };
 
 export const requireMeterOrAdmin = (req, res, next) => {
-  if (req.user?.role !== 'admin' && req.user?.role !== 'meter_user') {
+  if (!['admin', 'manager', 'meter_user'].includes(req.user?.role)) {
     return res.status(403).json({ error: 'Admin or meter user access required' });
   }
   next();
@@ -70,7 +69,7 @@ export const requireMeterOrAdmin = (req, res, next) => {
 
 /** Excludes capturer - for machine create/update, etc. */
 export const requireMeterUserOrAdmin = (req, res, next) => {
-  if (req.user?.role !== 'admin' && req.user?.role !== 'meter_user') {
+  if (!['admin', 'manager', 'meter_user'].includes(req.user?.role)) {
     return res.status(403).json({ error: 'Admin or meter user access required' });
   }
   next();

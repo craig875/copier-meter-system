@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customersApi, consumablesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { trimLeading } from '../utils/string';
 import toast from 'react-hot-toast';
 import {
   Plus,
@@ -18,8 +19,8 @@ import {
 
 const Customers = ({ title = 'Customers' }) => {
   const queryClient = useQueryClient();
-  const { effectiveBranch, isAdmin, isMeterUser } = useAuth();
-  const canArchive = isAdmin || isMeterUser;
+  const { effectiveBranch, isElevated, isMeterUser } = useAuth();
+  const canArchive = isElevated || isMeterUser;
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -119,7 +120,7 @@ const Customers = ({ title = 'Customers' }) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {isAdmin && (
+          {isElevated && (
           <button
             onClick={() => setShowModal(true)}
             className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -180,7 +181,7 @@ const Customers = ({ title = 'Customers' }) => {
                 </p>
               </div>
             </Link>
-            {(isAdmin || canArchive) && (
+            {(isElevated || canArchive) && (
               <div
                 ref={openMenuId === customer.id ? menuRef : null}
                 className="absolute top-2 right-2"
@@ -199,7 +200,7 @@ const Customers = ({ title = 'Customers' }) => {
                 </button>
                 {openMenuId === customer.id && (
                   <div className="absolute right-0 top-full mt-1 py-1 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[140px] z-10">
-                    {isAdmin && (
+                    {isElevated && (
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -232,7 +233,7 @@ const Customers = ({ title = 'Customers' }) => {
                         {customer.isArchived ? 'Unarchive' : 'Archive'}
                       </button>
                     )}
-                    {isAdmin && (
+                    {isElevated && (
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -303,8 +304,9 @@ const CustomerModal = ({ customer, onClose }) => {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, tagName } = e.target;
+    const v = tagName === 'SELECT' ? value : (typeof value === 'string' ? trimLeading(value) : value);
+    setFormData((prev) => ({ ...prev, [name]: v }));
   };
 
   return (

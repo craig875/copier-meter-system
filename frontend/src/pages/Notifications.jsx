@@ -15,12 +15,12 @@ import clsx from 'clsx';
 const Notifications = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isElevated } = useAuth();
 
   const { data, isLoading, error, isError } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => notificationsApi.getAll(),
-    enabled: !!isAdmin,
+    enabled: !!isElevated,
   });
 
   const markReadMutation = useMutation({
@@ -70,7 +70,7 @@ const Notifications = () => {
     }
   };
 
-  if (!isAdmin) {
+  if (!isElevated) {
     return (
       <div className="liquid-glass rounded-xl p-6">
         <p className="text-red-600">Access denied. Notifications are for administrators only.</p>

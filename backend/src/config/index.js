@@ -9,4 +9,5 @@ export const config = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   databaseUrl: process.env.DATABASE_URL,
+  connectivityModuleEnabled: process.env.CONNECTIVITY_MODULE_ENABLED !== 'false',
 };

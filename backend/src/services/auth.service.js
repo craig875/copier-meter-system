@@ -6,6 +6,20 @@ import { config } from '../config/index.js';
 import { repositories } from '../repositories/index.js';
 import { UnauthorizedError, ConflictError, NotFoundError } from '../utils/errors.js';
 import prisma from '../config/database.js';
+import { defaultModulesForRole } from '../utils/permissions.js';
+
+/** Safe user shape for API responses (no password hash) */
+function publicUser(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    branch: user.branch,
+    modules: user.modules ?? [],
+    createdAt: user.createdAt,
+  };
+}
 
 /**
  * Auth Service - Business logic for authentication
@@ -59,6 +73,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         branch: user.branch,
+        modules: user.modules ?? [],
         twoFactorEnabled: !!user.twoFactorEnabled,
       },
     };
@@ -104,6 +119,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         branch: user.branch,
+        modules: user.modules ?? [],
         twoFactorEnabled: !!user.twoFactorEnabled,
       },
     };
@@ -204,6 +220,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         branch: user.branch,
+        modules: user.modules ?? [],
         twoFactorEnabled: !!user.twoFactorEnabled,
       },
     };
@@ -234,7 +251,8 @@ export class UserService {
    * @returns {Promise<Object>}
    */
   async createUser(data) {
-    const { email, password, name, role, branch } = data;
+    const { email, password, name, role, branch, modules } = data;
+    const resolvedRole = role || 'meter_user';
 
     // Check for duplicate email
     const existing = await this.userRepo.findByEmail(email);
@@ -244,24 +262,21 @@ export class UserService {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    const resolvedModules =
+      Array.isArray(modules) && modules.length > 0
+        ? [...new Set(modules)]
+        : defaultModulesForRole(resolvedRole);
+
     const user = await this.userRepo.create({
       email,
       passwordHash,
       name,
-      role: role || 'user',
+      role: resolvedRole,
       branch: branch === '' ? null : (branch || null),
+      modules: resolvedModules,
     });
 
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        branch: user.branch,
-        createdAt: user.createdAt,
-      },
-    };
+    return { user: publicUser(user) };
   }
 
   /**
@@ -286,18 +301,20 @@ export class UserService {
     if (data.branch !== undefined) {
       updateData.branch = data.branch === '' ? null : data.branch;
     }
+    if (data.modules !== undefined) {
+      const r = data.role ?? existing.role;
+      updateData.modules =
+        Array.isArray(data.modules) && data.modules.length > 0
+          ? [...new Set(data.modules)]
+          : defaultModulesForRole(r);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return { user: publicUser(existing) };
+    }
 
     const user = await this.userRepo.update(id, updateData);
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        branch: user.branch,
-        createdAt: user.createdAt,
-      },
-    };
+    return { user: publicUser(user) };
   }
 
   /**

@@ -10,8 +10,7 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
-  const { effectiveBranch, isAdmin, isMeterUser, user } = useAuth();
-  const canSwitchBranches = isAdmin || (isMeterUser && !user?.branch);
+  const { effectiveBranch, isElevated, user, canSwitchBranches } = useAuth();
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -19,6 +18,7 @@ const Dashboard = () => {
   const { data: readingsData, isLoading } = useQuery({
     queryKey: ['readings', currentYear, currentMonth, effectiveBranch],
     queryFn: () => readingsApi.get(currentYear, currentMonth, false, effectiveBranch),
+    enabled: effectiveBranch != null,
   });
 
   const { data: jhbData } = useQuery({
@@ -174,7 +174,7 @@ const Dashboard = () => {
             </div>
           </Link>
 
-          {isAdmin && (
+          {isElevated && (
             <Link
               to="/import-readings"
               data-tour="meter-action-import"

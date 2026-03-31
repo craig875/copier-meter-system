@@ -10,12 +10,13 @@ async function main() {
   const adminPassword = await bcrypt.hash('admin123', 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@example.com' },
-    update: { passwordHash: adminPassword, name: 'System Admin', role: 'admin' },
+    update: { passwordHash: adminPassword, name: 'System Admin', role: 'admin', modules: ['copiers', 'connectivity'] },
     create: {
       email: 'admin@example.com',
       passwordHash: adminPassword,
       name: 'System Admin',
       role: 'admin',
+      modules: ['copiers', 'connectivity'],
     },
   });
   console.log('Created admin user:', admin.email);
@@ -24,12 +25,13 @@ async function main() {
   const managementPassword = await bcrypt.hash('management123', 12);
   const management = await prisma.user.upsert({
     where: { email: 'management@example.com' },
-    update: { passwordHash: managementPassword, name: 'Management User', role: 'management' },
+    update: { passwordHash: managementPassword, name: 'Management User', role: 'management', modules: ['copiers'] },
     create: {
       email: 'management@example.com',
       passwordHash: managementPassword,
       name: 'Management User',
       role: 'management',
+      modules: ['copiers'],
     },
   });
   console.log('Created management user:', management.email);
@@ -38,12 +40,13 @@ async function main() {
   const userPassword = await bcrypt.hash('user123', 12);
   const user = await prisma.user.upsert({
     where: { email: 'user@example.com' },
-    update: { passwordHash: userPassword, name: 'Regular User', role: 'user' },
+    update: { passwordHash: userPassword, name: 'Regular User', role: 'user', modules: ['copiers'] },
     create: {
       email: 'user@example.com',
       passwordHash: userPassword,
       name: 'Regular User',
       role: 'user',
+      modules: ['copiers'],
     },
   });
   console.log('Created regular user:', user.email);
@@ -52,13 +55,14 @@ async function main() {
   const meterUserPassword = await bcrypt.hash('meter123', 12);
   const meterUser = await prisma.user.upsert({
     where: { email: 'meter@example.com' },
-    update: { passwordHash: meterUserPassword, name: 'Meter User', role: 'meter_user', branch: 'JHB' },
+    update: { passwordHash: meterUserPassword, name: 'Meter User', role: 'meter_user', branch: 'JHB', modules: ['copiers'] },
     create: {
       email: 'meter@example.com',
       passwordHash: meterUserPassword,
       name: 'Meter User',
       role: 'meter_user',
       branch: 'JHB',
+      modules: ['copiers'],
     },
   });
   console.log('Created meter user:', meterUser.email);
@@ -67,13 +71,14 @@ async function main() {
   const salesAgentPassword = await bcrypt.hash('sales123', 12);
   const salesAgent = await prisma.user.upsert({
     where: { email: 'sales@example.com' },
-    update: { passwordHash: salesAgentPassword, name: 'Sales Agent', role: 'sales_agent', branch: 'JHB' },
+    update: { passwordHash: salesAgentPassword, name: 'Sales Agent', role: 'sales_agent', branch: 'JHB', modules: ['copiers'] },
     create: {
       email: 'sales@example.com',
       passwordHash: salesAgentPassword,
       name: 'Sales Agent',
       role: 'sales_agent',
       branch: 'JHB',
+      modules: ['copiers'],
     },
   });
   console.log('Created sales agent:', salesAgent.email);
@@ -82,16 +87,49 @@ async function main() {
   const capturerPassword = await bcrypt.hash('capturer123', 12);
   const capturer = await prisma.user.upsert({
     where: { email: 'capturer@example.com' },
-    update: { passwordHash: capturerPassword, name: 'Capturer', role: 'capturer', branch: 'JHB' },
+    update: { passwordHash: capturerPassword, name: 'Capturer', role: 'capturer', branch: 'JHB', modules: ['copiers'] },
     create: {
       email: 'capturer@example.com',
       passwordHash: capturerPassword,
       name: 'Capturer',
       role: 'capturer',
       branch: 'JHB',
+      modules: ['copiers'],
     },
   });
   console.log('Created capturer:', capturer.email);
+
+  // Create viewer (connectivity monitoring read-only)
+  const viewerPassword = await bcrypt.hash('viewer123', 12);
+  const viewer = await prisma.user.upsert({
+    where: { email: 'viewer@example.com' },
+    update: { passwordHash: viewerPassword, name: 'Viewer', role: 'viewer', modules: ['connectivity'] },
+    create: {
+      email: 'viewer@example.com',
+      passwordHash: viewerPassword,
+      name: 'Viewer',
+      role: 'viewer',
+      modules: ['connectivity'],
+    },
+  });
+  console.log('Created viewer:', viewer.email);
+
+  // Create default SLA targets for connectivity (if connectivity tables exist)
+  try {
+    await prisma.slaTarget.upsert({
+      where: { serviceType: 'fibre' },
+      create: { serviceType: 'fibre', targetPercent: 99.9 },
+      update: { targetPercent: 99.9 },
+    });
+    await prisma.slaTarget.upsert({
+      where: { serviceType: 'wireless' },
+      create: { serviceType: 'wireless', targetPercent: 99.5 },
+      update: { targetPercent: 99.5 },
+    });
+    console.log('Created default SLA targets');
+  } catch (e) {
+    if (!e.message?.includes('does not exist') && e.code !== 'P2021') throw e;
+  }
 
   // Create sample customers (find or create by name)
   const customerNames = [
@@ -182,6 +220,7 @@ async function main() {
   console.log('  Admin: admin@example.com / admin123');
   console.log('  Meter User: meter@example.com / meter123');
   console.log('  Capturer: capturer@example.com / capturer123');
+  console.log('  Viewer: viewer@example.com / viewer123');
 }
 
 main()

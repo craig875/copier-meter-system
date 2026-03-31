@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import CapturerRestrict from './components/CapturerRestrict';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import BranchSelect from './pages/BranchSelect';
 import HomeDashboard from './pages/HomeDashboard';
 import Dashboard from './pages/Dashboard';
 import Capture from './pages/Capture';
@@ -22,6 +23,13 @@ import CustomerDetail from './pages/CustomerDetail';
 import CopierServiceDashboard from './pages/CopierServiceDashboard';
 import Notifications from './pages/Notifications';
 import SecuritySettings from './pages/SecuritySettings';
+import ConnectivityDashboard from './pages/ConnectivityDashboard';
+import ConnectivityTargets from './pages/ConnectivityTargets';
+import ConnectivityTargetDetail from './pages/ConnectivityTargetDetail';
+import ConnectivityTargetForm from './pages/ConnectivityTargetForm';
+import ConnectivityTimeWindows from './pages/ConnectivityTimeWindows';
+import ConnectivityReports from './pages/ConnectivityReports';
+import ConnectivityOutages from './pages/ConnectivityOutages';
 
 function App() {
   const { user, loading } = useAuth();
@@ -37,7 +45,16 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-      
+
+      <Route
+        path="/branch-select"
+        element={
+          <ProtectedRoute>
+            <BranchSelect />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Main Dashboard - Shows available modules */}
       <Route
         path="/"
@@ -265,6 +282,16 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      {/* Connectivity Monitoring Module */}
+      <Route path="/connectivity" element={<ProtectedRoute><Layout><ConnectivityDashboard /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets" element={<ProtectedRoute><Layout><ConnectivityTargets /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets/new" element={<ProtectedRoute><Layout><ConnectivityTargetForm /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets/:id/edit" element={<ProtectedRoute><Layout><ConnectivityTargetForm /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets/:id" element={<ProtectedRoute><Layout><ConnectivityTargetDetail /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/time-windows" element={<ProtectedRoute><Layout><ConnectivityTimeWindows /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/reports" element={<ProtectedRoute><Layout><ConnectivityReports /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/outages" element={<ProtectedRoute><Layout><ConnectivityOutages /></Layout></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

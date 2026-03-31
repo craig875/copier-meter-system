@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { makesApi, modelsApi, consumablesApi } from '../services/api';
+import { trimLeading } from '../utils/string';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
@@ -383,7 +384,7 @@ const MachineConfiguration = () => {
               <input
                 type="text"
                 value={makeForm.name}
-                onChange={(e) => setMakeForm({ name: e.target.value })}
+                onChange={(e) => setMakeForm({ name: trimLeading(e.target.value) })}
                 placeholder="e.g. Canon, Olivetti"
                 className="flex-1 px-3 py-2 border rounded-lg"
               />
@@ -478,7 +479,7 @@ const MachineConfiguration = () => {
                       <input
                         type="text"
                         value={modelForm.name}
-                        onChange={(e) => setModelForm((f) => ({ ...f, name: e.target.value }))}
+                        onChange={(e) => setModelForm((f) => ({ ...f, name: trimLeading(e.target.value) }))}
                         placeholder="Model name (e.g. iR-ADV C5535)"
                         className="flex-1 min-w-[180px] px-3 py-2 border rounded-lg"
                       />
@@ -502,7 +503,7 @@ const MachineConfiguration = () => {
                         type="number"
                         min="1"
                         value={modelForm.machineLife}
-                        onChange={(e) => setModelForm((f) => ({ ...f, machineLife: e.target.value }))}
+                        onChange={(e) => setModelForm((f) => ({ ...f, machineLife: trimLeading(e.target.value) }))}
                         placeholder="Machine life"
                         className="w-28 px-3 py-2 border rounded-lg"
                       />
@@ -761,13 +762,13 @@ const AddPartModal = ({ model, make, onCreate, onClose, isPending }) => {
         <div className="space-y-3">
           <input
             value={form.partName}
-            onChange={(e) => setForm((f) => ({ ...f, partName: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, partName: trimLeading(e.target.value) }))}
             placeholder="Part name (e.g. Black Toner)"
             className="w-full px-3 py-2 border rounded-lg"
           />
           <input
             value={form.itemCode}
-            onChange={(e) => setForm((f) => ({ ...f, itemCode: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, itemCode: trimLeading(e.target.value) }))}
             placeholder="Item code"
             className="w-full px-3 py-2 border rounded-lg"
           />
@@ -791,7 +792,7 @@ const AddPartModal = ({ model, make, onCreate, onClose, isPending }) => {
           <input
             type="number"
             value={form.expectedYield}
-            onChange={(e) => setForm((f) => ({ ...f, expectedYield: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, expectedYield: trimLeading(e.target.value) }))}
             placeholder="Expected yield (clicks)"
             className="w-full px-3 py-2 border rounded-lg"
           />
@@ -799,7 +800,7 @@ const AddPartModal = ({ model, make, onCreate, onClose, isPending }) => {
             type="number"
             step="0.01"
             value={form.costRand}
-            onChange={(e) => setForm((f) => ({ ...f, costRand: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, costRand: trimLeading(e.target.value) }))}
             placeholder="Cost (Rand)"
             className="w-full px-3 py-2 border rounded-lg"
           />
@@ -839,7 +840,7 @@ const ModelEditModal = ({ model, makeName, onClose, onSave }) => {
         <div className="space-y-3">
           <input
             value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, name: trimLeading(e.target.value) }))}
             placeholder="Model name"
             className="w-full px-3 py-2 border rounded-lg"
           />
@@ -863,7 +864,7 @@ const ModelEditModal = ({ model, makeName, onClose, onSave }) => {
             type="number"
             min="1"
             value={form.machineLife}
-            onChange={(e) => setForm((f) => ({ ...f, machineLife: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, machineLife: trimLeading(e.target.value) }))}
             placeholder="Machine life (optional)"
             className="w-full px-3 py-2 border rounded-lg"
           />
@@ -902,13 +903,13 @@ const PartEditModal = ({ part, onClose, onSave }) => {
         <div className="space-y-3">
           <input
             value={form.partName}
-            onChange={(e) => setForm((f) => ({ ...f, partName: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, partName: trimLeading(e.target.value) }))}
             placeholder="Part name"
             className="w-full px-3 py-2 border rounded-lg"
           />
           <input
             value={form.itemCode}
-            onChange={(e) => setForm((f) => ({ ...f, itemCode: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, itemCode: trimLeading(e.target.value) }))}
             placeholder="Item code"
             className="w-full px-3 py-2 border rounded-lg"
           />
@@ -933,7 +934,7 @@ const PartEditModal = ({ part, onClose, onSave }) => {
           <input
             type="number"
             value={form.expectedYield}
-            onChange={(e) => setForm((f) => ({ ...f, expectedYield: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, expectedYield: trimLeading(e.target.value) }))}
             placeholder="Expected yield"
             className="w-full px-3 py-2 border rounded-lg"
           />
@@ -941,7 +942,7 @@ const PartEditModal = ({ part, onClose, onSave }) => {
             type="number"
             step="0.01"
             value={form.costRand}
-            onChange={(e) => setForm((f) => ({ ...f, costRand: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, costRand: trimLeading(e.target.value) }))}
             placeholder="Cost (Rand)"
             className="w-full px-3 py-2 border rounded-lg"
           />

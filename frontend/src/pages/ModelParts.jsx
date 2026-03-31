@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { consumablesApi, makesApi, modelsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { trimLeading } from '../utils/string';
 import toast from 'react-hot-toast';
 import { Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -253,7 +254,7 @@ const ModelParts = () => {
                 <input
                   type="text"
                   value={form.partName}
-                  onChange={(e) => setForm((f) => ({ ...f, partName: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, partName: trimLeading(e.target.value) }))}
                   placeholder="e.g. Black Toner"
                   className="w-full px-3 py-2 border rounded-lg"
                   required
@@ -264,7 +265,7 @@ const ModelParts = () => {
                 <input
                   type="text"
                   value={form.itemCode}
-                  onChange={(e) => setForm((f) => ({ ...f, itemCode: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, itemCode: trimLeading(e.target.value) }))}
                   placeholder="Optional"
                   className="w-full px-3 py-2 border rounded-lg"
                 />
@@ -302,7 +303,7 @@ const ModelParts = () => {
                   type="number"
                   min="1"
                   value={form.expectedYield}
-                  onChange={(e) => setForm((f) => ({ ...f, expectedYield: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, expectedYield: trimLeading(e.target.value) }))}
                   className="w-full px-3 py-2 border rounded-lg"
                   required
                 />
@@ -314,7 +315,7 @@ const ModelParts = () => {
                   min="0"
                   step="0.01"
                   value={form.costRand}
-                  onChange={(e) => setForm((f) => ({ ...f, costRand: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, costRand: trimLeading(e.target.value) }))}
                   className="w-full px-3 py-2 border rounded-lg"
                   required
                 />

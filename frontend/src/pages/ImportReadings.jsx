@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { readingsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { trimLeading } from '../utils/string';
 import toast from 'react-hot-toast';
 import { 
   Upload, 
@@ -15,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 const ImportReadings = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { isAdmin, selectedBranch, effectiveBranch } = useAuth();
+  const { selectedBranch, effectiveBranch } = useAuth();
   const [file, setFile] = useState(null);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
@@ -328,7 +329,7 @@ const ImportReadings = () => {
             <input
               type="number"
               value={year}
-              onChange={(e) => setYear(parseInt(e.target.value))}
+              onChange={(e) => setYear(parseInt(trimLeading(e.target.value)) || new Date().getFullYear())}
               min="2000"
               max="2100"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"

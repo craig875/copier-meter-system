@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { readingsApi } from '../services/api';
 import toast from 'react-hot-toast';
+import { trimLeading } from '../utils/string';
 import { useAuth } from '../context/AuthContext';
 import { 
   Save, 
@@ -25,7 +26,7 @@ import clsx from 'clsx';
 const Capture = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAdmin, effectiveBranch, updateSelectedBranch, canSwitchBranches } = useAuth();
+  const { isElevated, effectiveBranch, updateSelectedBranch, canSwitchBranches } = useAuth();
   const now = new Date();
   const urlYear = searchParams.get('year');
   const urlMonth = searchParams.get('month');
@@ -42,7 +43,7 @@ const Capture = () => {
   const { data, isLoading, error, isError } = useQuery({
     queryKey: ['readings', year, month, queryBranch],
     queryFn: () => readingsApi.get(year, month, false, queryBranch),
-    enabled: !!year && !!month, // Ensure query runs when year/month are set
+    enabled: !!year && !!month && queryBranch != null,
   });
 
   const unlockMutation = useMutation({
@@ -467,7 +468,7 @@ const Capture = () => {
                   {new Date(submission.submittedAt).toLocaleDateString()}
                 </span>
               </div>
-              {isAdmin && queryBranch && (
+              {isElevated && queryBranch && (
                 <button
                   onClick={() => {
                     if (window.confirm('Unlock this month for editing? Anyone will be able to modify the readings.')) {
@@ -507,7 +508,7 @@ const Capture = () => {
 
           {/* Submit & Export Button - Show when 100% complete OR if admin (even if not complete), but hide if locked */}
           {/* Regular users can only export when 100% complete. Admins can export anytime. */}
-          {!isLocked && (isComplete || isAdmin) ? (
+          {!isLocked && (isComplete || isElevated) ? (
             <div data-tour="submit-buttons" className="flex items-center gap-2">
               {isComplete ? (
                 // Show export buttons for all users when 100% complete
@@ -624,7 +625,7 @@ const Capture = () => {
           type="text"
           placeholder="Search machines..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => setSearch(trimLeading(e.target.value))}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
@@ -720,7 +721,7 @@ const Capture = () => {
                   <td className="px-4 py-3">
                     <textarea
                       value={getReadingValue(machine.id, 'note', currentReading) || ''}
-                      onChange={(e) => handleReadingChange(machine.id, 'note', e.target.value)}
+                      onChange={(e) => handleReadingChange(machine.id, 'note', trimLeading(e.target.value))}
                       disabled={isLocked}
                       placeholder="Add note..."
                       maxLength={500}
@@ -782,7 +783,7 @@ const Capture = () => {
                           Cancel
                         </button>
                       )}
-                      {isAdmin && currentReading && (
+                      {isElevated && currentReading && (
                         <button
                           onClick={() => handleDeleteReading(machine.id)}
                           disabled={isLocked}
@@ -811,7 +812,7 @@ const MeterInput = ({ value, onChange, previous, previousMonthLabel, error, disa
       <input
         type="number"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(trimLeading(e.target.value))}
         disabled={disabled}
         className={clsx(
           'w-24 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent',

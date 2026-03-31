@@ -21,12 +21,13 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import MachineModal from '../components/MachineModal';
+import { trimLeading } from '../utils/string';
 import MeterBlocks from '../components/MeterBlocks';
 
 const Machines = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAdmin, selectedBranch, effectiveBranch, user, loading: authLoading } = useAuth();
+  const { isElevated, selectedBranch, effectiveBranch, user, loading: authLoading } = useAuth();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -146,7 +147,7 @@ const Machines = () => {
   };
 
   const handleRecommission = (machine) => {
-    if (!isAdmin) return;
+    if (!isElevated) return;
     if (window.confirm(`Recommission machine ${machine.machineSerialNumber}? It will be added back to capture lists.`)) {
       recommissionMutation.mutate(machine.id);
     }
@@ -244,7 +245,7 @@ const Machines = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          {isAdmin && (
+          {isElevated && (
             <button
               onClick={() => setShowImportModal(true)}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -282,7 +283,7 @@ const Machines = () => {
           type="text"
           placeholder={selectedModelId ? 'Search within this model...' : 'Search machines...'}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => setSearch(trimLeading(e.target.value))}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
@@ -420,7 +421,7 @@ const Machines = () => {
                       <span>Edit</span>
                     </button>
                     {machine.isDecommissioned ? (
-                      isAdmin ? (
+                      isElevated ? (
                         <button
                           onClick={() => handleRecommission(machine)}
                           className="p-1 text-gray-500 hover:text-green-600 transition-colors ml-2"
@@ -438,7 +439,7 @@ const Machines = () => {
                         <Archive className="h-4 w-4" />
                       </button>
                     )}
-                    {isAdmin && (
+                    {isElevated && (
                       <button
                         onClick={() => handleDelete(machine)}
                         className="p-1 text-gray-500 hover:text-gray-900 transition-colors ml-2"
@@ -466,7 +467,7 @@ const Machines = () => {
       )}
 
       {/* Import Modal */}
-      {isAdmin && showImportModal && (
+      {isElevated && showImportModal && (
         <ImportModal
           onClose={() => setShowImportModal(false)}
         />
@@ -801,7 +802,7 @@ const ImportModal = ({ onClose }) => {
               <input
                 type="number"
                 value={year}
-                onChange={(e) => setYear(parseInt(e.target.value))}
+                onChange={(e) => setYear(parseInt(trimLeading(e.target.value)) || new Date().getFullYear())}
                 min="2000"
                 max="2100"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -814,7 +815,7 @@ const ImportModal = ({ onClose }) => {
               <input
                 type="number"
                 value={month}
-                onChange={(e) => setMonth(parseInt(e.target.value))}
+                onChange={(e) => setMonth(parseInt(trimLeading(e.target.value)) || new Date().getMonth() + 1)}
                 min="1"
                 max="12"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

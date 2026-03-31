@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { trimLeading } from '../utils/string';
 import toast from 'react-hot-toast';
 import { 
   Plus, 
@@ -11,9 +12,11 @@ import {
   Check,
   Shield,
   User as UserIcon,
-  Printer
+  Printer,
+  UserCog,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { MODULE_OPTIONS } from '../constants/modules';
 
 const Users = () => {
   const queryClient = useQueryClient();
@@ -98,12 +101,15 @@ const Users = () => {
               <div className="flex items-center">
                 <div className={clsx(
                   'w-10 h-10 rounded-full flex items-center justify-center',
-                  user.role === 'admin' ? 'bg-purple-100' 
+                  user.role === 'admin' ? 'bg-purple-100'
+                    : user.role === 'manager' ? 'bg-indigo-100'
                     : user.role === 'meter_user' ? 'bg-green-100'
                     : 'bg-gray-100'
                 )}>
                   {user.role === 'admin' ? (
                     <Shield className="h-5 w-5 text-purple-600" />
+                  ) : user.role === 'manager' ? (
+                    <UserCog className="h-5 w-5 text-indigo-600" />
                   ) : user.role === 'meter_user' ? (
                     <Printer className="h-5 w-5 text-green-600" />
                   ) : user.role === 'capturer' ? (
@@ -144,15 +150,18 @@ const Users = () => {
               <div className="flex items-center justify-between">
                 <span className={clsx(
                   'inline-flex px-2 py-1 rounded-full text-xs font-medium',
-                  user.role === 'admin' 
-                    ? 'bg-purple-100 text-purple-700' 
+                  user.role === 'admin'
+                    ? 'bg-purple-100 text-purple-700'
+                    : user.role === 'manager'
+                    ? 'bg-indigo-100 text-indigo-800'
                     : user.role === 'meter_user'
                     ? 'bg-green-100 text-green-700'
                     : user.role === 'capturer'
                     ? 'bg-blue-100 text-blue-700'
                     : 'bg-gray-100 text-gray-600'
                 )}>
-                  {user.role === 'admin' ? 'Administrator' 
+                  {user.role === 'admin' ? 'Administrator'
+                    : user.role === 'manager' ? 'Manager'
                     : user.role === 'meter_user' ? 'Meter User'
                     : user.role === 'capturer' ? 'Capturer'
                     : 'Unknown'}
@@ -172,6 +181,21 @@ const Users = () => {
                   </span>
                 </div>
               )}
+              {user.role === 'admin' ? (
+                <p className="text-xs text-gray-500">Modules: all (administrator)</p>
+              ) : Array.isArray(user.modules) && user.modules.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  <span className="text-xs text-gray-500">Modules:</span>
+                  {user.modules.map((m) => (
+                    <span
+                      key={m}
+                      className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700"
+                    >
+                      {m === 'copiers' ? 'Copiers' : m === 'connectivity' ? 'Connectivity' : m}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
         ))}
@@ -198,9 +222,14 @@ const UserModal = ({ user, onClose }) => {
     password: '',
     role: user?.role || 'meter_user',
     branch: user?.branch || '',
+    modules:
+      user?.role === 'admin'
+        ? ['copiers', 'connectivity']
+        : Array.isArray(user?.modules) && user.modules.length > 0
+          ? [...user.modules]
+          : ['copiers'],
   });
 
-  // Validate form (meter users can have no branch assigned for all branches access)
   const validateForm = () => {
     return true;
   };
@@ -209,9 +238,11 @@ const UserModal = ({ user, onClose }) => {
     mutationFn: (data) => {
       const payload = { ...data };
       if (!payload.password) delete payload.password;
-      // Convert empty string to null for branch field
       if (payload.branch === '') {
         payload.branch = null;
+      }
+      if (payload.role === 'admin') {
+        delete payload.modules;
       }
       return isEditing 
         ? usersApi.update(user.id, payload)
@@ -236,12 +267,36 @@ const UserModal = ({ user, onClose }) => {
     if (!validateForm()) {
       return;
     }
+    if (formData.role !== 'admin' && (!formData.modules || formData.modules.length === 0)) {
+      toast.error('Select at least one module');
+      return;
+    }
     mutation.mutate(formData);
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, tagName } = e.target;
+    const v = tagName === 'SELECT' ? value : (typeof value === 'string' ? trimLeading(value) : value);
+    setFormData((prev) => {
+      const next = { ...prev, [name]: v };
+      if (name === 'role' && v === 'admin') {
+        next.modules = ['copiers', 'connectivity'];
+      }
+      if (name === 'role' && v !== 'admin' && (!next.modules || next.modules.length === 0)) {
+        next.modules = ['copiers'];
+      }
+      return next;
+    });
+  };
+
+  const toggleModule = (key) => {
+    if (formData.role === 'admin') return;
+    setFormData((prev) => {
+      const set = new Set(prev.modules || []);
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      return { ...prev, modules: [...set] };
+    });
   };
 
   return (
@@ -256,7 +311,7 @@ const UserModal = ({ user, onClose }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[85vh] overflow-y-auto">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Name *
@@ -312,13 +367,15 @@ const UserModal = ({ user, onClose }) => {
             >
               <option value="meter_user">Meter User</option>
               <option value="capturer">Capturer</option>
+              <option value="manager">Manager</option>
               <option value="admin">Administrator</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Branch {formData.role === 'meter_user' || formData.role === 'capturer' ? '*' : '(optional)'}
+              Branch{' '}
+              {formData.role === 'meter_user' || formData.role === 'capturer' ? '*' : '(optional)'}
             </label>
             <select
               name="branch"
@@ -331,10 +388,41 @@ const UserModal = ({ user, onClose }) => {
               <option value="CT">Cape Town (CT)</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              {(formData.role === 'meter_user' || formData.role === 'capturer') 
+              {(formData.role === 'meter_user' || formData.role === 'capturer')
                 ? 'Leave blank for all branches access, or select a specific branch'
+                : formData.role === 'admin' || formData.role === 'manager'
+                ? 'Optional: assign a branch to restrict this user to one site'
                 : 'Assign a branch to restrict user access to specific branch data'}
             </p>
+          </div>
+
+          <div>
+            <span className="block text-sm font-medium text-gray-700 mb-2">Module access</span>
+            {formData.role === 'admin' ? (
+              <p className="text-sm text-gray-500">
+                Administrators have access to all modules (Copiers and Connectivity).
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {MODULE_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.key}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.modules?.includes(opt.key) ?? false}
+                      onChange={() => toggleModule(opt.key)}
+                      className="mt-1 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-gray-900">{opt.label}</span>
+                      <span className="block text-xs text-gray-500">{opt.description}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
+import { trimLeading } from '../utils/string';
 import toast from 'react-hot-toast';
 import { Shield, ShieldCheck, ShieldOff } from 'lucide-react';
 
@@ -152,7 +153,7 @@ const SecuritySettings = () => {
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={(e) => setCode(trimLeading(e.target.value.replace(/\D/g, '').slice(0, 6)))}
                 maxLength={6}
                 className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-center text-lg tracking-widest"
                 placeholder="000000"
@@ -185,7 +186,7 @@ const SecuritySettings = () => {
             <input
               type="password"
               value={disablePassword}
-              onChange={(e) => setDisablePassword(e.target.value)}
+              onChange={(e) => setDisablePassword(trimLeading(e.target.value))}
               className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg"
               placeholder="Your password"
             />

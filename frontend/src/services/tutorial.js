@@ -438,7 +438,7 @@ const stepsByPath = {
   ],
 };
 
-function getStepsForPath(pathname, isAdmin) {
+function getStepsForPath(pathname, isElevated) {
   const exact = stepsByPath[pathname];
   if (exact) return exact;
 
@@ -448,14 +448,14 @@ function getStepsForPath(pathname, isAdmin) {
   if (pathname.startsWith('/machines')) return stepsByPath['/machines'];
   if (pathname.startsWith('/customers')) return stepsByPath['/customers'];
   if (pathname.startsWith('/consumables')) return stepsByPath['/consumables/summary'];
-  if (pathname.startsWith('/users')) return isAdmin ? stepsByPath['/users'] : stepsByPath['/'];
-  if (pathname.startsWith('/import-readings')) return isAdmin ? stepsByPath['/import-readings'] : stepsByPath['/'];
-  if (pathname.startsWith('/transaction-history')) return isAdmin ? stepsByPath['/transaction-history'] : stepsByPath['/'];
-  if (pathname.startsWith('/notifications')) return isAdmin ? stepsByPath['/notifications'] : stepsByPath['/'];
+  if (pathname.startsWith('/users')) return isElevated ? stepsByPath['/users'] : stepsByPath['/'];
+  if (pathname.startsWith('/import-readings')) return isElevated ? stepsByPath['/import-readings'] : stepsByPath['/'];
+  if (pathname.startsWith('/transaction-history')) return isElevated ? stepsByPath['/transaction-history'] : stepsByPath['/'];
+  if (pathname.startsWith('/notifications')) return isElevated ? stepsByPath['/notifications'] : stepsByPath['/'];
   if (pathname.startsWith('/meter-readings')) return stepsByPath['/meter-readings'];
   if (pathname === '/copier-service') return stepsByPath['/copier-service'];
-  if (pathname.startsWith('/admin/parts-pricing')) return isAdmin ? stepsByPath['/admin/parts-pricing'] : stepsByPath['/'];
-  if (pathname.startsWith('/admin/machine-configuration') || pathname === '/admin') return isAdmin ? stepsByPath['/admin/machine-configuration'] : stepsByPath['/'];
+  if (pathname.startsWith('/admin/parts-pricing')) return isElevated ? stepsByPath['/admin/parts-pricing'] : stepsByPath['/'];
+  if (pathname.startsWith('/admin/machine-configuration') || pathname === '/admin') return isElevated ? stepsByPath['/admin/machine-configuration'] : stepsByPath['/'];
 
   return stepsByPath['/'];
 }
@@ -463,10 +463,10 @@ function getStepsForPath(pathname, isAdmin) {
 /**
  * Start the interactive tutorial for the current page.
  */
-export function startTutorial(pathname = window.location.pathname, isAdmin = false) {
+export function startTutorial(pathname = window.location.pathname, isElevated = false) {
   // Defer to next tick so DOM is fully rendered
   requestAnimationFrame(() => {
-    const steps = getStepsForPath(pathname, isAdmin);
+    const steps = getStepsForPath(pathname, isElevated);
 
     const validSteps = steps.filter((step) => {
       if (!step.element) return true; // Steps without element (e.g. welcome) always valid

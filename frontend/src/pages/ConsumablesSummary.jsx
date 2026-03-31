@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 const ConsumablesSummary = () => {
   const queryClient = useQueryClient();
-  const { effectiveBranch, isAdmin } = useAuth();
+  const { effectiveBranch, isElevated } = useAuth();
   const [partTypeFilter, setPartTypeFilter] = useState('');
   const [complianceFilter, setComplianceFilter] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
@@ -176,7 +176,7 @@ const ConsumablesSummary = () => {
             <h2 className="text-lg font-semibold text-gray-900">Consumable Summary</h2>
             <p className="text-sm text-gray-600 mt-1">View consumable status per machine. Click a row to see full history.</p>
           </div>
-          {isAdmin && (
+          {isElevated && (
             <button
               onClick={() => setShowImportModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

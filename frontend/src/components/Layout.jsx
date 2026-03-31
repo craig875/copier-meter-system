@@ -18,20 +18,33 @@ import {
   ChevronRight,
   ArrowLeft,
   Bell,
-  Shield
+  Shield,
+  Globe
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import logo from '../assets/logo.png';
 import Setup2FAPrompt from './Setup2FAPrompt';
+import ConnectivityAlertBanner from './connectivity/ConnectivityAlertBanner';
 import { notificationsApi } from '../services/api';
+import { MODULE_COPERS, MODULE_CONNECTIVITY } from '../constants/modules';
 
 const Layout = ({ children }) => {
-  const { user, logout, isAdmin, isMeterUser, isCapturer, selectedBranch, updateSelectedBranch, effectiveBranch } = useAuth();
+  const {
+    user,
+    logout,
+    isElevated,
+    isCapturer,
+    hasModule,
+    selectedBranch,
+    updateSelectedBranch,
+    effectiveBranch,
+    canSwitchBranches,
+  } = useAuth();
+  const showCopiers = hasModule(MODULE_COPERS);
+  const showConnectivity = hasModule(MODULE_CONNECTIVITY);
   const navigate = useNavigate();
-  // Show branch selector for admins or meter users/capturers with no branch assigned (can switch branches)
-  const canSwitchBranches = isAdmin || ((isMeterUser || isCapturer) && !user?.branch);
   const location = useLocation();
   const showBackButton = location.pathname !== '/';
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -40,7 +53,7 @@ const Layout = ({ children }) => {
   const { data: unreadData } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationsApi.getUnreadCount(),
-    enabled: !!isAdmin,
+    enabled: !!isElevated,
     refetchInterval: 60000, // refresh every 60s
     staleTime: 0, // always consider stale so invalidations trigger refetch
   });
@@ -54,6 +67,64 @@ const Layout = ({ children }) => {
       return next;
     });
   };
+
+  const connectivityNav = { name: 'Connectivity', href: '/connectivity', icon: Globe };
+
+  const navigation = (() => {
+    const home = { name: 'Home', href: '/', icon: Home };
+
+    if (!showCopiers && showConnectivity) {
+      return [home, connectivityNav];
+    }
+
+    if (isCapturer && showCopiers) {
+      return [
+        home,
+        {
+          name: 'Meter Readings',
+          href: '/meter-readings',
+          icon: LayoutDashboard,
+          children: [
+            { name: 'Monthly Capture', href: '/capture', icon: LayoutDashboard },
+            { name: 'History', href: '/history', icon: ScrollText },
+          ],
+        },
+        ...(showConnectivity ? [connectivityNav] : []),
+      ];
+    }
+
+    const nav = [home, ...(showConnectivity ? [connectivityNav] : [])];
+    if (showCopiers) {
+      nav.push({
+        name: 'Copier Service',
+        href: '/copier-service',
+        icon: Printer,
+        children: [
+          { name: 'Customers', href: '/customers', icon: Building2 },
+          { name: 'Meter Readings', href: '/meter-readings', icon: LayoutDashboard, activePaths: ['/capture', '/history', '/import-readings'] },
+          { name: 'Machines', href: '/machines', icon: Printer },
+          { name: 'Consumable Summary', href: '/consumables/summary', icon: Package, activePaths: ['/consumables/summary'] },
+        ],
+      });
+    }
+    if (isElevated) {
+      nav.push(
+        { name: 'Notifications', href: '/notifications', icon: Bell },
+        {
+          name: 'Admin Tools',
+          href: '/admin',
+          icon: Wrench,
+          children: [
+            { name: 'Machine Configuration', href: '/admin/machine-configuration', icon: Cog },
+            { name: 'Parts & Pricing', href: '/admin/parts-pricing', icon: Package },
+            { name: 'Users', href: '/users', icon: Users },
+            { name: 'Transaction History', href: '/transaction-history', icon: ScrollText },
+          ],
+        },
+      );
+    }
+    return nav;
+  })();
 
   // Auto-expand section when current route is within it (e.g. direct nav or refresh)
   useEffect(() => {
@@ -69,48 +140,6 @@ const Layout = ({ children }) => {
       setExpandedSections((prev) => new Set(prev).add(sectionToExpand));
     }
   }, [location.pathname]);
-
-  const navigation = isCapturer
-    ? [
-        { name: 'Home', href: '/', icon: Home },
-        { 
-          name: 'Meter Readings', 
-          href: '/meter-readings', 
-          icon: LayoutDashboard,
-          children: [
-            { name: 'Monthly Capture', href: '/capture', icon: LayoutDashboard },
-            { name: 'History', href: '/history', icon: ScrollText },
-          ]
-        },
-      ]
-    : [
-    { name: 'Home', href: '/', icon: Home },
-    { 
-      name: 'Copier Service', 
-      href: '/copier-service', 
-      icon: Printer,
-      children: [
-        { name: 'Customers', href: '/customers', icon: Building2 },
-        { name: 'Meter Readings', href: '/meter-readings', icon: LayoutDashboard, activePaths: ['/capture', '/history', '/import-readings'] },
-        { name: 'Machines', href: '/machines', icon: Printer },
-        { name: 'Consumable Summary', href: '/consumables/summary', icon: Package, activePaths: ['/consumables/summary'] },
-      ]
-    },
-    ...(isAdmin ? [
-      { name: 'Notifications', href: '/notifications', icon: Bell },
-      { 
-        name: 'Admin Tools', 
-        href: '/admin', 
-        icon: Wrench,
-        children: [
-          { name: 'Machine Configuration', href: '/admin/machine-configuration', icon: Cog },
-          { name: 'Parts & Pricing', href: '/admin/parts-pricing', icon: Package },
-          { name: 'Users', href: '/users', icon: Users },
-          { name: 'Transaction History', href: '/transaction-history', icon: ScrollText },
-        ]
-      },
-    ] : []),
-  ];
 
   const isActive = (href) => {
     if (href === '/') return location.pathname === '/';
@@ -345,7 +374,7 @@ const Layout = ({ children }) => {
           </div>
           <button
             onClick={() => {
-              import('../services/tutorial').then((m) => m.startTutorial(location.pathname, isAdmin)).catch((err) => {
+              import('../services/tutorial').then((m) => m.startTutorial(location.pathname, isElevated)).catch((err) => {
                 console.error('Tutorial failed to load:', err);
                 import('react-hot-toast').then(({ default: toast }) => toast.error('Could not load tour'));
               });
@@ -357,6 +386,8 @@ const Layout = ({ children }) => {
             <span className="hidden sm:inline">Help</span>
           </button>
         </header>
+
+        {showConnectivity && <ConnectivityAlertBanner enabled={showConnectivity} />}
 
         {/* Page content */}
         <main className="p-6">

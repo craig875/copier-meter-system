@@ -23,6 +23,7 @@ export class UserRepository extends BaseRepository {
           name: true,
           role: true,
           branch: true,
+          modules: true,
           createdAt: true,
         },
         orderBy: { name: 'asc' },

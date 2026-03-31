@@ -3,14 +3,48 @@
  * Helper functions for checking user roles and permissions
  */
 
+/** Module keys (extend when adding new product areas) */
+export const MODULE_COPERS = 'copiers';
+export const MODULE_CONNECTIVITY = 'connectivity';
+export const KNOWN_MODULES = [MODULE_COPERS, MODULE_CONNECTIVITY];
+
 /**
- * Check if user has admin privileges
+ * Default modules when none specified for a role (used on create / migration)
+ * @param {string} role
+ * @returns {string[]}
+ */
+export const defaultModulesForRole = (role) => {
+  if (role === 'admin') return [MODULE_COPERS, MODULE_CONNECTIVITY];
+  if (role === 'manager') return [MODULE_COPERS, MODULE_CONNECTIVITY];
+  if (role === 'viewer') return [MODULE_CONNECTIVITY];
+  return [MODULE_COPERS];
+};
+
+/**
+ * Whether a user may access a module (admins always have full access)
+ * @param {{ role: string, modules?: string[] }} user
+ * @param {string} moduleKey
+ * @returns {boolean}
+ */
+export const userHasModule = (user, moduleKey) => {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  const list = user.modules;
+  if (!Array.isArray(list) || list.length === 0) return false;
+  return list.includes(moduleKey);
+};
+
+/**
+ * Administrator or manager (elevated operational access; managers still use module grants via userHasModule)
  * @param {string} role - User role
  * @returns {boolean}
  */
 export const hasAdminAccess = (role) => {
-  return role === 'admin';
+  return role === 'admin' || role === 'manager';
 };
+
+/** Strict administrator only (rare checks) */
+export const isStrictAdmin = (role) => role === 'admin';
 
 /**
  * Check if user is a meter user
@@ -64,4 +98,23 @@ export const canAccessConsumables = (role) => {
  */
 export const canManageMachines = (role) => {
   return hasAdminAccess(role) || isMeterUser(role);
+};
+
+/**
+ * Check if user can access connectivity monitoring (dashboard, reports, outages)
+ * @param {string} role - User role
+ * @returns {boolean}
+ */
+/** @deprecated Use userHasModule(user, MODULE_CONNECTIVITY); role alone no longer gates connectivity */
+export const canAccessConnectivity = (role) => {
+  return hasAdminAccess(role) || role === 'viewer';
+};
+
+/**
+ * Check if user can manage connectivity (CRUD targets, time windows)
+ * @param {string} role - User role
+ * @returns {boolean}
+ */
+export const canManageConnectivity = (role) => {
+  return role === 'admin' || role === 'manager';
 };

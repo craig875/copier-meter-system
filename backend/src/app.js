@@ -1,12 +1,22 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { config } from './config/index.js';
 import routes from './routes/index.js';
 import prisma from './config/database.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { NotFoundError } from './utils/errors.js';
+import { getMonitoringEngine } from './connectivity/monitoring/engine.js';
 
 const app = express();
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Middleware - CORS
 app.use(cors({
@@ -25,6 +35,8 @@ app.use(cors({
   optionsSuccessStatus: 204,
 }));
 app.use(express.json());
+
+app.use('/api', apiLimiter);
 
 // Root route
 app.get('/', (req, res) => {
@@ -75,6 +87,10 @@ const start = async () => {
     app.listen(config.port, () => {
       console.log(`Server running on http://localhost:${config.port}`);
       console.log(`Environment: ${config.nodeEnv}`);
+      if (config.connectivityModuleEnabled) {
+        getMonitoringEngine().start();
+        console.log('Connectivity monitoring engine started');
+      }
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -86,11 +102,17 @@ start();
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
+  if (config.connectivityModuleEnabled) {
+    getMonitoringEngine().stop();
+  }
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
+  if (config.connectivityModuleEnabled) {
+    getMonitoringEngine().stop();
+  }
   await prisma.$disconnect();
   process.exit(0);
 });

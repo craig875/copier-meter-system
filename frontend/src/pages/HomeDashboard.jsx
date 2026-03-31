@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Printer, LayoutDashboard } from 'lucide-react';
+import { Printer, LayoutDashboard, Globe } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { MODULE_COPERS, MODULE_CONNECTIVITY } from '../constants/modules';
 
 const copierModules = [
   {
@@ -26,9 +27,25 @@ const capturerModules = [
   },
 ];
 
+const connectivityModule = {
+  id: 'connectivity',
+  name: 'Connectivity Monitoring',
+  description: 'Monitor customer internet links, uptime, SLA, and alerts',
+  href: '/connectivity',
+  icon: Globe,
+  color: 'bg-blue-50',
+  iconColor: 'text-blue-700',
+};
+
 const HomeDashboard = () => {
-  const { user, isCapturer } = useAuth();
-  const modules = isCapturer ? capturerModules : copierModules;
+  const { user, isCapturer, hasModule } = useAuth();
+  const tiles = [];
+  if (hasModule(MODULE_COPERS)) {
+    tiles.push(...(isCapturer ? capturerModules : copierModules));
+  }
+  if (hasModule(MODULE_CONNECTIVITY)) {
+    tiles.push(connectivityModule);
+  }
 
   return (
     <div className="space-y-6">
@@ -42,8 +59,12 @@ const HomeDashboard = () => {
         <p className="text-gray-500 mt-1">Select a module to get started</p>
       </div>
 
+      {tiles.length === 0 && (
+        <p className="text-gray-500 text-sm">No modules are assigned to your account. Contact an administrator.</p>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {modules.map((module) => {
+        {tiles.map((module) => {
           const Icon = module.icon;
           return (
             <Link

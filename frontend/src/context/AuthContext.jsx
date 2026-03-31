@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
+import { MODULE_CONNECTIVITY } from '../constants/modules';
 
 const AuthContext = createContext(null);
 
@@ -30,9 +31,14 @@ export const AuthProvider = ({ children }) => {
           setUser({ ...userData, twoFactorEnabled: userData.twoFactorEnabled ?? false });
           // Initialize selectedBranch for admins or meter users with no branch assigned
           // (both can switch between branches)
-          if (userData.role === 'admin' || ((userData.role === 'meter_user' || userData.role === 'capturer') && !userData.branch)) {
+          if (
+            userData.role === 'admin' ||
+            userData.role === 'manager' ||
+            ((userData.role === 'meter_user' || userData.role === 'capturer') && !userData.branch)
+          ) {
             const storedBranch = localStorage.getItem('selectedBranch');
-            setSelectedBranch(storedBranch || userData.branch || 'JHB');
+            // Restore from localStorage only; no default until BranchSelect or header switch
+            setSelectedBranch(storedBranch || userData.branch || null);
           }
         } catch (error) {
           sessionStorage.removeItem('token');
@@ -50,9 +56,13 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.setItem('token', token);
     sessionStorage.setItem('user', JSON.stringify(userWith2FA));
     setUser(userWith2FA);
-    if (userWith2FA.role === 'admin' || ((userWith2FA.role === 'meter_user' || userWith2FA.role === 'capturer') && !userWith2FA.branch)) {
+    if (
+      userWith2FA.role === 'admin' ||
+      userWith2FA.role === 'manager' ||
+      ((userWith2FA.role === 'meter_user' || userWith2FA.role === 'capturer') && !userWith2FA.branch)
+    ) {
       const storedBranch = localStorage.getItem('selectedBranch');
-      setSelectedBranch(storedBranch || userWith2FA.branch || 'JHB');
+      setSelectedBranch(storedBranch || userWith2FA.branch || null);
     }
     return userWith2FA;
   };
@@ -99,20 +109,36 @@ export const AuthProvider = ({ children }) => {
     navigate('/login');
   };
 
-  // Only admins have full access
   const isAdmin = user?.role === 'admin';
-  
+  const isManager = user?.role === 'manager';
+  /** Admin or manager (elevated UI; managers still use `modules` via hasModule) */
+  const isElevated = isAdmin || isManager;
+
   // Check if user is a meter user
   const isMeterUser = user?.role === 'meter_user';
   // Check if user is a capturer (capture-only)
   const isCapturer = user?.role === 'capturer';
-  
-  // Get the effective branch: 
-  // - For admins: use selectedBranch (can switch)
-  // - For meter users with no branch assigned: use selectedBranch (can switch)
-  // - For meter users with branch assigned: use their assigned branch (cannot switch)
-  const canSwitchBranches = isAdmin || ((isMeterUser || isCapturer) && !user?.branch);
-  const effectiveBranch = canSwitchBranches ? (selectedBranch || 'JHB') : (user?.branch || null);
+  // Check if user is a viewer (connectivity read-only)
+  const isViewer = user?.role === 'viewer';
+
+  /** Feature modules (only admins bypass the list) */
+  const hasModule = (moduleKey) => {
+    if (user?.role === 'admin') return true;
+    const list = user?.modules ?? [];
+    return Array.isArray(list) && list.includes(moduleKey);
+  };
+
+  const canAccessConnectivity = hasModule(MODULE_CONNECTIVITY);
+  const canManageConnectivity =
+    isAdmin || (isManager && hasModule(MODULE_CONNECTIVITY));
+
+  // Get the effective branch:
+  // - admins/managers: use selectedBranch (can switch)
+  // - meter users with no branch assigned: use selectedBranch (can switch)
+  // - meter users with branch assigned: use their assigned branch (cannot switch)
+  const canSwitchBranches =
+    isAdmin || isManager || ((isMeterUser || isCapturer) && !user?.branch);
+  const effectiveBranch = canSwitchBranches ? (selectedBranch ?? null) : (user?.branch || null);
   
   // Helper to update selectedBranch and persist to localStorage
   const updateSelectedBranch = (branch) => {
@@ -129,10 +155,17 @@ export const AuthProvider = ({ children }) => {
       login, 
       loginWith2FA,
       refreshUser,
-      logout, 
+      logout,
       isAdmin,
+      isManager,
+      isElevated,
       isMeterUser,
       isCapturer,
+      isViewer,
+      canAccessConnectivity,
+      canManageConnectivity,
+      hasModule,
+      canSwitchBranches,
       selectedBranch,
       setSelectedBranch,
       effectiveBranch,

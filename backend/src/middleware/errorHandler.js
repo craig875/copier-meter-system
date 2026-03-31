@@ -21,6 +21,14 @@ export const errorHandler = (err, req, res, next) => {
     });
   }
 
+  // Invalid enum / field values (e.g. role not in DB enum — run migrations)
+  if (err.name === 'PrismaClientValidationError') {
+    return res.status(400).json({
+      error: 'Invalid data for database',
+      ...(process.env.NODE_ENV !== 'production' && { details: err.message }),
+    });
+  }
+
   // Handle Prisma errors
   if (err.code === 'P2002') {
     return res.status(409).json({
@@ -34,6 +42,20 @@ export const errorHandler = (err, req, res, next) => {
     });
   }
 
+  if (err.code === 'P2021') {
+    return res.status(500).json({
+      error: 'Table does not exist. Run: npx prisma migrate deploy',
+      code: err.code,
+    });
+  }
+
+  if (err.code === 'P2014') {
+    return res.status(409).json({
+      error: 'Relation constraint violation',
+      code: err.code,
+    });
+  }
+
   // Default to 500 server error
   res.status(500).json({
     error: process.env.NODE_ENV === 'production' 
@@ -41,7 +63,9 @@ export const errorHandler = (err, req, res, next) => {
       : err.message,
     ...(process.env.NODE_ENV !== 'production' && { 
       stack: err.stack,
-      details: err.toString() 
+      details: err.toString(),
+      code: err.code,
+      meta: err.meta,
     }),
   });
 };

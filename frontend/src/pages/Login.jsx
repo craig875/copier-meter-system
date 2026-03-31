@@ -1,8 +1,22 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { trimLeading } from '../utils/string';
 import toast from 'react-hot-toast';
 import logo from '../assets/logo.png';
+import { MODULE_COPERS } from '../constants/modules';
+
+function shouldPickBranch(u) {
+  if (!u) return false;
+  const roleOk =
+    u.role === 'admin' ||
+    u.role === 'manager' ||
+    ((u.role === 'meter_user' || u.role === 'capturer') && !u.branch);
+  if (!roleOk) return false;
+  if (u.role === 'admin') return true;
+  const mods = u.modules ?? [];
+  return Array.isArray(mods) && mods.includes(MODULE_COPERS);
+}
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -14,7 +28,12 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/';
+  const getRedirectPath = () => {
+    const f = location.state?.from;
+    if (f?.pathname) return `${f.pathname}${f.search || ''}${f.hash || ''}`;
+    return '/';
+  };
+
   const show2FAStep = !!tempToken;
 
   const handleSubmit = async (e) => {
@@ -23,9 +42,13 @@ const Login = () => {
 
     try {
       if (show2FAStep) {
-        await loginWith2FA(tempToken, code);
+        const user = await loginWith2FA(tempToken, code);
         toast.success('Login successful');
-        navigate(from, { replace: true });
+        if (shouldPickBranch(user)) {
+          navigate('/branch-select', { replace: true, state: { from: location.state?.from } });
+        } else {
+          navigate(getRedirectPath(), { replace: true });
+        }
       } else {
         const result = await login(email, password);
         if (result?.requires2FA && result?.tempToken) {
@@ -34,7 +57,11 @@ const Login = () => {
           toast.success('Enter your 6-digit code');
         } else {
           toast.success('Login successful');
-          navigate(from, { replace: true });
+          if (shouldPickBranch(result)) {
+            navigate('/branch-select', { replace: true, state: { from: location.state?.from } });
+          } else {
+            navigate(getRedirectPath(), { replace: true });
+          }
         }
       }
     } catch (error) {
@@ -73,7 +100,7 @@ const Login = () => {
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onChange={(e) => setCode(trimLeading(e.target.value.replace(/\D/g, '').slice(0, 6)))}
                     maxLength={6}
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all text-center text-lg tracking-widest"
@@ -98,7 +125,7 @@ const Login = () => {
                     id="email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => setEmail(trimLeading(e.target.value))}
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                     placeholder="you@example.com"
@@ -113,7 +140,7 @@ const Login = () => {
                     id="password"
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => setPassword(trimLeading(e.target.value))}
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                     placeholder="••••••••"

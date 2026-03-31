@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { machinesApi, makesApi, modelsApi, customersApi } from '../services/api';
+import { trimLeading } from '../utils/string';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { X, Check } from 'lucide-react';
@@ -15,12 +16,13 @@ import { X, Check } from 'lucide-react';
  */
 const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = false }) => {
   const queryClient = useQueryClient();
-  const { isAdmin, effectiveBranch } = useAuth();
+  const { effectiveBranch } = useAuth();
   const isEditing = !!machine;
 
   const [formData, setFormData] = useState({
     machineSerialNumber: machine?.machineSerialNumber || '',
     customerId: machine?.customerId || machine?.customer?.id || initialCustomerId || '',
+    location: machine?.location || '',
     makeId: machine?.model?.make?.id || '',
     modelId: machine?.modelId || machine?.model?.id || '',
     branch: machine?.branch || effectiveBranch || 'JHB',
@@ -48,11 +50,18 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
 
   const mutation = useMutation({
     mutationFn: (data) => {
-      const { makeId, ...rest } = data;
-      const payload = { ...rest, customerId: rest.customerId || null };
-      return isEditing
-        ? machinesApi.update(machine.id, payload)
-        : machinesApi.create(payload);
+      const { makeId, branch, ...rest } = data;
+      const payload = {
+        ...rest,
+        customerId: rest.customerId || null,
+        location: rest.location?.trim() || null,
+      };
+      if (isEditing) {
+        delete payload.branch;
+        return machinesApi.update(machine.id, payload);
+      }
+      payload.branch = effectiveBranch || 'JHB';
+      return machinesApi.create(payload);
     },
     onSuccess: () => {
       toast.success(isEditing ? 'Machine updated' : 'Machine created');
@@ -74,7 +83,10 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => {
-      const next = { ...prev, [name]: type === 'checkbox' ? checked : type === 'number' ? Number(value) : value };
+      let val = type === 'checkbox' ? checked : value;
+      if (type !== 'checkbox' && typeof val === 'string') val = trimLeading(val);
+      if (type === 'number') val = Number(val);
+      const next = { ...prev, [name]: val };
       if (name === 'makeId') {
         next.modelId = '';
       } else if (name === 'modelId' && value) {
@@ -173,21 +185,23 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
             </select>
           </div>
 
-          {isAdmin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Branch *
-              </label>
-              <select
-                name="branch"
-                value={formData.branch}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              >
-                <option value="JHB">Johannesburg (JHB)</option>
-                <option value="CT">Cape Town (CT)</option>
-              </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Machine Location
+            </label>
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              placeholder="e.g. Reception, Floor 3, Building A"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            />
+          </div>
+
+          {isEditing && (
+            <div className="text-sm text-gray-500">
+              Branch: {formData.branch === 'CT' ? 'Cape Town (CT)' : 'Johannesburg (JHB)'}
             </div>
           )}
 

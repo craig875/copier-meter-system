@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { consumablesApi, machinesApi, readingsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { trimLeading } from '../utils/string';
 import toast from 'react-hot-toast';
 import {
   Loader2,
@@ -28,8 +29,8 @@ const ConsumableMachineDetail = () => {
   const { machineId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { effectiveBranch, isAdmin, isMeterUser } = useAuth();
-  const canEditMachine = isAdmin || isMeterUser;
+  const { effectiveBranch, isElevated, isMeterUser } = useAuth();
+  const canEditMachine = isElevated || isMeterUser;
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showEditMachine, setShowEditMachine] = useState(false);
   const [orderForm, setOrderForm] = useState({
@@ -221,7 +222,7 @@ const ConsumableMachineDetail = () => {
           >
             <Copy className="h-4 w-4" />
           </button>
-          {isAdmin && (
+          {isElevated && (
             <button
               type="button"
               onClick={() => handleDeleteOrder(r)}
@@ -475,7 +476,7 @@ const ConsumableMachineDetail = () => {
                 <input
                   type="date"
                   value={orderForm.orderDate}
-                  onChange={(e) => setOrderForm((f) => ({ ...f, orderDate: e.target.value }))}
+                  onChange={(e) => setOrderForm((f) => ({ ...f, orderDate: trimLeading(e.target.value) }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 />
@@ -486,7 +487,7 @@ const ConsumableMachineDetail = () => {
                   type="number"
                   min="0"
                   value={orderForm.currentReading}
-                  onChange={(e) => setOrderForm((f) => ({ ...f, currentReading: e.target.value }))}
+                  onChange={(e) => setOrderForm((f) => ({ ...f, currentReading: trimLeading(e.target.value) }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   placeholder="e.g. 118000"
                   required
@@ -501,7 +502,7 @@ const ConsumableMachineDetail = () => {
                     max="100"
                     step="0.1"
                     value={orderForm.remainingTonerPercent}
-                    onChange={(e) => setOrderForm((f) => ({ ...f, remainingTonerPercent: e.target.value }))}
+                    onChange={(e) => setOrderForm((f) => ({ ...f, remainingTonerPercent: trimLeading(e.target.value) }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     placeholder="e.g. 10"
                   />
