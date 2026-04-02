@@ -311,6 +311,7 @@ enum AlertDeliveryStatus {
 
 model MonitoringTarget {
   id                     String    @id @default(uuid())
+  branch                 Branch    @default(JHB) @map("branch")
   customerName           String    @map("customer_name")
   siteName               String    @map("site_name")
   monitoringTarget       String    @map("monitoring_target")
@@ -338,6 +339,7 @@ model MonitoringTarget {
 
   @@index([status])
   @@index([currentStatus])
+  @@index([branch])
   @@map("monitoring_targets")
 }
 

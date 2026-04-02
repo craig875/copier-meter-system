@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MODULE_COPERS } from '../constants/modules';
+import { shouldPromptForBranch } from '../utils/branchSelection';
 
 const sites = [
   {
@@ -27,15 +27,21 @@ const BranchSelect = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const copiersOk =
-      user?.role === 'admin' ||
-      (Array.isArray(user?.modules) && user.modules.includes(MODULE_COPERS));
-    if (!canSwitchBranches || !copiersOk) {
+    if (!canSwitchBranches || !shouldPromptForBranch(user)) {
       navigate('/', { replace: true });
     }
-  }, [canSwitchBranches, navigate, user?.modules, user?.role]);
+  }, [canSwitchBranches, navigate, user]);
 
   const resolveTarget = () => {
+    try {
+      const stored = sessionStorage.getItem('branchSelectReturn');
+      if (stored && stored.startsWith('/') && !stored.startsWith('//')) {
+        sessionStorage.removeItem('branchSelectReturn');
+        return stored;
+      }
+    } catch {
+      // ignore
+    }
     const from = location.state?.from;
     if (from && typeof from.pathname === 'string') {
       return `${from.pathname}${from.search || ''}${from.hash || ''}`;

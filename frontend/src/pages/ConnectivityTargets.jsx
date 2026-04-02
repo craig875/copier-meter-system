@@ -6,20 +6,20 @@ import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/connectivity/StatusBadge';
 
 export default function ConnectivityTargets() {
-  const { canManageConnectivity } = useAuth();
+  const { canManageConnectivity, effectiveBranch } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
-    queryKey: ['connectivity', 'targets'],
-    queryFn: () => connectivityApi.getTargets(),
+    queryKey: ['connectivity', 'targets', effectiveBranch],
+    queryFn: () => connectivityApi.getTargets({ branch: effectiveBranch }),
     enabled: !!canManageConnectivity,
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => connectivityApi.deleteTarget(id),
+    mutationFn: (id) => connectivityApi.deleteTarget(id, effectiveBranch),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectivity'] }),
   });
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }) => connectivityApi.setTargetStatus(id, status),
+    mutationFn: ({ id, status }) => connectivityApi.setTargetStatus(id, status, effectiveBranch),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectivity'] }),
   });
 

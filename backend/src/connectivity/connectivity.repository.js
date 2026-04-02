@@ -58,6 +58,7 @@ export class ConnectivityRepository {
 
   async findTargets(filters = {}, options = {}) {
     const where = {};
+    if (filters.branch) where.branch = filters.branch;
     if (filters.status) where.status = filters.status;
     if (filters.currentStatus) where.currentStatus = filters.currentStatus;
     if (filters.customerName) {
@@ -133,6 +134,9 @@ export class ConnectivityRepository {
   async findOutageLogs(filters = {}, options = {}) {
     const where = {};
     if (filters.targetId) where.targetId = filters.targetId;
+    if (filters.branch) {
+      where.target = { branch: filters.branch };
+    }
     if (filters.startDate || filters.endDate) {
       where.startedAt = {};
       if (filters.startDate) where.startedAt.gte = new Date(filters.startDate);
@@ -196,8 +200,17 @@ export class ConnectivityRepository {
     });
   }
 
-  async findAllAlertTimeWindows() {
+  async findAllAlertTimeWindows(branch = null) {
+    if (!branch) {
+      return this.prisma.alertTimeWindow.findMany({
+        include: { target: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
     return this.prisma.alertTimeWindow.findMany({
+      where: {
+        OR: [{ targetId: null }, { target: { branch } }],
+      },
       include: { target: true },
       orderBy: { createdAt: 'desc' },
     });

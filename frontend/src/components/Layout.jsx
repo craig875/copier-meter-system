@@ -37,9 +37,8 @@ const Layout = ({ children }) => {
     isElevated,
     isCapturer,
     hasModule,
-    selectedBranch,
-    updateSelectedBranch,
     effectiveBranch,
+    requestBranchSwitch,
     canSwitchBranches,
   } = useAuth();
   const showCopiers = hasModule(MODULE_COPERS);
@@ -301,21 +300,15 @@ const Layout = ({ children }) => {
             <Shield className="h-5 w-5 mr-3" />
             Security
           </Link>
-          {/* Branch Selector for Admins and Meter Users with All Branches Access */}
           {canSwitchBranches && (
-            <div data-tour="branch-selector" className="mb-3">
-              <label className="block text-xs font-medium text-gray-400 mb-1">
-                Branch
-              </label>
-              <select
-                value={selectedBranch ?? 'JHB'}
-                onChange={(e) => updateSelectedBranch(e.target.value)}
-                className="w-full px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              >
-                <option value="JHB">Johannesburg (JHB)</option>
-                <option value="CT">Cape Town (CT)</option>
-              </select>
-            </div>
+            <button
+              type="button"
+              data-tour="branch-selector"
+              onClick={() => requestBranchSwitch()}
+              className="w-full mb-3 px-3 py-2 text-sm font-medium text-center text-white bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+            >
+              Switch branch
+            </button>
           )}
           
           {/* User Info */}
@@ -387,7 +380,7 @@ const Layout = ({ children }) => {
           </button>
         </header>
 
-        {showConnectivity && <ConnectivityAlertBanner enabled={showConnectivity} />}
+        {showConnectivity && <ConnectivityAlertBanner enabled={showConnectivity} branch={effectiveBranch} />}
 
         {/* Page content */}
         <main className="p-6">

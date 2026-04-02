@@ -1,5 +1,6 @@
 import { ConnectivityRepository } from './connectivity.repository.js';
 import { NotFoundError } from '../utils/errors.js';
+import { assertTargetInBranch } from './connectivity-branch.util.js';
 
 /**
  * Connectivity Service - Business logic for connectivity monitoring
@@ -9,8 +10,8 @@ export class ConnectivityService {
     this.repo = repository || new ConnectivityRepository();
   }
 
-  async getDashboard() {
-    const targets = await this.repo.findTargets({});
+  async getDashboard(branch) {
+    const targets = await this.repo.findTargets({ branch });
     const summary = this._buildSummary(targets);
     return { summary, targets };
   }
@@ -18,8 +19,8 @@ export class ConnectivityService {
   /**
    * Lightweight summary for Layout polling (down/dns_failure counts for alert banner)
    */
-  async getSummary() {
-    const targets = await this.repo.findTargets({});
+  async getSummary(branch) {
+    const targets = await this.repo.findTargets({ branch });
     const summary = this._buildSummary(targets);
     return { down: summary.down, dnsFailure: summary.dnsFailure, total: summary.total };
   }
@@ -40,13 +41,16 @@ export class ConnectivityService {
   }
 
   async getTarget(id, options = {}) {
-    const target = await this.repo.findTargetById(id, options);
+    const { branch, ...rest } = options;
+    const target = await this.repo.findTargetById(id, rest);
     if (!target) throw new NotFoundError('Monitoring target');
+    if (branch) assertTargetInBranch(target, branch);
     return { target };
   }
 
-  async createTarget(data) {
+  async createTarget(data, branch) {
     const payload = {
+      branch,
       customerName: data.customerName,
       siteName: data.siteName,
       monitoringTarget: data.monitoringTarget.trim(),
@@ -63,9 +67,10 @@ export class ConnectivityService {
     return { target };
   }
 
-  async updateTarget(id, data) {
+  async updateTarget(id, data, branch) {
     const existing = await this.repo.findTargetById(id);
     if (!existing) throw new NotFoundError('Monitoring target');
+    assertTargetInBranch(existing, branch);
 
     const payload = {};
     if (data.customerName !== undefined) payload.customerName = data.customerName;
@@ -87,26 +92,33 @@ export class ConnectivityService {
     return { target };
   }
 
-  async deleteTarget(id) {
+  async deleteTarget(id, branch) {
     const existing = await this.repo.findTargetById(id);
     if (!existing) throw new NotFoundError('Monitoring target');
+    assertTargetInBranch(existing, branch);
     await this.repo.deleteTarget(id);
     return { message: 'Target deleted' };
   }
 
-  async setTargetStatus(id, status) {
+  async setTargetStatus(id, status, branch) {
     const existing = await this.repo.findTargetById(id);
     if (!existing) throw new NotFoundError('Monitoring target');
+    assertTargetInBranch(existing, branch);
     const target = await this.repo.updateTarget(id, { status: status === 'enabled' ? 'enabled' : 'disabled' });
     return { target };
   }
 
-  async getTimeWindows() {
-    const timeWindows = await this.repo.findAllAlertTimeWindows();
+  async getTimeWindows(branch) {
+    const timeWindows = await this.repo.findAllAlertTimeWindows(branch);
     return { timeWindows };
   }
 
-  async createOrUpdateTimeWindow(data) {
+  async createOrUpdateTimeWindow(data, branch) {
+    if (data.targetId && data.targetId !== '') {
+      const t = await this.repo.findTargetById(data.targetId);
+      if (!t) throw new NotFoundError('Monitoring target');
+      assertTargetInBranch(t, branch);
+    }
     const payload = {
       startTime: data.startTime,
       endTime: data.endTime,
@@ -126,7 +138,16 @@ export class ConnectivityService {
   }
 
   async getOutages(filters = {}, options = {}) {
-    const { items, total } = await this.repo.findOutageLogs(filters, options);
+    const { branch, targetId, startDate, endDate } = filters;
+    if (targetId && branch) {
+      const t = await this.repo.findTargetById(targetId);
+      if (!t) throw new NotFoundError('Monitoring target');
+      assertTargetInBranch(t, branch);
+    }
+    const { items, total } = await this.repo.findOutageLogs(
+      { branch, targetId, startDate, endDate },
+      options
+    );
     return { outages: items, total };
   }
 }

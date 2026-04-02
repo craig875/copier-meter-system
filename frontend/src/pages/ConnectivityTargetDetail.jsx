@@ -45,7 +45,7 @@ export default function ConnectivityTargetDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { canManageConnectivity, canAccessConnectivity } = useAuth();
+  const { canManageConnectivity, canAccessConnectivity, effectiveBranch } = useAuth();
   const getTodayLocal = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -58,25 +58,44 @@ export default function ConnectivityTargetDetail() {
   const applyDateRange = () => setAppliedRange({ start: startDate, end: endDate });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['connectivity', 'target', id, appliedRange.start, appliedRange.end],
-    queryFn: () => connectivityApi.getTarget(id, { checkLimit: 5000, startDate: appliedRange.start, endDate: appliedRange.end }),
+    queryKey: ['connectivity', 'target', id, effectiveBranch, appliedRange.start, appliedRange.end],
+    queryFn: () =>
+      connectivityApi.getTarget(id, {
+        branch: effectiveBranch,
+        checkLimit: 5000,
+        startDate: appliedRange.start,
+        endDate: appliedRange.end,
+      }),
     enabled: !!canAccessConnectivity && !!id,
   });
 
   const { data: uptimeData } = useQuery({
-    queryKey: ['connectivity', 'uptime', id, appliedRange.start, appliedRange.end],
-    queryFn: () => connectivityApi.getUptimeReport({ targetId: id, startDate: appliedRange.start, endDate: appliedRange.end }),
+    queryKey: ['connectivity', 'uptime', id, effectiveBranch, appliedRange.start, appliedRange.end],
+    queryFn: () =>
+      connectivityApi.getUptimeReport({
+        branch: effectiveBranch,
+        targetId: id,
+        startDate: appliedRange.start,
+        endDate: appliedRange.end,
+      }),
     enabled: !!canAccessConnectivity && !!id,
   });
 
   const { data: outagesData } = useQuery({
-    queryKey: ['connectivity', 'outages', id, appliedRange.start, appliedRange.end],
-    queryFn: () => connectivityApi.getOutages({ targetId: id, startDate: appliedRange.start, endDate: appliedRange.end, limit: 20 }),
+    queryKey: ['connectivity', 'outages', id, effectiveBranch, appliedRange.start, appliedRange.end],
+    queryFn: () =>
+      connectivityApi.getOutages({
+        branch: effectiveBranch,
+        targetId: id,
+        startDate: appliedRange.start,
+        endDate: appliedRange.end,
+        limit: 20,
+      }),
     enabled: !!canAccessConnectivity && !!id,
   });
 
   const checkMutation = useMutation({
-    mutationFn: () => connectivityApi.checkTarget(id),
+    mutationFn: () => connectivityApi.checkTarget(id, effectiveBranch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['connectivity', 'target', id] });
       queryClient.invalidateQueries({ queryKey: ['connectivity', 'uptime', id] });

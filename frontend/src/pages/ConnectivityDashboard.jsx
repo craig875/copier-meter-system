@@ -23,7 +23,7 @@ function formatDate(d) {
 }
 
 export default function ConnectivityDashboard() {
-  const { canAccessConnectivity, canManageConnectivity } = useAuth();
+  const { canAccessConnectivity, canManageConnectivity, effectiveBranch } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const statusFromUrl = searchParams.get('status') || '';
@@ -37,8 +37,8 @@ export default function ConnectivityDashboard() {
   const [sortDir, setSortDir] = useState('asc');
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['connectivity', 'dashboard'],
-    queryFn: () => connectivityApi.getDashboard(),
+    queryKey: ['connectivity', 'dashboard', effectiveBranch],
+    queryFn: () => connectivityApi.getDashboard(effectiveBranch),
     refetchInterval: 30000,
     enabled: !!canAccessConnectivity,
   });

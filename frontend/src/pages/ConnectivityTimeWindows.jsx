@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { connectivityApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -6,12 +6,11 @@ import { useAuth } from '../context/AuthContext';
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function ConnectivityTimeWindows() {
-  const { canManageConnectivity } = useAuth();
-  const queryClient = useQueryClient();
+  const { canManageConnectivity, effectiveBranch } = useAuth();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['connectivity', 'time-windows'],
-    queryFn: () => connectivityApi.getTimeWindows(),
+    queryKey: ['connectivity', 'time-windows', effectiveBranch],
+    queryFn: () => connectivityApi.getTimeWindows(effectiveBranch),
     enabled: !!canManageConnectivity,
   });
 

@@ -12,8 +12,8 @@ export class ReportService {
    * Calculate uptime for a target over a date range
    * Uses check results: uptime = (successful checks / total checks) * 100
    */
-  async getUptimeReport(startDate, endDate, customerName, siteName, targetId) {
-    const targets = await this.repo.findTargets({});
+  async getUptimeReport(startDate, endDate, customerName, siteName, targetId, branch) {
+    const targets = await this.repo.findTargets(branch ? { branch } : {});
     let filtered = targets;
     if (targetId) {
       filtered = filtered.filter((t) => t.id === targetId);
@@ -66,11 +66,11 @@ export class ReportService {
   /**
    * SLA report - compare uptime to SLA targets per service type
    */
-  async getSlaReport(startDate, endDate, customerName, siteName) {
+  async getSlaReport(startDate, endDate, customerName, siteName, branch) {
     const slaTargets = await this.repo.findSlaTargets();
     const slaMap = Object.fromEntries(slaTargets.map((s) => [s.serviceType, s.targetPercent]));
 
-    const uptimeReport = await this.getUptimeReport(startDate, endDate, customerName, siteName);
+    const uptimeReport = await this.getUptimeReport(startDate, endDate, customerName, siteName, undefined, branch);
     const byTarget = uptimeReport.results.map((r) => ({
       ...r,
       slaTarget: slaMap[r.serviceType] ?? 99.9,
@@ -88,8 +88,8 @@ export class ReportService {
   /**
    * Export as CSV
    */
-  async exportCsv(startDate, endDate) {
-    const report = await this.getUptimeReport(startDate, endDate);
+  async exportCsv(startDate, endDate, branch) {
+    const report = await this.getUptimeReport(startDate, endDate, undefined, undefined, undefined, branch);
     const headers = [
       'Customer',
       'Site',

@@ -19,18 +19,18 @@ function formatDate(d) {
 }
 
 export default function ConnectivityOutages() {
-  const { canAccessConnectivity } = useAuth();
+  const { canAccessConnectivity, effectiveBranch } = useAuth();
   const [targetId, setTargetId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const params = { limit: 100 };
+  const params = { limit: 100, branch: effectiveBranch };
   if (targetId) params.targetId = targetId;
   if (startDate) params.startDate = startDate;
   if (endDate) params.endDate = endDate;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['connectivity', 'outages', params],
+    queryKey: ['connectivity', 'outages', effectiveBranch, params],
     queryFn: () => connectivityApi.getOutages(params),
     enabled: !!canAccessConnectivity,
   });

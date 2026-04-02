@@ -164,19 +164,30 @@ export const modelsApi = {
   delete: (id) => api.delete(`/models/${id}`).then((r) => r.data),
 };
 
-// Connectivity Monitoring API
+// Connectivity Monitoring API (branch must match the user's selected / effective branch)
+const connectivityBranchParams = (branch) => (branch ? { branch } : {});
+
 export const connectivityApi = {
-  getDashboard: () => api.get('/connectivity/dashboard').then((r) => r.data),
-  getSummary: () => api.get('/connectivity/summary').then((r) => r.data),
+  getDashboard: (branch) =>
+    api.get('/connectivity/dashboard', { params: connectivityBranchParams(branch) }).then((r) => r.data),
+  getSummary: (branch) =>
+    api.get('/connectivity/summary', { params: connectivityBranchParams(branch) }).then((r) => r.data),
   getTargets: (params = {}) => api.get('/connectivity/targets', { params }).then((r) => r.data),
   getTarget: (id, params = {}) => api.get(`/connectivity/targets/${id}`, { params }).then((r) => r.data),
-  checkTarget: (id) => api.post(`/connectivity/targets/${id}/check`).then((r) => r.data),
-  createTarget: (data) => api.post('/connectivity/targets', data).then((r) => r.data),
-  updateTarget: (id, data) => api.put(`/connectivity/targets/${id}`, data).then((r) => r.data),
-  deleteTarget: (id) => api.delete(`/connectivity/targets/${id}`).then((r) => r.data),
-  setTargetStatus: (id, status) => api.patch(`/connectivity/targets/${id}/status`, { status }).then((r) => r.data),
-  getTimeWindows: () => api.get('/connectivity/time-windows').then((r) => r.data),
-  createOrUpdateTimeWindow: (data) => api.post('/connectivity/time-windows', data).then((r) => r.data),
+  checkTarget: (id, branch) =>
+    api.post(`/connectivity/targets/${id}/check`, {}, { params: connectivityBranchParams(branch) }).then((r) => r.data),
+  createTarget: (data, branch) =>
+    api.post('/connectivity/targets', data, { params: connectivityBranchParams(branch) }).then((r) => r.data),
+  updateTarget: (id, data, branch) =>
+    api.put(`/connectivity/targets/${id}`, data, { params: connectivityBranchParams(branch) }).then((r) => r.data),
+  deleteTarget: (id, branch) =>
+    api.delete(`/connectivity/targets/${id}`, { params: connectivityBranchParams(branch) }).then((r) => r.data),
+  setTargetStatus: (id, status, branch) =>
+    api.patch(`/connectivity/targets/${id}/status`, { status }, { params: connectivityBranchParams(branch) }).then((r) => r.data),
+  getTimeWindows: (branch) =>
+    api.get('/connectivity/time-windows', { params: connectivityBranchParams(branch) }).then((r) => r.data),
+  createOrUpdateTimeWindow: (data, branch) =>
+    api.post('/connectivity/time-windows', data, { params: connectivityBranchParams(branch) }).then((r) => r.data),
   getUptimeReport: (params) => api.get('/connectivity/reports/uptime', { params }).then((r) => r.data),
   getSlaReport: (params) => api.get('/connectivity/reports/sla', { params }).then((r) => r.data),
   exportReport: (params) => api.get('/connectivity/reports/export', { params, responseType: 'blob' }),

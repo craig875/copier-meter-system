@@ -22,12 +22,12 @@ function playAlertSound() {
   }
 }
 
-export default function ConnectivityAlertBanner({ enabled }) {
+export default function ConnectivityAlertBanner({ enabled, branch }) {
   const prevAffectedRef = useRef(null);
 
   const { data } = useQuery({
-    queryKey: ['connectivity', 'summary'],
-    queryFn: () => connectivityApi.getSummary(),
+    queryKey: ['connectivity', 'summary', branch],
+    queryFn: () => connectivityApi.getSummary(branch),
     enabled: !!enabled,
     refetchInterval: 30000,
     staleTime: 0,

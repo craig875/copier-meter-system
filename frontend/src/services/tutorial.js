@@ -46,7 +46,7 @@ const stepsByPath = {
       element: '[data-tour="branch-selector"]',
       popover: {
         title: 'Switch Branch',
-        description: 'If you have access to multiple branches, use this dropdown to switch between Johannesburg (JHB) and Cape Town (CT). Your view and data will update.',
+        description: 'If you have access to multiple branches, use Switch branch to open the site picker (same as after login). Choose Johannesburg (JHB) or Cape Town (CT); you return to where you were.',
         side: 'right',
       },
     },

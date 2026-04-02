@@ -12,7 +12,7 @@ export default function ConnectivityTargetForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { canManageConnectivity } = useAuth();
+  const { canManageConnectivity, effectiveBranch } = useAuth();
   const isEdit = !!id;
 
   const [form, setForm] = useState({
@@ -30,8 +30,8 @@ export default function ConnectivityTargetForm() {
   });
 
   const { data } = useQuery({
-    queryKey: ['connectivity', 'target', id],
-    queryFn: () => connectivityApi.getTarget(id),
+    queryKey: ['connectivity', 'target', id, effectiveBranch],
+    queryFn: () => connectivityApi.getTarget(id, { branch: effectiveBranch }),
     enabled: isEdit && !!canManageConnectivity,
   });
 
@@ -54,7 +54,7 @@ export default function ConnectivityTargetForm() {
   }, [data?.target]);
 
   const createMutation = useMutation({
-    mutationFn: (body) => connectivityApi.createTarget(body),
+    mutationFn: (body) => connectivityApi.createTarget(body, effectiveBranch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['connectivity'] });
       navigate('/connectivity/targets');
@@ -62,7 +62,7 @@ export default function ConnectivityTargetForm() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (body) => connectivityApi.updateTarget(id, body),
+    mutationFn: (body) => connectivityApi.updateTarget(id, body, effectiveBranch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['connectivity'] });
       navigate(`/connectivity/targets/${id}`);

@@ -277,8 +277,11 @@ export class ReadingService {
    * @returns {Promise<Array>}
    */
   async getReadingHistory(machineId, limit = 12, branch = null) {
+    const take = Math.min(Math.max(parseInt(limit, 10) || 12, 1), 500);
     const options = {
-      take: parseInt(limit),
+      take,
+      /** Reading period (year/month), not capture timestamp */
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
       include: {
         user: {
           select: { name: true },
@@ -295,7 +298,6 @@ export class ReadingService {
       return { readings };
     }
 
-    // Otherwise use the existing findByMachineId method
     const readings = await this.readingRepo.findByMachineId(machineId, options);
     return { readings };
   }

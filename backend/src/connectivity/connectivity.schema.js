@@ -69,18 +69,22 @@ export const alertTimeWindowSchema = z.object({
   enabled: z.boolean().optional().default(true),
 });
 
+const branchQuery = z.enum(['JHB', 'CT']).optional();
+
 export const uptimeReportQuerySchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   customerName: z.string().optional(),
   siteName: z.string().optional(),
   targetId: z.string().uuid().optional(),
+  branch: branchQuery,
 });
 
 export const exportReportQuerySchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   format: z.enum(['csv', 'pdf']).default('csv'),
+  branch: branchQuery,
 });
 
 export const outagesQuerySchema = z.object({
@@ -89,4 +93,5 @@ export const outagesQuerySchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   limit: z.coerce.number().min(1).max(500).optional().default(50),
   offset: z.coerce.number().min(0).optional().default(0),
+  branch: branchQuery,
 });

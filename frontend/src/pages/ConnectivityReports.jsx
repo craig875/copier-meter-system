@@ -12,7 +12,7 @@ function formatDate(d) {
 }
 
 export default function ConnectivityReports() {
-  const { canAccessConnectivity } = useAuth();
+  const { canAccessConnectivity, effectiveBranch } = useAuth();
   const navigate = useNavigate();
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -22,20 +22,20 @@ export default function ConnectivityReports() {
   const [endDate, setEndDate] = useState(formatDate(new Date()));
 
   const { data: uptimeData, isLoading: uptimeLoading } = useQuery({
-    queryKey: ['connectivity', 'uptime', startDate, endDate],
-    queryFn: () => connectivityApi.getUptimeReport({ startDate, endDate }),
+    queryKey: ['connectivity', 'uptime', effectiveBranch, startDate, endDate],
+    queryFn: () => connectivityApi.getUptimeReport({ branch: effectiveBranch, startDate, endDate }),
     enabled: !!canAccessConnectivity,
   });
 
   const { data: slaData, isLoading: slaLoading } = useQuery({
-    queryKey: ['connectivity', 'sla', startDate, endDate],
-    queryFn: () => connectivityApi.getSlaReport({ startDate, endDate }),
+    queryKey: ['connectivity', 'sla', effectiveBranch, startDate, endDate],
+    queryFn: () => connectivityApi.getSlaReport({ branch: effectiveBranch, startDate, endDate }),
     enabled: !!canAccessConnectivity,
   });
 
   const handleExport = async () => {
     try {
-      const res = await connectivityApi.exportReport({ startDate, endDate, format: 'csv' });
+      const res = await connectivityApi.exportReport({ branch: effectiveBranch, startDate, endDate, format: 'csv' });
       const blob = res?.data ?? res;
       if (!blob) throw new Error('No data');
       const url = window.URL.createObjectURL(blob);

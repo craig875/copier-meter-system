@@ -148,6 +148,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /** Clear branch choice and go to the same site picker as after login (full navigation). */
+  const requestBranchSwitch = () => {
+    if (!canSwitchBranches) return;
+    localStorage.removeItem('selectedBranch');
+    try {
+      const path = window.location.pathname + window.location.search + window.location.hash;
+      sessionStorage.setItem('branchSelectReturn', path);
+    } catch {
+      // ignore
+    }
+    window.location.assign('/branch-select');
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -169,7 +182,8 @@ export const AuthProvider = ({ children }) => {
       selectedBranch,
       setSelectedBranch,
       effectiveBranch,
-      updateSelectedBranch
+      updateSelectedBranch,
+      requestBranchSwitch
     }}>
       {children}
     </AuthContext.Provider>

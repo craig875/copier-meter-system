@@ -4,19 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
 import toast from 'react-hot-toast';
 import logo from '../assets/logo.png';
-import { MODULE_COPERS } from '../constants/modules';
-
-function shouldPickBranch(u) {
-  if (!u) return false;
-  const roleOk =
-    u.role === 'admin' ||
-    u.role === 'manager' ||
-    ((u.role === 'meter_user' || u.role === 'capturer') && !u.branch);
-  if (!roleOk) return false;
-  if (u.role === 'admin') return true;
-  const mods = u.modules ?? [];
-  return Array.isArray(mods) && mods.includes(MODULE_COPERS);
-}
+import { shouldPromptForBranch } from '../utils/branchSelection';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -44,7 +32,7 @@ const Login = () => {
       if (show2FAStep) {
         const user = await loginWith2FA(tempToken, code);
         toast.success('Login successful');
-        if (shouldPickBranch(user)) {
+        if (shouldPromptForBranch(user)) {
           navigate('/branch-select', { replace: true, state: { from: location.state?.from } });
         } else {
           navigate(getRedirectPath(), { replace: true });
@@ -57,7 +45,7 @@ const Login = () => {
           toast.success('Enter your 6-digit code');
         } else {
           toast.success('Login successful');
-          if (shouldPickBranch(result)) {
+          if (shouldPromptForBranch(result)) {
             navigate('/branch-select', { replace: true, state: { from: location.state?.from } });
           } else {
             navigate(getRedirectPath(), { replace: true });
