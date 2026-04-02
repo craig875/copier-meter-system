@@ -29,5 +29,12 @@ jobs:
           script_stop: true
           script: |
             set -e
-            cd /var/www/copier-meter-system
+            # Repo path — change here if your clone lives elsewhere, or set DEPLOY_PATH in repo secrets
+            REPO="${DEPLOY_PATH:-/var/www/copier-meter-system}"
+            cd "$REPO"
+            # Ensure latest code (including scripts/deploy.sh) exists before first deploy.sh run
+            git fetch origin
+            git checkout main 2>/dev/null || git checkout -b main origin/main
+            git reset --hard origin/main
+            chmod +x scripts/deploy.sh
             ./scripts/deploy.sh
