@@ -1,3 +1,6 @@
 # Root repo — frontend lives alongside backend
 frontend/node_modules/
 frontend/dist/
+
+# Server-only: VITE_API_URL for deploy.sh
+deploy.env

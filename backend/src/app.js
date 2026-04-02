@@ -10,6 +10,13 @@ import { getMonitoringEngine } from './connectivity/monitoring/engine.js';
 
 const app = express();
 
+// Behind nginx: X-Forwarded-For is set — express-rate-limit requires trust proxy (see ERR_ERL_UNEXPECTED_X_FORWARDED_FOR).
+// Use NODE_ENV === 'production' directly so this works even if config.trustProxy is ever out of sync.
+const trustProxyOff = process.env.TRUST_PROXY === 'false' || process.env.TRUST_PROXY === '0';
+if (!trustProxyOff && (config.nodeEnv === 'production' || config.trustProxy)) {
+  app.set('trust proxy', 1);
+}
+
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
@@ -87,6 +94,7 @@ const start = async () => {
     app.listen(config.port, () => {
       console.log(`Server running on http://localhost:${config.port}`);
       console.log(`Environment: ${config.nodeEnv}`);
+      console.log(`Trust proxy: ${app.get('trust proxy') ?? 'off'}`);
       if (config.connectivityModuleEnabled) {
         getMonitoringEngine().start();
         console.log('Connectivity monitoring engine started');

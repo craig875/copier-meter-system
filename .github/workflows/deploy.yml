@@ -1,0 +1,33 @@
+# One-time: add GitHub repo secrets (Settings → Secrets → Actions):
+#   DEPLOY_HOST     — server hostname or IP
+#   DEPLOY_USER     — SSH user (e.g. root or deploy)
+#   DEPLOY_SSH_KEY  — private key (full PEM including BEGIN/END lines)
+# Optional:
+#   DEPLOY_SSH_PORT — default 22
+
+name: Deploy to server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd /var/www/copier-meter-system
+            ./scripts/deploy.sh
