@@ -587,6 +587,12 @@ const Customers = ({ title = 'Customers' }) => {
   );
 };
 
+const branchLabel = (b) => {
+  if (b === 'CT') return 'Cape Town (CT)';
+  if (b === 'JHB') return 'Johannesburg (JHB)';
+  return b || '—';
+};
+
 const CustomerModal = ({ customer, onClose }) => {
   const queryClient = useQueryClient();
   const { effectiveBranch } = useAuth();
@@ -598,13 +604,16 @@ const CustomerModal = ({ customer, onClose }) => {
     email: customer?.email || '',
     phone: customer?.phone || '',
     address: customer?.address || '',
-    branch: customer?.branch || '',
   });
 
   const mutation = useMutation({
     mutationFn: (data) => {
       const payload = { ...data };
-      if (payload.branch === '') payload.branch = null;
+      if (isEditing) {
+        payload.branch = customer.branch ?? null;
+      } else {
+        payload.branch = effectiveBranch || null;
+      }
       return isEditing
         ? customersApi.update(customer.id, payload)
         : customersApi.create(payload);
@@ -700,18 +709,18 @@ const CustomerModal = ({ customer, onClose }) => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-            <select
-              name="branch"
-              value={formData.branch}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-            >
-              <option value="">No branch</option>
-              <option value="JHB">Johannesburg (JHB)</option>
-              <option value="CT">Cape Town (CT)</option>
-            </select>
+          <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-sm text-gray-700">
+            {isEditing ? (
+              <>
+                <span className="font-medium text-gray-800">Branch: </span>
+                {branchLabel(customer.branch)}
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-gray-800">New customers are added to: </span>
+                {effectiveBranch ? branchLabel(effectiveBranch) : 'Select a branch in the header first.'}
+              </>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
