@@ -23,6 +23,7 @@ import MeterBlocks from '../components/MeterBlocks';
 import MachineStatsTile from '../components/MachineStatsTile';
 import MachineLifeTile from '../components/MachineLifeTile';
 import MonthlyUsageCycleTile from '../components/MonthlyUsageCycleTile';
+import ThreeMonthAverageUsageTile from '../components/ThreeMonthAverageUsageTile';
 import MachineModal from '../components/MachineModal';
 
 const ConsumableMachineDetail = () => {
@@ -303,6 +304,10 @@ const ConsumableMachineDetail = () => {
         <MonthlyUsageCycleTile
           machineLife={machine.model?.machineLife ?? null}
           readings={readingsHistoryData?.readings || []}
+        />
+        <ThreeMonthAverageUsageTile
+          readings={readingsHistoryData?.readings || []}
+          isColour={machine.model?.modelType === 'colour'}
         />
       </div>
 
