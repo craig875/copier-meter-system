@@ -300,17 +300,7 @@ const Layout = ({ children }) => {
             <Shield className="h-5 w-5 mr-3" />
             Security
           </Link>
-          {canSwitchBranches && (
-            <button
-              type="button"
-              data-tour="branch-selector"
-              onClick={() => requestBranchSwitch()}
-              className="w-full mb-3 px-3 py-2 text-sm font-medium text-center text-white bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-            >
-              Switch branch
-            </button>
-          )}
-          
+
           {/* User Info */}
           <div className="flex items-center justify-between">
             <div>
@@ -365,19 +355,36 @@ const Layout = ({ children }) => {
                 : navigation.find(n => isItemActive(n))?.name || 'Dashboard'}
             </h2>
           </div>
-          <button
-            onClick={() => {
-              import('../services/tutorial').then((m) => m.startTutorial(location.pathname, isElevated)).catch((err) => {
-                console.error('Tutorial failed to load:', err);
-                import('react-hot-toast').then(({ default: toast }) => toast.error('Could not load tour'));
-              });
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-white/30 rounded-lg transition-colors"
-            title="Take a tour"
-          >
-            <HelpCircle className="h-5 w-5" />
-            <span className="hidden sm:inline">Help</span>
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {canSwitchBranches && (
+              <button
+                type="button"
+                data-tour="branch-selector"
+                onClick={() => requestBranchSwitch()}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-800 bg-white/40 border border-gray-300/80 rounded-lg hover:bg-white/80 hover:border-gray-400 transition-colors shadow-sm"
+                title="Choose Johannesburg or Cape Town (same as after login)"
+              >
+                <Building2 className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                <span className="whitespace-nowrap">Switch branch</span>
+                {effectiveBranch && (
+                  <span className="text-xs font-normal text-gray-500 hidden sm:inline">({effectiveBranch})</span>
+                )}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                import('../services/tutorial').then((m) => m.startTutorial(location.pathname, isElevated)).catch((err) => {
+                  console.error('Tutorial failed to load:', err);
+                  import('react-hot-toast').then(({ default: toast }) => toast.error('Could not load tour'));
+                });
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-white/30 rounded-lg transition-colors"
+              title="Take a tour"
+            >
+              <HelpCircle className="h-5 w-5" />
+              <span className="hidden sm:inline">Help</span>
+            </button>
+          </div>
         </header>
 
         {showConnectivity && <ConnectivityAlertBanner enabled={showConnectivity} branch={effectiveBranch} />}
