@@ -30,11 +30,15 @@ app.use(cors({
   origin: config.nodeEnv === 'development'
     ? true
     : (origin, cb) => {
-        const allowed = (config.frontendUrl || '').replace(/\/$/, '');
         if (!origin) return cb(null, true);
-        if (allowed && (origin === allowed || origin.startsWith(allowed))) return cb(null, origin);
-        if (allowed && origin.includes('vercel.app')) return cb(null, origin);
-        return cb(null, allowed || origin);
+        const list =
+          config.frontendOrigins?.length > 0
+            ? config.frontendOrigins
+            : [(config.frontendUrl || '').replace(/\/$/, '')].filter(Boolean);
+        const allowed = list.some((a) => a && origin === a);
+        if (allowed) return cb(null, origin);
+        if (origin.includes('vercel.app')) return cb(null, origin);
+        return cb(null, false);
       },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
