@@ -27,6 +27,25 @@ export class ImportController {
     res.json(result);
   });
 
+  /** Bulk CSV: create customers only (machines added separately). */
+  importCustomers = asyncHandler(async (req, res) => {
+    const { data } = req.body;
+    const branch = hasAdminAccess(req.user.role) ? req.body.branch || req.user.branch : req.user.branch;
+
+    if (!branch) {
+      return res.status(400).json({ error: 'Branch is required' });
+    }
+
+    const userId = req.user.id;
+    const result = await this.importService.importCustomers(data, branch);
+    this.auditService.log(userId, 'customer_import', 'import', null, {
+      branch,
+      created: result.results?.created,
+      skipped: result.results?.skipped,
+    });
+    res.json(result);
+  });
+
   importReadings = asyncHandler(async (req, res) => {
     const { data, year, month, branch } = req.body;
     
@@ -69,5 +88,6 @@ export class ImportController {
 const importController = new ImportController();
 
 export const importMachines = importController.importMachines.bind(importController);
+export const importCustomers = importController.importCustomers.bind(importController);
 export const importReadings = importController.importReadings.bind(importController);
 export const importMakeModelParts = importController.importMakeModelParts.bind(importController);

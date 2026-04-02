@@ -142,6 +142,8 @@ export const customersApi = {
   update: (id, data) => api.put(`/customers/${id}`, data).then((r) => r.data),
   archive: (id, isArchived = true) => api.patch(`/customers/${id}/archive`, { isArchived }).then((r) => r.data),
   delete: (id) => api.delete(`/customers/${id}`).then((r) => r.data),
+  /** Bulk import customers from CSV (customers only; no machines) */
+  importBulk: (data, branch) => api.post('/customers/import', { data, branch }).then((r) => r.data),
 };
 
 // Makes & Models API

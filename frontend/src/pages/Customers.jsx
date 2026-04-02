@@ -15,13 +15,320 @@ import {
   Archive,
   RotateCcw,
   MoreVertical,
+  Upload,
+  Download,
 } from 'lucide-react';
+
+/** CSV line parser (quoted fields) — matches Machines import */
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function buildCustomerOnlyRow(headers, values) {
+  const row = {};
+  headers.forEach((header, index) => {
+    const value = (values[index] || '').replace(/^"|"$/g, '');
+    switch (header) {
+      case 'customer':
+      case 'name':
+        row.customer = value;
+        break;
+      case 'contact name':
+      case 'contact_name':
+        row.contactName = value;
+        break;
+      case 'email':
+        row.email = value;
+        break;
+      case 'phone':
+        row.phone = value;
+        break;
+      case 'address':
+        row.address = value;
+        break;
+      case 'branch':
+        row.branch = value;
+        break;
+      default:
+        break;
+    }
+  });
+  return row;
+}
+
+const CustomerBulkImportModal = ({ onClose }) => {
+  const queryClient = useQueryClient();
+  const { effectiveBranch } = useAuth();
+  const [file, setFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [errors, setErrors] = useState([]);
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    setFile(selectedFile);
+    setErrors([]);
+    setPreview(null);
+
+    if (selectedFile.type === 'text/csv' || selectedFile.name.endsWith('.csv')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const text = event.target.result;
+          const lines = text.split('\n').filter((line) => line.trim());
+          if (lines.length < 2) {
+            setErrors(['CSV file must have a header row and at least one data row']);
+            return;
+          }
+
+          const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().replace(/^"|"$/g, ''));
+          const hasName = headers.includes('customer') || headers.includes('name');
+          if (!hasName) {
+            setErrors(['CSV must include a Customer column (or Name).']);
+            return;
+          }
+
+          const rows = [];
+          for (let i = 1; i < Math.min(lines.length, 6); i++) {
+            const values = parseCSVLine(lines[i]).map((v) => v.replace(/^"|"$/g, ''));
+            rows.push(values);
+          }
+          setPreview({ headers, rows, totalRows: lines.length - 1 });
+        } catch (err) {
+          setErrors([`Error parsing CSV: ${err.message}`]);
+        }
+      };
+      reader.readAsText(selectedFile);
+    } else {
+      setErrors(['Please upload a CSV file']);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!file) {
+      toast.error('Please select a file');
+      return;
+    }
+
+    setImporting(true);
+    setErrors([]);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const text = event.target.result;
+          const lines = text.split('\n').filter((line) => line.trim());
+
+          if (lines.length < 2) {
+            toast.error('CSV file must have a header row and at least one data row');
+            setImporting(false);
+            return;
+          }
+
+          const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().replace(/^"|"$/g, ''));
+          if (!headers.includes('customer') && !headers.includes('name')) {
+            toast.error('CSV must include a Customer column (or Name)');
+            setImporting(false);
+            return;
+          }
+
+          const data = [];
+          for (let i = 1; i < lines.length; i++) {
+            const values = parseCSVLine(lines[i]).map((v) => v.replace(/^"|"$/g, ''));
+            const row = buildCustomerOnlyRow(headers, values);
+            const name =
+              (typeof row.customer === 'string' && row.customer.trim()) ||
+              (typeof row.name === 'string' && row.name.trim()) ||
+              '';
+            if (!name) continue;
+            data.push(row);
+          }
+
+          if (data.length === 0) {
+            toast.error('No rows with a customer name');
+            setImporting(false);
+            return;
+          }
+
+          const result = await customersApi.importBulk(data, effectiveBranch);
+          const results = result.results;
+
+          toast.success(
+            `Import complete: ${results.created} created, ${results.skipped} skipped (already exist or duplicate in file)`
+          );
+
+          if (results.errors?.length > 0) {
+            toast(`${results.errors.length} rows had errors`, { icon: '⚠️' });
+          }
+
+          queryClient.invalidateQueries(['customers']);
+          onClose();
+        } catch (error) {
+          console.error('Import error:', error);
+          toast.error(error.response?.data?.error || 'Failed to import data');
+          if (error.response?.data?.details) {
+            setErrors([error.response.data.details]);
+          }
+        } finally {
+          setImporting(false);
+        }
+      };
+      reader.readAsText(file);
+    } catch (error) {
+      console.error('File read error:', error);
+      toast.error('Failed to read file');
+      setImporting(false);
+    }
+  };
+
+  const templateCsv =
+    'Customer,Contact Name,Email,Phone,Address,Branch\n' +
+    'Acme Ltd,Jane Doe,jane@example.com,0215550000,1 Example Rd,JHB';
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+      <div className="popup-panel max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white">
+          <h2 className="text-lg font-semibold text-gray-900">Import customers</h2>
+          <button type="button" onClick={onClose} className="p-1 hover:bg-gray-100 rounded text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-950">
+            <p className="font-medium mb-1">Customers only</p>
+            <p>
+              Each row creates one customer if the name does not already exist for your branch. Add machines later from{' '}
+              <Link to="/machines" className="text-red-700 underline font-medium">
+                Machines
+              </Link>
+              . Optional columns: Contact Name, Email, Phone, Address, Branch (per row; otherwise your current branch is used).
+            </p>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                const blob = new Blob([templateCsv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'customer-import-template.csv';
+                link.click();
+                window.URL.revokeObjectURL(url);
+              }}
+              className="flex items-center px-3 py-1.5 text-sm bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download template
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">CSV file</label>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            />
+          </div>
+
+          {preview && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Preview (first {preview.rows.length} of {preview.totalRows} rows)
+              </h3>
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        {preview.headers.map((header, i) => (
+                          <th key={i} className="px-2 py-2 text-left font-medium text-gray-700">
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {preview.rows.map((values, i) => (
+                        <tr key={i}>
+                          {preview.headers.map((_, j) => (
+                            <td key={j} className="px-2 py-2 text-gray-600">
+                              {values[j] ?? ''}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {errors.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 max-h-40 overflow-y-auto">
+              <p className="text-sm font-medium text-red-800 mb-1">Errors:</p>
+              <ul className="text-sm text-red-700 list-disc list-inside space-y-1">
+                {errors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleImport}
+              disabled={!file || importing}
+              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {importing ? 'Importing…' : 'Import'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Customers = ({ title = 'Customers' }) => {
   const queryClient = useQueryClient();
   const { effectiveBranch, isElevated, isMeterUser } = useAuth();
   const canArchive = isElevated || isMeterUser;
   const [showModal, setShowModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
@@ -121,13 +428,24 @@ const Customers = ({ title = 'Customers' }) => {
         </div>
         <div className="flex items-center gap-2">
           {isElevated && (
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Customer
-          </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center px-4 py-2 border border-gray-300 text-gray-800 bg-white rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowModal(true)}
+                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Customer
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -260,6 +578,10 @@ const Customers = ({ title = 'Customers' }) => {
           customer={editingCustomer}
           onClose={handleCloseModal}
         />
+      )}
+
+      {isElevated && showImportModal && (
+        <CustomerBulkImportModal onClose={() => setShowImportModal(false)} />
       )}
     </div>
   );

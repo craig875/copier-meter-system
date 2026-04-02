@@ -84,6 +84,13 @@ The server will start on `http://localhost:3001` (or the port specified in your 
 - `GET /api/fibre-orders` - Get fibre orders
 - `POST /api/fibre-orders` - Create order (admin only)
 
+### Bulk customer import (CSV)
+
+Admins and managers can **create customers in bulk** from the Customers page (`POST /api/customers/import`). Body: `{ data, branch }` where `data` is an array of row objects. Audit action: `customer_import`.
+
+- **Columns:** **`Customer`** or **`Name`** (required). Optional: **`Contact Name`** / `contact_name`, **`email`**, **`phone`**, **`address`**, **`Branch`** (per row; defaults to the request branch when omitted).
+- **Behaviour:** Creates a customer only when no matching name exists for that branch (same matching rules as single create). Existing customers are skipped (not updated). **Machines** are not created here; use **`POST /api/machines/import`** on the Machines page for CSV machine import.
+
 ### Stopping the Server
 
 Press `Ctrl+C` in the terminal where the server is running.

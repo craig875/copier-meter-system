@@ -561,6 +561,23 @@ const ImportModal = ({ onClose }) => {
                 case 'model':
                   row.model = value;
                   break;
+                case 'model id':
+                case 'model_id':
+                  row.modelId = value;
+                  break;
+                case 'contact name':
+                case 'contact_name':
+                  row.contactName = value;
+                  break;
+                case 'email':
+                  row.email = value;
+                  break;
+                case 'phone':
+                  row.phone = value;
+                  break;
+                case 'address':
+                  row.address = value;
+                  break;
                 case 'contract reference':
                   row.contractReference = value;
                   break;
@@ -653,6 +670,23 @@ const ImportModal = ({ onClose }) => {
                   break;
                 case 'model':
                   row.model = value;
+                  break;
+                case 'model id':
+                case 'model_id':
+                  row.modelId = value;
+                  break;
+                case 'contact name':
+                case 'contact_name':
+                  row.contactName = value;
+                  break;
+                case 'email':
+                  row.email = value;
+                  break;
+                case 'phone':
+                  row.phone = value;
+                  break;
+                case 'address':
+                  row.address = value;
                   break;
                 case 'contract reference':
                   row.contractReference = value;

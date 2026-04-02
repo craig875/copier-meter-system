@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getCustomers, getCustomer, createCustomer, updateCustomer, deleteCustomer, archiveCustomer } from '../controllers/customer.controller.js';
+import { importCustomers } from '../controllers/import.controller.js';
 import { authenticate, requireAdmin, requireMeterOrAdmin } from '../middleware/auth.js';
 import { requireCustomerAccess } from '../middleware/permissions.js';
 import { validate } from '../middleware/validate.js';
@@ -9,6 +10,9 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireCustomerAccess);
+
+// Bulk customer import CSV (customers only; admin/manager)
+router.post('/import', requireAdmin, importCustomers);
 
 // List and view - any user with meter/consumables access
 router.get('/', getCustomers);

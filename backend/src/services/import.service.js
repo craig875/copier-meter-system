@@ -5,6 +5,15 @@ import { calculateReadingMetrics } from '../utils/reading.utils.js';
 import { ValidationError } from '../utils/errors.js';
 
 /**
+ * Loose UUID v4 check for import rows (Model Id column)
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuidString(value) {
+  return typeof value === 'string' && UUID_RE.test(value.trim());
+}
+
+/**
  * Import Service - Business logic for importing machines and readings
  * Single Responsibility: Import operations
  */
@@ -66,9 +75,36 @@ export class ImportService {
         const colourEnabled = row.colourEnabled?.toLowerCase().trim() === 'yes';
         const scanEnabled = row.scanEnabled?.toLowerCase().trim() === 'yes';
 
-        // Resolve model from "Make ModelName" string
+        // Resolve model: prefer Model Id (UUID) when present, else legacy "Make ModelName" string
         let modelId = null;
-        if (row.model?.trim()) {
+        const rawModelId =
+          (typeof row.modelId === 'string' && row.modelId.trim()) ||
+          (typeof row.model_id === 'string' && row.model_id.trim()) ||
+          '';
+        if (rawModelId) {
+          if (!isUuidString(rawModelId)) {
+            results.errors.push({
+              row: rowNumber,
+              machineSerialNumber,
+              error: 'Model Id must be a valid UUID (copy from Machine Configuration → Makes & Models)',
+            });
+            results.skipped++;
+            continue;
+          }
+          const foundById = await prisma.model.findUnique({
+            where: { id: rawModelId.trim() },
+          });
+          if (!foundById) {
+            results.errors.push({
+              row: rowNumber,
+              machineSerialNumber,
+              error: `No model found for Model Id: ${rawModelId.trim()}`,
+            });
+            results.skipped++;
+            continue;
+          }
+          modelId = foundById.id;
+        } else if (row.model?.trim()) {
           const modelStr = row.model.trim();
           const firstSpace = modelStr.indexOf(' ');
           const makeName = firstSpace > 0 ? modelStr.slice(0, firstSpace) : modelStr;
@@ -82,7 +118,7 @@ export class ImportService {
           if (found) modelId = found.id;
         }
 
-        // Resolve customer - find or create by name
+        // Resolve customer - find or create by name; optional contact fields on create only
         let customerId = null;
         const customerName = row.customer?.trim();
         const machineBranch = row.branch ? row.branch.toUpperCase() : branch;
@@ -91,9 +127,19 @@ export class ImportService {
             where: { name: customerName, OR: [{ branch: machineBranch }, { branch: null }] },
           });
           if (!customer) {
-            customer = await prisma.customer.create({
-              data: { name: customerName, branch: machineBranch || null },
-            });
+            const createData = {
+              name: customerName,
+              branch: machineBranch || null,
+            };
+            const contact =
+              (typeof row.contactName === 'string' && row.contactName.trim()) ||
+              (typeof row.contact_name === 'string' && row.contact_name.trim()) ||
+              '';
+            if (contact) createData.contactName = contact;
+            if (typeof row.email === 'string' && row.email.trim()) createData.email = row.email.trim();
+            if (typeof row.phone === 'string' && row.phone.trim()) createData.phone = row.phone.trim();
+            if (typeof row.address === 'string' && row.address.trim()) createData.address = row.address.trim();
+            customer = await prisma.customer.create({ data: createData });
           }
           customerId = customer.id;
         }
@@ -177,6 +223,92 @@ export class ImportService {
         results.errors.push({
           row: rowNumber,
           machineSerialNumber: row.machineSerialNumber || 'N/A',
+          error: error.message || 'Unknown error',
+        });
+        results.skipped++;
+      }
+    }
+
+    return {
+      message: 'Import completed',
+      results,
+    };
+  }
+
+  /**
+   * Import customers only (no machines). Skips rows where a matching customer already exists.
+   * @param {Array<{ customer?: string, name?: string, contactName?: string, contact_name?: string, email?: string, phone?: string, address?: string, branch?: string }>} data
+   * @param {string} branch - Default branch when a row omits Branch
+   */
+  async importCustomers(data, branch) {
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new ValidationError('Import data must be a non-empty array');
+    }
+
+    if (!branch) {
+      throw new ValidationError('Branch is required');
+    }
+
+    const results = {
+      created: 0,
+      skipped: 0,
+      errors: [],
+    };
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowNumber = i + 2;
+
+      try {
+        const customerName =
+          (typeof row.customer === 'string' && row.customer.trim()) ||
+          (typeof row.name === 'string' && row.name.trim()) ||
+          '';
+
+        if (!customerName) {
+          results.errors.push({
+            row: rowNumber,
+            customer: row.customer || row.name || 'N/A',
+            error: 'Customer name is required',
+          });
+          results.skipped++;
+          continue;
+        }
+
+        const machineBranch = row.branch ? String(row.branch).toUpperCase() : branch;
+
+        const existing = await prisma.customer.findFirst({
+          where: {
+            name: customerName,
+            OR: [{ branch: machineBranch }, { branch: null }],
+          },
+        });
+
+        if (existing) {
+          results.skipped++;
+          continue;
+        }
+
+        const createData = {
+          name: customerName,
+          branch: machineBranch || null,
+        };
+
+        const contact =
+          (typeof row.contactName === 'string' && row.contactName.trim()) ||
+          (typeof row.contact_name === 'string' && row.contact_name.trim()) ||
+          '';
+        if (contact) createData.contactName = contact;
+        if (typeof row.email === 'string' && row.email.trim()) createData.email = row.email.trim();
+        if (typeof row.phone === 'string' && row.phone.trim()) createData.phone = row.phone.trim();
+        if (typeof row.address === 'string' && row.address.trim()) createData.address = row.address.trim();
+
+        await prisma.customer.create({ data: createData });
+        results.created++;
+      } catch (error) {
+        results.errors.push({
+          row: rowNumber,
+          customer: row.customer || row.name || 'N/A',
           error: error.message || 'Unknown error',
         });
         results.skipped++;
