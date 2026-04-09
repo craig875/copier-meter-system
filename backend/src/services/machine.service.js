@@ -43,7 +43,7 @@ export class MachineService {
 
     const where = {};
     if (isActive !== undefined) {
-      where.isActive = isActive === 'true';
+      where.isActive = isActive === true || isActive === 'true';
     }
     // Only filter by branch if it's provided and is a valid enum value
     // null/undefined/empty string means show all
@@ -60,7 +60,7 @@ export class MachineService {
     if (search) {
       whereClause.OR = [
         { machineSerialNumber: { contains: search, mode: 'insensitive' } },
-        { customer: { contains: search, mode: 'insensitive' } },
+        { customer: { name: { contains: search, mode: 'insensitive' } } },
         { contractReference: { contains: search, mode: 'insensitive' } },
         { model: { name: { contains: search, mode: 'insensitive' } } },
         { model: { make: { name: { contains: search, mode: 'insensitive' } } } },

@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+/** Express may pass a single string or an array for duplicate query keys */
+function firstQueryValue(val) {
+  if (val === undefined || val === null || val === '') return undefined;
+  return Array.isArray(val) ? val[0] : val;
+}
+
 export const createMachineSchema = z.object({
   machineSerialNumber: z.string().min(1, 'Machine serial number is required'),
   customerId: z.string().uuid().optional().nullable(),
@@ -29,9 +35,21 @@ export const updateMachineSchema = z.object({
 });
 
 export const machineQuerySchema = z.object({
-  page: z.string().transform(Number).pipe(z.number().int().min(1)).optional().default('1'),
-  limit: z.string().transform(Number).pipe(z.number().int().min(1).max(1000)).optional().default('50'),
-  search: z.string().optional(),
-  isActive: z.string().transform(v => v === 'true').optional(),
-  branch: z.enum(['JHB', 'CT']).optional(),
+  page: z.preprocess(
+    (v) => firstQueryValue(v) ?? '1',
+    z.string().transform(Number).pipe(z.number().int().min(1))
+  ),
+  limit: z.preprocess(
+    (v) => firstQueryValue(v) ?? '50',
+    z.string().transform(Number).pipe(z.number().int().min(1).max(1000))
+  ),
+  search: z.preprocess((v) => firstQueryValue(v), z.string().optional()),
+  isActive: z.preprocess(
+    (v) => firstQueryValue(v),
+    z.string().optional().transform((s) => (s === undefined ? undefined : s === 'true'))
+  ),
+  branch: z.preprocess(
+    (v) => firstQueryValue(v),
+    z.enum(['JHB', 'CT']).optional()
+  ),
 });
