@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { readingsApi } from '../services/api';
@@ -22,6 +22,207 @@ import {
   Unlock
 } from 'lucide-react';
 import clsx from 'clsx';
+
+const MeterInput = memo(function MeterInput({
+  value,
+  onChange,
+  previous,
+  previousMonthLabel,
+  error,
+  disabled = false,
+}) {
+  return (
+    <div className="space-y-1">
+      <input
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        value={value === '' || value == null ? '' : String(value)}
+        onChange={(e) => onChange(trimLeading(e.target.value.replace(/\D/g, '')))}
+        disabled={disabled}
+        className={clsx(
+          'w-24 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+          error ? 'border-red-500 bg-red-50' : 'border-gray-300',
+          disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+        )}
+      />
+      {previous != null && (
+        <p className="text-xs text-gray-400 text-center" title="Previous month's reading">
+          {previousMonthLabel ? `${previousMonthLabel}: ` : 'Prev: '}
+          {previous.toLocaleString()}
+        </p>
+      )}
+      {error && (
+        <div className="text-xs text-red-600 text-center">
+          <div className="flex items-center justify-center gap-1 mb-1">
+            <AlertTriangle className="h-3 w-3" />
+            <span className="font-semibold">Error:</span>
+          </div>
+          <p className="text-[10px] leading-tight break-words max-w-[100px] mx-auto">{error}</p>
+        </div>
+      )}
+    </div>
+  );
+});
+
+function readingFieldValue(field, currentReading, editedFields) {
+  if (editedFields?.[field] !== undefined) {
+    return editedFields[field] ?? '';
+  }
+  return currentReading?.[field] ?? '';
+}
+
+const CaptureMachineRow = memo(function CaptureMachineRow({
+  machine,
+  currentReading,
+  previousReading,
+  previousMonthLabel,
+  editedFields,
+  monoError,
+  colourError,
+  scanError,
+  noteError,
+  isLocked,
+  isElevated,
+  savePending,
+  onReadingChange,
+  onSaveSingle,
+  onCancelMachine,
+  onDeleteReading,
+}) {
+  const mid = machine.id;
+  return (
+    <tr
+      data-machine-id={mid}
+      className={clsx(editedFields && Object.keys(editedFields).length > 0 && 'bg-blue-50')}
+    >
+      <td className="px-4 py-3">
+        <p className="font-medium text-gray-900">{machine.machineSerialNumber}</p>
+      </td>
+      <td className="px-4 py-3 text-sm text-gray-500">{machine.customer?.name || '-'}</td>
+      <td className="px-4 py-3">
+        {machine.monoEnabled ? (
+          <MeterInput
+            value={readingFieldValue('monoReading', currentReading, editedFields)}
+            onChange={(v) => onReadingChange(mid, 'monoReading', v)}
+            previous={previousReading?.monoReading}
+            previousMonthLabel={previousMonthLabel}
+            error={monoError}
+            disabled={isLocked}
+          />
+        ) : (
+          <span className="text-gray-400 text-center block">-</span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {machine.colourEnabled ? (
+          <MeterInput
+            value={readingFieldValue('colourReading', currentReading, editedFields)}
+            onChange={(v) => onReadingChange(mid, 'colourReading', v)}
+            previous={previousReading?.colourReading}
+            previousMonthLabel={previousMonthLabel}
+            error={colourError}
+            disabled={isLocked}
+          />
+        ) : (
+          <span className="text-gray-400 text-center block">-</span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {machine.scanEnabled ? (
+          <MeterInput
+            value={readingFieldValue('scanReading', currentReading, editedFields)}
+            onChange={(v) => onReadingChange(mid, 'scanReading', v)}
+            previous={previousReading?.scanReading}
+            previousMonthLabel={previousMonthLabel}
+            error={scanError}
+            disabled={isLocked}
+          />
+        ) : (
+          <span className="text-gray-400 text-center block">-</span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        <textarea
+          value={readingFieldValue('note', currentReading, editedFields) || ''}
+          onChange={(e) => onReadingChange(mid, 'note', trimLeading(e.target.value))}
+          disabled={isLocked}
+          placeholder="Add note..."
+          maxLength={500}
+          rows={2}
+          className={clsx(
+            'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none',
+            noteError ? 'border-red-500 bg-red-50' : 'border-gray-300',
+            isLocked ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+          )}
+        />
+        {noteError && <p className="text-xs text-red-600 mt-1">{noteError}</p>}
+      </td>
+      <td className="px-4 py-3 text-center">
+        {currentReading ? (
+          (currentReading.monoReading != null ||
+            currentReading.colourReading != null ||
+            currentReading.scanReading != null) ? (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Done
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              Note Only
+            </span>
+          )
+        ) : (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+            Pending
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-center">
+        <div className="flex items-center justify-center gap-2">
+          {editedFields && Object.keys(editedFields).length > 0 && (
+            <button
+              type="button"
+              onClick={() => onSaveSingle(mid)}
+              disabled={savePending || isLocked}
+              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title={isLocked ? 'This month is locked' : "Save this machine's readings"}
+            >
+              <Save className="h-3 w-3 mr-1" />
+              Save
+            </button>
+          )}
+          {((editedFields && Object.keys(editedFields).length > 0) ||
+            [monoError, colourError, scanError, noteError].some(Boolean)) && (
+            <button
+              type="button"
+              onClick={() => onCancelMachine(mid)}
+              disabled={isLocked}
+              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title={isLocked ? 'This month is locked' : 'Cancel and clear all input for this machine'}
+            >
+              <X className="h-3 w-3 mr-1" />
+              Cancel
+            </button>
+          )}
+          {isElevated && currentReading && (
+            <button
+              type="button"
+              onClick={() => onDeleteReading(mid)}
+              disabled={isLocked}
+              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title={isLocked ? 'This month is locked' : "Delete this machine's reading (Admin only)"}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Delete
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 const Capture = () => {
   const queryClient = useQueryClient();
@@ -93,6 +294,10 @@ const Capture = () => {
   // Axios wraps it: { data: { year, month, data, summary, isLocked, submission }, status, ... }
   // React Query's data is the axios response, so data.data is: { year, month, data, summary, isLocked, submission }
   const machines = data?.data?.data || [];
+  const machinesRef = useRef(machines);
+  machinesRef.current = machines;
+  const editedReadingsRef = useRef(editedReadings);
+  editedReadingsRef.current = editedReadings;
   const summary = data?.data?.summary || {};
   const isLocked = data?.data?.isLocked || false;
   const submission = data?.data?.submission;
@@ -143,16 +348,14 @@ const Capture = () => {
     );
   }, [machines, search]);
 
-  const handleReadingChange = (machineId, field, value) => {
-    // Prevent changes if month is locked
+  const handleReadingChange = useCallback((machineId, field, value) => {
     if (isLocked) {
       toast.error('This month has been submitted and is locked for editing');
       return;
     }
 
-    // Handle note field differently (it's a string, not a number)
     if (field === 'note') {
-      setEditedReadings(prev => ({
+      setEditedReadings((prev) => ({
         ...prev,
         [machineId]: {
           ...prev[machineId],
@@ -165,7 +368,7 @@ const Capture = () => {
     const numValue = value === '' ? null : parseInt(value, 10);
     if (value !== '' && isNaN(numValue)) return;
 
-    setEditedReadings(prev => ({
+    setEditedReadings((prev) => ({
       ...prev,
       [machineId]: {
         ...prev[machineId],
@@ -173,20 +376,12 @@ const Capture = () => {
       },
     }));
 
-    // Clear error for this field
-    setErrors(prev => {
+    setErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[`${machineId}-${field}`];
       return newErrors;
     });
-  };
-
-  const getReadingValue = (machineId, field, currentReading) => {
-    if (editedReadings[machineId]?.[field] !== undefined) {
-      return editedReadings[machineId][field] ?? '';
-    }
-    return currentReading?.[field] ?? '';
-  };
+  }, [isLocked]);
 
   const handleSave = () => {
     // Prevent saving if month is locked
@@ -223,17 +418,17 @@ const Capture = () => {
     submitMutation.mutate(readingsToSubmit);
   };
 
-  const handleSaveSingle = async (machineId) => {
-    // Prevent saving if month is locked
-    if (isLocked) {
-      toast.error('This month has been submitted and is locked for editing');
-      return;
-    }
+  const handleSaveSingle = useCallback(
+    async (machineId) => {
+      if (isLocked) {
+        toast.error('This month has been submitted and is locked for editing');
+        return;
+      }
 
-    const machine = machines.find(m => m.machine.id === machineId);
-    if (!machine) return;
+      const machine = machinesRef.current.find((m) => m.machine.id === machineId);
+      if (!machine) return;
 
-    const editedValues = editedReadings[machineId];
+      const editedValues = editedReadingsRef.current[machineId];
     if (!editedValues) {
       toast.error('No changes to save for this machine');
       return;
@@ -289,73 +484,72 @@ const Capture = () => {
         toast.error(error.response?.data?.error || 'Failed to save readings');
       }
     }
-  };
+  },
+  [isLocked, year, month, queryBranch, queryClient]
+);
 
-  const handleCancelMachine = (machineId) => {
-    // Clear all edited readings for this machine
-    setEditedReadings(prev => {
+  const handleCancelMachine = useCallback((machineId) => {
+    setEditedReadings((prev) => {
       const newEdited = { ...prev };
       delete newEdited[machineId];
       return newEdited;
     });
-    
-    // Clear all errors for this machine
-    setErrors(prev => {
+
+    setErrors((prev) => {
       const newErrors = { ...prev };
-      Object.keys(newErrors).forEach(key => {
+      Object.keys(newErrors).forEach((key) => {
         if (key.startsWith(`${machineId}-`)) {
           delete newErrors[key];
         }
       });
       return newErrors;
     });
-    
+
     toast.success('Cleared all input for this machine');
-  };
+  }, []);
 
-  const handleDeleteReading = async (machineId) => {
-    // Prevent deletion if month is locked
-    if (isLocked) {
-      toast.error('This month has been submitted and is locked for editing');
-      return;
-    }
+  const handleDeleteReading = useCallback(
+    async (machineId) => {
+      if (isLocked) {
+        toast.error('This month has been submitted and is locked for editing');
+        return;
+      }
 
-    const machine = machines.find(m => m.machine.id === machineId);
-    if (!machine) return;
+      const machine = machinesRef.current.find((m) => m.machine.id === machineId);
+      if (!machine) return;
 
-    // Confirm deletion
-    if (!window.confirm(`Are you sure you want to delete the reading for ${machine.machine.machineSerialNumber}? This action cannot be undone.`)) {
-      return;
-    }
+      if (!window.confirm(`Are you sure you want to delete the reading for ${machine.machine.machineSerialNumber}? This action cannot be undone.`)) {
+        return;
+      }
 
-    try {
-      await readingsApi.delete(machineId, year, month);
-      toast.success(`Deleted reading for ${machine.machine.machineSerialNumber}`);
-      
-      // Clear any edited readings for this machine
-      setEditedReadings(prev => {
-        const newEdited = { ...prev };
-        delete newEdited[machineId];
-        return newEdited;
-      });
-      
-      // Clear any errors for this machine
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        Object.keys(newErrors).forEach(key => {
-          if (key.startsWith(`${machineId}-`)) {
-            delete newErrors[key];
-          }
+      try {
+        await readingsApi.delete(machineId, year, month);
+        toast.success(`Deleted reading for ${machine.machine.machineSerialNumber}`);
+
+        setEditedReadings((prev) => {
+          const newEdited = { ...prev };
+          delete newEdited[machineId];
+          return newEdited;
         });
-        return newErrors;
-      });
-      
-      queryClient.invalidateQueries(['readings', year, month, queryBranch]);
-      queryClient.invalidateQueries(['toner-alerts']);
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to delete reading');
-    }
-  };
+
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          Object.keys(newErrors).forEach((key) => {
+            if (key.startsWith(`${machineId}-`)) {
+              delete newErrors[key];
+            }
+          });
+          return newErrors;
+        });
+
+        queryClient.invalidateQueries(['readings', year, month, queryBranch]);
+        queryClient.invalidateQueries(['toner-alerts']);
+      } catch (error) {
+        toast.error(error.response?.data?.error || 'Failed to delete reading');
+      }
+    },
+    [isLocked, year, month, queryBranch, queryClient]
+  );
 
   const handleSubmitAndExport = async (format = 'xlsx') => {
     // First, save any pending changes
@@ -431,18 +625,18 @@ const Capture = () => {
     setErrors({});
   };
 
-  const monthName = new Date(year, month - 1).toLocaleString('default', { 
+  const monthName = new Date(year, month - 1).toLocaleString('default', {
     month: 'long', 
     year: 'numeric' 
   });
 
-  const getPrevMonthLabel = (y, m) => {
-    const prevM = m === 1 ? 12 : m - 1;
-    const prevY = m === 1 ? y - 1 : y;
-    return new Date(prevY, prevM - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
-  };
-
   const hasChanges = Object.keys(editedReadings).length > 0;
+
+  const previousMonthLabel = useMemo(() => {
+    const prevM = month === 1 ? 12 : month - 1;
+    const prevY = month === 1 ? year - 1 : year;
+    return new Date(prevY, prevM - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+  }, [year, month]);
 
   if (isLoading) {
     return (
@@ -664,179 +858,30 @@ const Capture = () => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredMachines.map(({ machine, currentReading, previousReading }) => (
-                <tr 
+                <CaptureMachineRow
                   key={machine.id}
-                  data-machine-id={machine.id}
-                  className={clsx(
-                    editedReadings[machine.id] && 'bg-blue-50'
-                  )}
-                >
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{machine.machineSerialNumber}</p>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {machine.customer?.name || '-'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {machine.monoEnabled ? (
-                      <MeterInput
-                        value={getReadingValue(machine.id, 'monoReading', currentReading)}
-                        onChange={(v) => handleReadingChange(machine.id, 'monoReading', v)}
-                        previous={previousReading?.monoReading}
-                        previousMonthLabel={getPrevMonthLabel(year, month)}
-                        error={errors[`${machine.id}-monoReading`]}
-                      />
-                    ) : (
-                      <span className="text-gray-400 text-center block">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {machine.colourEnabled ? (
-                      <MeterInput
-                        value={getReadingValue(machine.id, 'colourReading', currentReading)}
-                        onChange={(v) => handleReadingChange(machine.id, 'colourReading', v)}
-                        previous={previousReading?.colourReading}
-                        previousMonthLabel={getPrevMonthLabel(year, month)}
-                        error={errors[`${machine.id}-colourReading`]}
-                        disabled={isLocked}
-                      />
-                    ) : (
-                      <span className="text-gray-400 text-center block">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {machine.scanEnabled ? (
-                      <MeterInput
-                        value={getReadingValue(machine.id, 'scanReading', currentReading)}
-                        onChange={(v) => handleReadingChange(machine.id, 'scanReading', v)}
-                        previous={previousReading?.scanReading}
-                        previousMonthLabel={getPrevMonthLabel(year, month)}
-                        error={errors[`${machine.id}-scanReading`]}
-                        disabled={isLocked}
-                      />
-                    ) : (
-                      <span className="text-gray-400 text-center block">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <textarea
-                      value={getReadingValue(machine.id, 'note', currentReading) || ''}
-                      onChange={(e) => handleReadingChange(machine.id, 'note', trimLeading(e.target.value))}
-                      disabled={isLocked}
-                      placeholder="Add note..."
-                      maxLength={500}
-                      rows={2}
-                      className={clsx(
-                        'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none',
-                        errors[`${machine.id}-note`] ? 'border-red-500 bg-red-50' : 'border-gray-300',
-                        isLocked ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
-                      )}
-                    />
-                    {errors[`${machine.id}-note`] && (
-                      <p className="text-xs text-red-600 mt-1">{errors[`${machine.id}-note`]}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {currentReading ? (
-                      // Check if reading has actual values (not just a note)
-                      (currentReading.monoReading != null || 
-                       currentReading.colourReading != null || 
-                       currentReading.scanReading != null) ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Done
-                        </span>
-                      ) : (
-                        // Has reading record but only note, no actual readings
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          Note Only
-                        </span>
-                      )
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                        Pending
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      {editedReadings[machine.id] && (
-                        <button
-                          onClick={() => handleSaveSingle(machine.id)}
-                          disabled={submitMutation.isPending || isLocked}
-                          className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          title={isLocked ? "This month is locked" : "Save this machine's readings"}
-                        >
-                          <Save className="h-3 w-3 mr-1" />
-                          Save
-                        </button>
-                      )}
-                      {(editedReadings[machine.id] || Object.keys(errors).some(key => key.startsWith(`${machine.id}-`))) && (
-                        <button
-                          onClick={() => handleCancelMachine(machine.id)}
-                          disabled={isLocked}
-                          className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          title={isLocked ? "This month is locked" : "Cancel and clear all input for this machine"}
-                        >
-                          <X className="h-3 w-3 mr-1" />
-                          Cancel
-                        </button>
-                      )}
-                      {isElevated && currentReading && (
-                        <button
-                          onClick={() => handleDeleteReading(machine.id)}
-                          disabled={isLocked}
-                          className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          title={isLocked ? "This month is locked" : "Delete this machine's reading (Admin only)"}
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                  machine={machine}
+                  currentReading={currentReading}
+                  previousReading={previousReading}
+                  previousMonthLabel={previousMonthLabel}
+                  editedFields={editedReadings[machine.id]}
+                  monoError={errors[`${machine.id}-monoReading`]}
+                  colourError={errors[`${machine.id}-colourReading`]}
+                  scanError={errors[`${machine.id}-scanReading`]}
+                  noteError={errors[`${machine.id}-note`]}
+                  isLocked={isLocked}
+                  isElevated={isElevated}
+                  savePending={submitMutation.isPending}
+                  onReadingChange={handleReadingChange}
+                  onSaveSingle={handleSaveSingle}
+                  onCancelMachine={handleCancelMachine}
+                  onDeleteReading={handleDeleteReading}
+                />
               ))}
             </tbody>
           </table>
         </div>
       </div>
-    </div>
-  );
-};
-
-const MeterInput = ({ value, onChange, previous, previousMonthLabel, error, disabled = false }) => {
-  return (
-    <div className="space-y-1">
-      <input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(trimLeading(e.target.value))}
-        disabled={disabled}
-        className={clsx(
-          'w-24 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-          error ? 'border-red-500 bg-red-50' : 'border-gray-300',
-          disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
-        )}
-        min="0"
-      />
-      {previous != null && (
-        <p className="text-xs text-gray-400 text-center" title="Previous month's reading">
-          {previousMonthLabel ? `${previousMonthLabel}: ` : 'Prev: '}{previous.toLocaleString()}
-        </p>
-      )}
-      {error && (
-        <div className="text-xs text-red-600 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <AlertTriangle className="h-3 w-3" />
-            <span className="font-semibold">Error:</span>
-          </div>
-          <p className="text-[10px] leading-tight break-words max-w-[100px] mx-auto">
-            {error}
-          </p>
-        </div>
-      )}
     </div>
   );
 };
