@@ -59,8 +59,10 @@ const CustomerMachineOverviewRow = ({ machine, partsDue = [], effectiveBranch })
               )}
             </div>
           )}
-          <div className={`flex-1 min-w-0 flex flex-col justify-between ${hasBadges ? 'pl-4' : ''}`}>
-            <div>
+          <div
+            className={`flex-1 min-w-0 min-h-0 flex flex-col ${hasBadges ? 'pl-4' : ''}`}
+          >
+            <div className="shrink-0">
               <div className="flex items-start gap-2 flex-wrap">
                 <div className="p-2.5 bg-gray-50 rounded-lg group-hover:bg-gray-100 transition-colors flex items-center gap-1.5 shrink-0">
                   <Printer className="h-5 w-5 text-gray-600 group-hover:text-gray-900" />
@@ -70,9 +72,9 @@ const CustomerMachineOverviewRow = ({ machine, partsDue = [], effectiveBranch })
                   {machine.machineSerialNumber}
                 </p>
               </div>
-              <p className="text-sm text-gray-600 mt-3 leading-snug line-clamp-2">{modelDisplay}</p>
+              <p className="text-sm text-gray-600 mt-3 leading-relaxed break-words">{modelDisplay}</p>
             </div>
-            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-red-600 group-hover:text-red-700">
+            <span className="mt-auto pt-4 inline-flex items-center gap-1 text-sm font-medium text-red-600 group-hover:text-red-700 shrink-0">
               Machine details
               <ChevronRight className="h-4 w-4" />
             </span>

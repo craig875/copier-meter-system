@@ -1,15 +1,18 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
+/** Set in html2canvas `onclone` (captures layoutScale + real raster geometry). Cleared after read. */
+let pdfCloneRowFractions = null;
+
 /**
- * Row bands in PDF vertical space (same units as imgHeight from canvas).
+ * Fallback: row bands from live DOM vs scrollHeight (less accurate when layoutScale ≠ 1).
  * @param {HTMLElement} root
  * @param {string} rowSelector
  * @param {number} scrollHeight
  * @param {number} imgHeight
  * @returns {{ top: number; bottom: number }[]|null}
  */
-function collectRowBandsPdf(root, rowSelector, scrollHeight, imgHeight) {
+function collectRowBandsPdfLive(root, rowSelector, scrollHeight, imgHeight) {
   if (!scrollHeight || scrollHeight <= 0) return null;
   const rowEls = [...root.querySelectorAll(rowSelector)];
   if (rowEls.length === 0) return null;
@@ -24,6 +27,19 @@ function collectRowBandsPdf(root, rowSelector, scrollHeight, imgHeight) {
     return { top: t, bottom: Math.max(t + 0.5, b) };
   });
   return bands.sort((a, b) => a.top - b.top);
+}
+
+/**
+ * Convert normalized row bands from clone measurement to PDF vertical units.
+ * Small bottom pad avoids cutting descenders / subpixel mismatch at tile bottoms.
+ */
+function fractionsToPdfBands(fractions, imgHeight, bottomPadPt = 8) {
+  return fractions
+    .map(({ topF, bottomF }) => ({
+      top: Math.max(0, topF * imgHeight),
+      bottom: Math.min(imgHeight, bottomF * imgHeight + bottomPadPt),
+    }))
+    .sort((a, b) => a.top - b.top);
 }
 
 /**
@@ -96,6 +112,7 @@ export async function captureElementToPdf(element, options = {}) {
   } = options;
 
   const scrollHeight = element.scrollHeight || element.offsetHeight;
+  pdfCloneRowFractions = null;
 
   const canvas = await html2canvas(element, {
     scale,
@@ -108,12 +125,30 @@ export async function captureElementToPdf(element, options = {}) {
       typeof node.hasAttribute === 'function' &&
       node.hasAttribute('data-pdf-exclude'),
     onclone: (clonedDoc) => {
-      if (!layoutScale || layoutScale <= 1) return;
-      const node = clonedDoc.querySelector('[data-pdf-capture-root]');
-      if (node instanceof HTMLElement) {
-        node.style.transform = `scale(${layoutScale})`;
-        node.style.transformOrigin = 'top left';
+      const root = clonedDoc.querySelector('[data-pdf-capture-root]');
+      if (root instanceof HTMLElement && layoutScale > 1) {
+        root.style.transform = `scale(${layoutScale})`;
+        root.style.transformOrigin = 'top left';
       }
+      if (!(root instanceof HTMLElement)) {
+        pdfCloneRowFractions = null;
+        return;
+      }
+      const rowEls = [...clonedDoc.querySelectorAll(rowSelector)];
+      if (rowEls.length === 0) {
+        pdfCloneRowFractions = null;
+        return;
+      }
+      const rb = root.getBoundingClientRect();
+      const raw = rowEls.map((row) => {
+        const rr = row.getBoundingClientRect();
+        return { top: rr.top - rb.top, bottom: rr.bottom - rb.top };
+      });
+      const h = Math.max(rb.height, ...raw.map((r) => r.bottom), 1);
+      pdfCloneRowFractions = raw.map((r) => ({
+        topF: Math.max(0, r.top / h),
+        bottomF: Math.min(1, Math.max(0, r.bottom / h)),
+      }));
     },
   });
 
@@ -126,7 +161,14 @@ export async function captureElementToPdf(element, options = {}) {
   const imgWidth = contentWidth;
   const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-  const rowBands = collectRowBandsPdf(element, rowSelector, scrollHeight, imgHeight);
+  let rowBands = null;
+  if (pdfCloneRowFractions && pdfCloneRowFractions.length > 0) {
+    rowBands = fractionsToPdfBands(pdfCloneRowFractions, imgHeight);
+    pdfCloneRowFractions = null;
+  } else {
+    rowBands = collectRowBandsPdfLive(element, rowSelector, scrollHeight, imgHeight);
+  }
+
   const sliceHeights =
     rowBands && rowBands.length > 0
       ? computeRowAwareSliceHeights(imgHeight, contentHeight, rowBands)
