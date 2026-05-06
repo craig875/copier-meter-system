@@ -31,6 +31,12 @@ const MeterInput = memo(function MeterInput({
   error,
   disabled = false,
 }) {
+  const blockStepKeys = (e) => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+    }
+  };
+
   return (
     <div className="space-y-1">
       <input
@@ -39,6 +45,7 @@ const MeterInput = memo(function MeterInput({
         autoComplete="off"
         value={value === '' || value == null ? '' : String(value)}
         onChange={(e) => onChange(trimLeading(e.target.value.replace(/\D/g, '')))}
+        onKeyDown={blockStepKeys}
         disabled={disabled}
         className={clsx(
           'w-24 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent',
