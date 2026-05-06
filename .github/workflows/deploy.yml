@@ -4,6 +4,7 @@
 #   DEPLOY_SSH_KEY  — private key (full PEM including BEGIN/END lines)
 # Optional:
 #   DEPLOY_SSH_PORT — default 22
+#   DEPLOY_PATH   — server path to repo (default /var/www/copier-meter-system)
 
 name: Deploy to server
 
@@ -19,6 +20,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # Passed to SSH session when listed in envs below (optional secret).
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -26,11 +30,13 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: DEPLOY_PATH
+          command_timeout: 30m
           script_stop: true
           script: |
             set -e
-            # Repo path — change here if your clone lives elsewhere, or set DEPLOY_PATH in repo secrets
             REPO="${DEPLOY_PATH:-/var/www/copier-meter-system}"
+            echo "==> Deploy: REPO=$REPO"
             cd "$REPO"
             # Ensure latest code (including scripts/deploy.sh) exists before first deploy.sh run
             git fetch origin

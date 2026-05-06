@@ -19,16 +19,17 @@ import {
   ArrowLeft,
   Bell,
   Shield,
-  Globe
+  Globe,
+  ClipboardList,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import logo from '../assets/logo.png';
 import Setup2FAPrompt from './Setup2FAPrompt';
 import ConnectivityAlertBanner from './connectivity/ConnectivityAlertBanner';
 import { notificationsApi } from '../services/api';
-import { MODULE_COPERS, MODULE_CONNECTIVITY } from '../constants/modules';
+import { MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_INSTALLATIONS } from '../constants/modules';
 
 const Layout = ({ children }) => {
   const {
@@ -43,6 +44,7 @@ const Layout = ({ children }) => {
   } = useAuth();
   const showCopiers = hasModule(MODULE_COPERS);
   const showConnectivity = hasModule(MODULE_CONNECTIVITY);
+  const showInstallations = hasModule(MODULE_INSTALLATIONS);
   const navigate = useNavigate();
   const location = useLocation();
   const showBackButton = location.pathname !== '/';
@@ -52,7 +54,7 @@ const Layout = ({ children }) => {
   const { data: unreadData } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationsApi.getUnreadCount(),
-    enabled: !!isElevated,
+    enabled: Boolean(user),
     refetchInterval: 60000, // refresh every 60s
     staleTime: 0, // always consider stale so invalidations trigger refetch
   });
@@ -68,17 +70,27 @@ const Layout = ({ children }) => {
   };
 
   const connectivityNav = { name: 'Connectivity', href: '/connectivity', icon: Globe };
+  const installationsNav = { name: 'Installations', href: '/installations', icon: ClipboardList };
 
   const navigation = (() => {
     const home = { name: 'Home', href: '/', icon: Home };
+    const topLinks = [
+      ...(showInstallations ? [installationsNav] : []),
+      ...(showConnectivity ? [connectivityNav] : []),
+    ];
 
     if (!showCopiers && showConnectivity) {
-      return [home, connectivityNav];
+      return [home, ...topLinks];
+    }
+
+    if (!showCopiers && !showConnectivity && showInstallations) {
+      return [home, installationsNav];
     }
 
     if (isCapturer && showCopiers) {
       return [
         home,
+        ...topLinks,
         {
           name: 'Meter Readings',
           href: '/meter-readings',
@@ -88,11 +100,10 @@ const Layout = ({ children }) => {
             { name: 'History', href: '/history', icon: ScrollText },
           ],
         },
-        ...(showConnectivity ? [connectivityNav] : []),
       ];
     }
 
-    const nav = [home, ...(showConnectivity ? [connectivityNav] : [])];
+    const nav = [home, ...topLinks];
     if (showCopiers) {
       nav.push({
         name: 'Copier Service',
@@ -106,21 +117,19 @@ const Layout = ({ children }) => {
         ],
       });
     }
+    nav.push({ name: 'Notifications', href: '/notifications', icon: Bell });
     if (isElevated) {
-      nav.push(
-        { name: 'Notifications', href: '/notifications', icon: Bell },
-        {
-          name: 'Admin Tools',
-          href: '/admin',
-          icon: Wrench,
-          children: [
-            { name: 'Machine Configuration', href: '/admin/machine-configuration', icon: Cog },
-            { name: 'Parts & Pricing', href: '/admin/parts-pricing', icon: Package },
-            { name: 'Users', href: '/users', icon: Users },
-            { name: 'Transaction History', href: '/transaction-history', icon: ScrollText },
-          ],
-        },
-      );
+      nav.push({
+        name: 'Admin Tools',
+        href: '/admin',
+        icon: Wrench,
+        children: [
+          { name: 'Machine Configuration', href: '/admin/machine-configuration', icon: Cog },
+          { name: 'Parts & Pricing', href: '/admin/parts-pricing', icon: Package },
+          { name: 'Users', href: '/users', icon: Users },
+          { name: 'Transaction History', href: '/transaction-history', icon: ScrollText },
+        ],
+      });
     }
     return nav;
   })();
@@ -156,16 +165,6 @@ const Layout = ({ children }) => {
   };
 
   const isItemActive = (item) => isActive(item.href) || hasActiveChild(item);
-
-  // Prevent copy to clipboard
-  const handleCopy = useCallback((e) => {
-    e.preventDefault();
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener('copy', handleCopy);
-    return () => document.removeEventListener('copy', handleCopy);
-  }, [handleCopy]);
 
   return (
     <div

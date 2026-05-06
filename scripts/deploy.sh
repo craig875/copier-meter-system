@@ -3,6 +3,8 @@
 # Usage: ./scripts/deploy.sh
 set -euo pipefail
 
+trap 'echo "ERROR: deploy.sh failed near line $LINENO (see output above)." >&2' ERR
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 

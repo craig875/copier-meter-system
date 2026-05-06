@@ -59,10 +59,23 @@ Two options: **push to `main`** (GitHub Actions SSHs in and runs the script), or
    | `DEPLOY_HOST`    | Server hostname or IP                      |
    | `DEPLOY_USER`    | SSH user                                   |
    | `DEPLOY_SSH_KEY` | Contents of **`github-deploy`** (private) |
+   | `DEPLOY_PATH`    | (Optional) Server path to repo if not `/var/www/copier-meter-system` |
 
-5. Push to **`main`** — the workflow runs `./scripts/deploy.sh` on the server.
+5. Push to **`main`** — the workflow SSHs in and runs `./scripts/deploy.sh`.
+
+   **Note:** If **`git push`** prints **“Everything up-to-date”**, you have **no new commit**; either **commit** your work first or open **Actions → Deploy to server → Run workflow** to redeploy the current `main`.
 
 You can also run the workflow manually: **Actions → Deploy to server → Run workflow**.
+
+## Troubleshooting “deploy failed”
+
+Open the failed job in **GitHub Actions** and read the **Deploy via SSH** log (the server prints `==>` lines from `deploy.sh`). Typical causes:
+
+- **`ERROR: Set VITE_API_URL`** — create **`deploy.env`** on the server (see one-time setup).
+- **`npm ci` / Prisma** — database unreachable, bad **`DATABASE_URL`** in **`backend/.env`**, or a migration failed (read the Prisma error in the log).
+- **`npm run build` (frontend)** — fix the Vite error locally with `VITE_API_URL=… npm run build`, commit, push.
+- **SSH / path** — wrong **`DEPLOY_HOST`**, key, or repo path; set secret **`DEPLOY_PATH`** or clone to **`/var/www/copier-meter-system`**.
+- **Frontend on Vercel** — if your UI is deployed there, fix the **Vercel** build log; this workflow only updates your **PM2 + static `dist`** server setup.
 
 ## What `deploy.sh` does
 

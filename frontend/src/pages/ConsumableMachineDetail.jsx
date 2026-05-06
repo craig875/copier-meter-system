@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { consumablesApi, machinesApi, readingsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
+import { copyTextToClipboard } from '../utils/clipboard';
 import toast from 'react-hot-toast';
 import {
   Loader2,
@@ -169,7 +170,7 @@ const ConsumableMachineDetail = () => {
   const handleCopyLine = async (r) => {
     try {
       const line = buildCopyLine(r);
-      await navigator.clipboard.writeText(line);
+      await copyTextToClipboard(line);
       toast.success('Copied to clipboard');
     } catch {
       toast.error('Failed to copy');
