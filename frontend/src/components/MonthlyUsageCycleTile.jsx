@@ -7,8 +7,11 @@ import { Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
  * @param {Object} props
  * @param {number|null} props.machineLife - Model's estimated lifespan (pages)
  * @param {Array} props.readings - Meter readings with monoUsage, colourUsage, year, month
+ * @param {boolean} [props.compact] - Smaller tile for dense layouts
  */
-const MonthlyUsageCycleTile = ({ machineLife, readings = [] }) => {
+const MonthlyUsageCycleTile = ({ machineLife, readings = [], compact = false }) => {
+  const box = compact ? 'tile-card p-2.5 w-48 h-36' : 'tile-card p-4 w-64 h-64';
+  const titleCls = `font-semibold text-gray-900 flex items-center gap-1 ${compact ? 'text-[11px] mb-0.5' : 'text-sm mb-2'}`;
   const monthlyRecommended = machineLife && machineLife > 0
     ? Math.round(machineLife / 60)
     : null;
@@ -31,12 +34,12 @@ const MonthlyUsageCycleTile = ({ machineLife, readings = [] }) => {
 
   if (!monthlyRecommended) {
     return (
-      <div className="tile-card p-4 w-64 h-64 flex flex-col">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
-          <Calendar className="h-4 w-4 text-gray-500" />
+      <div className={`${box} flex flex-col`}>
+        <h3 className={titleCls}>
+          <Calendar className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} text-gray-500`} />
           Monthly usage
         </h3>
-        <p className="text-gray-500 text-xs flex-1">
+        <p className={`text-gray-500 flex-1 leading-tight ${compact ? 'text-[9px]' : 'text-xs'}`}>
           No lifespan configured. Set model lifespan to see recommended volume.
         </p>
       </div>
@@ -52,38 +55,40 @@ const MonthlyUsageCycleTile = ({ machineLife, readings = [] }) => {
         : `${overusedCount}/${usageData.length} over`;
 
   return (
-    <div className="tile-card p-4 w-64 h-64 flex flex-col overflow-hidden">
-      <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
-        <Calendar className="h-4 w-4 text-gray-500" />
+    <div className={`${box} flex flex-col overflow-hidden`}>
+      <h3 className={titleCls}>
+        <Calendar className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} text-gray-500`} />
         Monthly usage
       </h3>
-      <div className="mb-2">
-        <p className="text-[10px] text-gray-500">Recommended: {monthlyRecommended.toLocaleString()}/mo</p>
-        <p className="text-xs font-medium mt-0.5">
+      <div className={compact ? 'mb-0.5' : 'mb-2'}>
+        <p className={`text-gray-500 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
+          Recommended: {monthlyRecommended.toLocaleString()}/mo
+        </p>
+        <p className={`font-medium mt-0.5 ${compact ? 'text-[9px]' : 'text-xs'}`}>
           {overusedCount === 0 ? (
             <span className="text-green-600 inline-flex items-center gap-1">
-              <CheckCircle className="h-3.5 w-3.5" />
+              <CheckCircle className={compact ? 'h-2.5 w-2.5' : 'h-3.5 w-3.5'} />
               {statusLabel}
             </span>
           ) : (
             <span className="text-amber-600 inline-flex items-center gap-1">
-              <AlertTriangle className="h-3.5 w-3.5" />
+              <AlertTriangle className={compact ? 'h-2.5 w-2.5' : 'h-3.5 w-3.5'} />
               {statusLabel}
             </span>
           )}
         </p>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
+      <div className={`flex-1 min-h-0 overflow-y-auto ${compact ? '' : 'space-y-1.5'}`}>
         {usageData.length === 0 ? (
-          <p className="text-gray-500 text-xs">No readings yet.</p>
+          <p className={`text-gray-500 ${compact ? 'text-[9px]' : 'text-xs'}`}>No readings yet.</p>
         ) : (
           usageData.map((d) => (
             <div
               key={d.month}
-              className="flex items-center justify-between py-1 border-b border-gray-100 last:border-0"
+              className={`flex items-center justify-between border-b border-gray-100 last:border-0 ${compact ? 'py-px' : 'py-1'}`}
             >
-              <span className="text-xs text-gray-700">{d.month}</span>
-              <span className="text-xs font-medium">
+              <span className={`text-gray-700 ${compact ? 'text-[9px]' : 'text-xs'}`}>{d.month}</span>
+              <span className={`font-medium ${compact ? 'text-[9px]' : 'text-xs'}`}>
                 {d.usage.toLocaleString()}
                 {d.overused && (
                   <span className="ml-1 text-amber-600" title="Over recommended volume">

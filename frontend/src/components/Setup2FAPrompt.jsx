@@ -7,8 +7,12 @@ export default function Setup2FAPrompt() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Show prompt when user has 2FA disabled (data from login/getMe - no extra API call)
-  const show = !!user && !user.twoFactorEnabled && location.pathname !== '/security';
+  // Production only: require users without 2FA to set it up (see Layout comment). Local dev skips this.
+  const show =
+    import.meta.env.PROD &&
+    !!user &&
+    !user.twoFactorEnabled &&
+    location.pathname !== '/security';
 
   const handleSetup = () => {
     navigate('/security');

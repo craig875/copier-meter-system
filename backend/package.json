@@ -10,6 +10,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
+    "db:disable-2fa": "node prisma/disable-2fa-local.js",
     "db:studio": "prisma studio",
     "export:makes": "node prisma/export-makes-models-parts.js",
     "deploy": "(npx prisma migrate resolve --rolled-back 20260124000000_add_branch_to_user 2>/dev/null || true) && (npx prisma migrate resolve --rolled-back 20260125000000_replace_customer_reference_with_order_date 2>/dev/null || true) && npx prisma migrate deploy && npm run db:seed && npm start"

@@ -3,6 +3,7 @@ import { TrendingUp } from 'lucide-react';
 /**
  * Average monthly usage (mono / colour / scan) over the latest three month records
  * (most recent by year/month), re-evaluated whenever readings update.
+ * @param {boolean} [props.compact] - Smaller tile for dense layouts
  */
 function latestMonths(readings, n) {
   return [...readings]
@@ -20,17 +21,19 @@ function computeThreeMonthAverages(readings) {
   return { mono, colour, scan, count: n, months: last };
 }
 
-const ThreeMonthAverageUsageTile = ({ readings = [], isColour }) => {
+const ThreeMonthAverageUsageTile = ({ readings = [], isColour, compact = false }) => {
   const avg = computeThreeMonthAverages(readings);
+  const box = compact ? 'tile-card p-2.5 w-48 h-36' : 'tile-card p-4 w-64';
+  const minH = compact ? '' : 'min-h-[200px]';
 
   if (!avg) {
     return (
-      <div className="tile-card p-4 w-64 min-h-[200px] flex flex-col">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
-          <TrendingUp className="h-4 w-4 text-gray-500" />
-          3-month avg usage
+      <div className={`${box} ${minH} flex flex-col`}>
+        <h3 className={`font-semibold text-gray-900 flex items-center gap-1 ${compact ? 'text-[11px] mb-0.5' : 'text-sm mb-2'}`}>
+          <TrendingUp className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} text-gray-500`} />
+          {compact ? '3-mo avg' : '3-month avg usage'}
         </h3>
-        <p className="text-gray-500 text-xs flex-1">No meter readings yet.</p>
+        <p className={`text-gray-500 flex-1 ${compact ? 'text-[9px] leading-tight' : 'text-xs'}`}>No meter readings yet.</p>
       </div>
     );
   }
@@ -43,19 +46,30 @@ const ThreeMonthAverageUsageTile = ({ readings = [], isColour }) => {
     )
     .join(' → ');
 
+  const rangeShort =
+    chronological.length > 0
+      ? `${new Date(chronological[0].year, chronological[0].month - 1).toLocaleString('default', { month: 'short', year: '2-digit' })}–${new Date(chronological[chronological.length - 1].year, chronological[chronological.length - 1].month - 1).toLocaleString('default', { month: 'short', year: '2-digit' })}`
+      : '';
+
   const fmt = (v) => Math.round(v).toLocaleString();
 
   return (
-    <div className="tile-card p-4 w-64 min-h-[200px] flex flex-col">
-      <h3 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-1.5">
-        <TrendingUp className="h-4 w-4 text-gray-500" />
-        3-month avg usage
+    <div className={`${box} flex flex-col overflow-hidden ${compact ? '' : minH}`}>
+      <h3 className={`font-semibold text-gray-900 flex items-center gap-1 ${compact ? 'text-[11px] mb-0.5' : 'text-sm mb-1'}`}>
+        <TrendingUp className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} text-gray-500`} />
+        {compact ? '3-mo avg' : '3-month avg usage'}
       </h3>
-      <p className="text-[10px] text-gray-500 mb-3">
-        Average monthly usage over the latest {count} month{count !== 1 ? 's' : ''} of data
-        {rangeLabel ? ` (${rangeLabel})` : ''}.
-      </p>
-      <div className="space-y-2 text-sm flex-1">
+      {compact ? (
+        <p className="text-[9px] text-gray-500 mb-1 leading-tight">
+          {count} mo avg{rangeShort ? ` · ${rangeShort}` : ''}
+        </p>
+      ) : (
+        <p className="text-[10px] text-gray-500 mb-3">
+          Average monthly usage over the latest {count} month{count !== 1 ? 's' : ''} of data
+          {rangeLabel ? ` (${rangeLabel})` : ''}.
+        </p>
+      )}
+      <div className={`flex-1 min-h-0 ${compact ? 'space-y-0.5 text-[10px]' : 'space-y-2 text-sm'}`}>
         <div className="flex justify-between items-baseline gap-2">
           <span className="text-gray-600">Mono</span>
           <span className="font-semibold text-gray-900 tabular-nums">{fmt(mono)}</span>
@@ -68,7 +82,7 @@ const ThreeMonthAverageUsageTile = ({ readings = [], isColour }) => {
         ) : (
           <div className="flex justify-between items-baseline gap-2">
             <span className="text-gray-600">Colour</span>
-            <span className="text-gray-400 text-xs">—</span>
+            <span className={`text-gray-400 ${compact ? 'text-[9px]' : 'text-xs'}`}>—</span>
           </div>
         )}
         <div className="flex justify-between items-baseline gap-2">

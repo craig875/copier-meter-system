@@ -1,10 +1,12 @@
 import axios from 'axios';
 
-// In production, set VITE_API_URL to your backend URL (e.g. https://your-app.railway.app)
-// In development, uses /api which is proxied to localhost:3001
-const baseURL = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
-  : '/api';
+// Production build: set VITE_API_URL when the SPA is served separately from the API.
+// Vite dev: always use same-origin `/api` (proxied to localhost:3001) so a wrong machine env cannot break login.
+const baseURL = import.meta.env.DEV
+  ? '/api'
+  : import.meta.env.VITE_API_URL
+    ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
+    : '/api';
 
 const api = axios.create({
   baseURL,

@@ -3,6 +3,9 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+/** Ensure seeded accounts work for local login without an authenticator after re-seed. */
+const seedUser2FAClear = { twoFactorEnabled: false, twoFactorSecret: null };
+
 async function main() {
   console.log('Seeding database...');
 
@@ -10,13 +13,20 @@ async function main() {
   const adminPassword = await bcrypt.hash('admin123', 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@example.com' },
-    update: { passwordHash: adminPassword, name: 'System Admin', role: 'admin', modules: ['copiers', 'connectivity'] },
+    update: {
+      passwordHash: adminPassword,
+      name: 'System Admin',
+      role: 'admin',
+      modules: ['copiers', 'connectivity'],
+      ...seedUser2FAClear,
+    },
     create: {
       email: 'admin@example.com',
       passwordHash: adminPassword,
       name: 'System Admin',
       role: 'admin',
       modules: ['copiers', 'connectivity'],
+      ...seedUser2FAClear,
     },
   });
   console.log('Created admin user:', admin.email);
@@ -25,13 +35,20 @@ async function main() {
   const managementPassword = await bcrypt.hash('management123', 12);
   const management = await prisma.user.upsert({
     where: { email: 'management@example.com' },
-    update: { passwordHash: managementPassword, name: 'Management User', role: 'management', modules: ['copiers'] },
+    update: {
+      passwordHash: managementPassword,
+      name: 'Management User',
+      role: 'management',
+      modules: ['copiers'],
+      ...seedUser2FAClear,
+    },
     create: {
       email: 'management@example.com',
       passwordHash: managementPassword,
       name: 'Management User',
       role: 'management',
       modules: ['copiers'],
+      ...seedUser2FAClear,
     },
   });
   console.log('Created management user:', management.email);
@@ -40,13 +57,20 @@ async function main() {
   const userPassword = await bcrypt.hash('user123', 12);
   const user = await prisma.user.upsert({
     where: { email: 'user@example.com' },
-    update: { passwordHash: userPassword, name: 'Regular User', role: 'user', modules: ['copiers'] },
+    update: {
+      passwordHash: userPassword,
+      name: 'Regular User',
+      role: 'user',
+      modules: ['copiers'],
+      ...seedUser2FAClear,
+    },
     create: {
       email: 'user@example.com',
       passwordHash: userPassword,
       name: 'Regular User',
       role: 'user',
       modules: ['copiers'],
+      ...seedUser2FAClear,
     },
   });
   console.log('Created regular user:', user.email);
@@ -55,7 +79,14 @@ async function main() {
   const meterUserPassword = await bcrypt.hash('meter123', 12);
   const meterUser = await prisma.user.upsert({
     where: { email: 'meter@example.com' },
-    update: { passwordHash: meterUserPassword, name: 'Meter User', role: 'meter_user', branch: 'JHB', modules: ['copiers'] },
+    update: {
+      passwordHash: meterUserPassword,
+      name: 'Meter User',
+      role: 'meter_user',
+      branch: 'JHB',
+      modules: ['copiers'],
+      ...seedUser2FAClear,
+    },
     create: {
       email: 'meter@example.com',
       passwordHash: meterUserPassword,
@@ -63,6 +94,7 @@ async function main() {
       role: 'meter_user',
       branch: 'JHB',
       modules: ['copiers'],
+      ...seedUser2FAClear,
     },
   });
   console.log('Created meter user:', meterUser.email);
@@ -71,7 +103,14 @@ async function main() {
   const salesAgentPassword = await bcrypt.hash('sales123', 12);
   const salesAgent = await prisma.user.upsert({
     where: { email: 'sales@example.com' },
-    update: { passwordHash: salesAgentPassword, name: 'Sales Agent', role: 'sales_agent', branch: 'JHB', modules: ['copiers'] },
+    update: {
+      passwordHash: salesAgentPassword,
+      name: 'Sales Agent',
+      role: 'sales_agent',
+      branch: 'JHB',
+      modules: ['copiers'],
+      ...seedUser2FAClear,
+    },
     create: {
       email: 'sales@example.com',
       passwordHash: salesAgentPassword,
@@ -79,6 +118,7 @@ async function main() {
       role: 'sales_agent',
       branch: 'JHB',
       modules: ['copiers'],
+      ...seedUser2FAClear,
     },
   });
   console.log('Created sales agent:', salesAgent.email);
@@ -87,7 +127,14 @@ async function main() {
   const capturerPassword = await bcrypt.hash('capturer123', 12);
   const capturer = await prisma.user.upsert({
     where: { email: 'capturer@example.com' },
-    update: { passwordHash: capturerPassword, name: 'Capturer', role: 'capturer', branch: 'JHB', modules: ['copiers'] },
+    update: {
+      passwordHash: capturerPassword,
+      name: 'Capturer',
+      role: 'capturer',
+      branch: 'JHB',
+      modules: ['copiers'],
+      ...seedUser2FAClear,
+    },
     create: {
       email: 'capturer@example.com',
       passwordHash: capturerPassword,
@@ -95,6 +142,7 @@ async function main() {
       role: 'capturer',
       branch: 'JHB',
       modules: ['copiers'],
+      ...seedUser2FAClear,
     },
   });
   console.log('Created capturer:', capturer.email);
@@ -103,13 +151,20 @@ async function main() {
   const viewerPassword = await bcrypt.hash('viewer123', 12);
   const viewer = await prisma.user.upsert({
     where: { email: 'viewer@example.com' },
-    update: { passwordHash: viewerPassword, name: 'Viewer', role: 'viewer', modules: ['connectivity'] },
+    update: {
+      passwordHash: viewerPassword,
+      name: 'Viewer',
+      role: 'viewer',
+      modules: ['connectivity'],
+      ...seedUser2FAClear,
+    },
     create: {
       email: 'viewer@example.com',
       passwordHash: viewerPassword,
       name: 'Viewer',
       role: 'viewer',
       modules: ['connectivity'],
+      ...seedUser2FAClear,
     },
   });
   console.log('Created viewer:', viewer.email);
@@ -152,7 +207,7 @@ async function main() {
     }
     customerMap[name] = customer.id;
   }
-  console.log('Created/verified customers');
+  console.log('Created/verified customers (Finance Department has multiple machines for layout testing)');
 
   // Create sample machines (no makes/models - add via Admin Tools → Machine Configuration)
   const machines = [
@@ -166,6 +221,11 @@ async function main() {
     { machineSerialNumber: 'CPR-008', customerName: 'Warehouse Office', contractReference: 'CTR-2024-005', monoEnabled: true, colourEnabled: false, scanEnabled: false },
     { machineSerialNumber: 'CPR-009', customerName: 'Executive Suite', contractReference: 'CTR-2024-006', monoEnabled: true, colourEnabled: true, scanEnabled: true },
     { machineSerialNumber: 'CPR-010', customerName: 'Legal Department', contractReference: 'CTR-2024-007', monoEnabled: true, colourEnabled: true, scanEnabled: true },
+    // Extra machines on one customer (good for testing customer detail / multi-machine layout)
+    { machineSerialNumber: 'CPR-011', customerName: 'Finance Department', contractReference: 'CTR-2024-001', monoEnabled: true, colourEnabled: true, scanEnabled: true },
+    { machineSerialNumber: 'CPR-012', customerName: 'Finance Department', contractReference: 'CTR-2024-001', monoEnabled: true, colourEnabled: false, scanEnabled: true },
+    { machineSerialNumber: 'CPR-013', customerName: 'Finance Department', contractReference: 'CTR-2024-008', monoEnabled: true, colourEnabled: true, scanEnabled: false },
+    { machineSerialNumber: 'CPR-014', customerName: 'Finance Department', contractReference: 'CTR-2024-008', monoEnabled: true, colourEnabled: true, scanEnabled: true },
   ];
 
   for (const m of machines) {

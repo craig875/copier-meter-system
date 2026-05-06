@@ -3,13 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2, Printer, AlertTriangle, AlertCircle, ChevronRight } from 'lucide-react';
 import { readingsApi } from '../services/api';
 import MeterBlocks from './MeterBlocks';
-import MachineStatsTile from './MachineStatsTile';
 import MachineLifeTile from './MachineLifeTile';
 import MonthlyUsageCycleTile from './MonthlyUsageCycleTile';
 import ThreeMonthAverageUsageTile from './ThreeMonthAverageUsageTile';
 
 /**
- * One customer machine row: identity + badges on the left, same stat tiles as consumable machine page on the right.
+ * One customer machine row: identity + badges on the left; life / monthly / 3-month tiles (no usage chart) on the right.
  */
 const CustomerMachineOverviewRow = ({ machine, partsDue = [], effectiveBranch }) => {
   const { data: readingsHistoryData, isLoading } = useQuery({
@@ -78,12 +77,12 @@ const CustomerMachineOverviewRow = ({ machine, partsDue = [], effectiveBranch })
         {isLoading ? (
           <div className="flex items-center gap-3 text-gray-500 py-8 pl-2">
             <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-            <span className="text-sm">Loading usage stats…</span>
+            <span className="text-sm">Loading machine stats…</span>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-4">
-            <MachineStatsTile readings={readings} isColour={machine.model?.modelType === 'colour'} />
+          <div className="flex flex-wrap gap-3">
             <MachineLifeTile
+              compact
               totalReading={
                 machine.totalReading ??
                 (readings[0]
@@ -93,8 +92,12 @@ const CustomerMachineOverviewRow = ({ machine, partsDue = [], effectiveBranch })
               machineLife={machine.model?.machineLife ?? null}
               lifePercentUsed={machine.lifePercentUsed ?? null}
             />
-            <MonthlyUsageCycleTile machineLife={machine.model?.machineLife ?? null} readings={readings} />
-            <ThreeMonthAverageUsageTile readings={readings} isColour={machine.model?.modelType === 'colour'} />
+            <MonthlyUsageCycleTile compact machineLife={machine.model?.machineLife ?? null} readings={readings} />
+            <ThreeMonthAverageUsageTile
+              compact
+              readings={readings}
+              isColour={machine.model?.modelType === 'colour'}
+            />
           </div>
         )}
       </div>
