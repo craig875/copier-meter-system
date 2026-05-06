@@ -51,6 +51,10 @@ const CustomerDetail = () => {
       await new Promise(requestAnimationFrame);
       await captureElementToPdf(pdfCaptureRef.current, {
         filename: `${pdfBaseName(customer.name)}-customer-machines.pdf`,
+        orientation: 'portrait',
+        scale: 2.5,
+        margin: 16,
+        layoutScale: 1.08,
       });
       toast.success('PDF downloaded');
     } catch (e) {
@@ -91,7 +95,7 @@ const CustomerDetail = () => {
         </Link>
       </div>
 
-      <div ref={pdfCaptureRef} className="space-y-6 bg-white">
+      <div ref={pdfCaptureRef} className="space-y-6 bg-white" data-pdf-capture-root>
         <div className="tile-card p-6">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 bg-red-50 rounded-lg">

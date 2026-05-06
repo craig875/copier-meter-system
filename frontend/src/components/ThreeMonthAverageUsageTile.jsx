@@ -23,12 +23,13 @@ function computeThreeMonthAverages(readings) {
 
 const ThreeMonthAverageUsageTile = ({ readings = [], isColour, compact = false }) => {
   const avg = computeThreeMonthAverages(readings);
-  const box = compact ? 'tile-card p-2.5 w-48 h-36' : 'tile-card p-4 w-64';
-  const minH = compact ? '' : 'min-h-[200px]';
+  const box = compact
+    ? 'tile-card p-2.5 w-48 h-36 flex flex-col overflow-hidden'
+    : 'tile-card p-4 w-64 h-64 flex flex-col overflow-hidden';
 
   if (!avg) {
     return (
-      <div className={`${box} ${minH} flex flex-col`}>
+      <div className={box}>
         <h3 className={`font-semibold text-gray-900 flex items-center gap-1 ${compact ? 'text-[11px] mb-0.5' : 'text-sm mb-2'}`}>
           <TrendingUp className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} text-gray-500`} />
           {compact ? '3-mo avg' : '3-month avg usage'}
@@ -40,12 +41,6 @@ const ThreeMonthAverageUsageTile = ({ readings = [], isColour, compact = false }
 
   const { mono, colour, scan, count, months } = avg;
   const chronological = [...months].sort((a, b) => a.year - b.year || a.month - b.month);
-  const rangeLabel = chronological
-    .map((m) =>
-      new Date(m.year, m.month - 1).toLocaleString('default', { month: 'short', year: 'numeric' })
-    )
-    .join(' → ');
-
   const rangeShort =
     chronological.length > 0
       ? `${new Date(chronological[0].year, chronological[0].month - 1).toLocaleString('default', { month: 'short', year: '2-digit' })}–${new Date(chronological[chronological.length - 1].year, chronological[chronological.length - 1].month - 1).toLocaleString('default', { month: 'short', year: '2-digit' })}`
@@ -54,21 +49,16 @@ const ThreeMonthAverageUsageTile = ({ readings = [], isColour, compact = false }
   const fmt = (v) => Math.round(v).toLocaleString();
 
   return (
-    <div className={`${box} flex flex-col overflow-hidden ${compact ? '' : minH}`}>
+    <div className={box}>
       <h3 className={`font-semibold text-gray-900 flex items-center gap-1 ${compact ? 'text-[11px] mb-0.5' : 'text-sm mb-1'}`}>
         <TrendingUp className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} text-gray-500`} />
         {compact ? '3-mo avg' : '3-month avg usage'}
       </h3>
-      {compact ? (
-        <p className="text-[9px] text-gray-500 mb-1 leading-tight">
-          {count} mo avg{rangeShort ? ` · ${rangeShort}` : ''}
-        </p>
-      ) : (
-        <p className="text-[10px] text-gray-500 mb-3">
-          Average monthly usage over the latest {count} month{count !== 1 ? 's' : ''} of data
-          {rangeLabel ? ` (${rangeLabel})` : ''}.
-        </p>
-      )}
+      <p className={`text-gray-500 mb-1 leading-tight shrink-0 ${compact ? 'text-[9px]' : 'text-xs'}`}>
+        {compact
+          ? `${count} mo avg${rangeShort ? ` · ${rangeShort}` : ''}`
+          : `Avg over ${count} month${count !== 1 ? 's' : ''}${rangeShort ? ` · ${rangeShort}` : ''}`}
+      </p>
       <div className={`flex-1 min-h-0 ${compact ? 'space-y-0.5 text-[10px]' : 'space-y-2 text-sm'}`}>
         <div className="flex justify-between items-baseline gap-2">
           <span className="text-gray-600">Mono</span>
