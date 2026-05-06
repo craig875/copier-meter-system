@@ -96,7 +96,7 @@ const CustomerDetail = () => {
       </div>
 
       <div ref={pdfCaptureRef} className="space-y-6 bg-white" data-pdf-capture-root>
-        <div className="tile-card p-6">
+        <div className="tile-card p-6" data-pdf-row>
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 bg-red-50 rounded-lg">
               <Building2 className="h-8 w-8 text-gray-900" />

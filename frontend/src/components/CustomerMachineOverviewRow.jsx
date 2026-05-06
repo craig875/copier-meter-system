@@ -24,7 +24,10 @@ const CustomerMachineOverviewRow = ({ machine, partsDue = [], effectiveBranch })
   const readings = readingsHistoryData?.readings || [];
 
   return (
-    <div className="flex flex-col xl:flex-row xl:items-stretch gap-6 py-6 border-b border-gray-100 last:border-b-0 last:pb-0 first:pt-0">
+    <div
+      data-pdf-row
+      className="flex flex-col xl:flex-row xl:items-stretch gap-6 py-6 border-b border-gray-100 last:border-b-0 last:pb-0 first:pt-0"
+    >
       <div className="shrink-0 w-full xl:w-64 flex flex-col">
         <Link
           to={`/consumables/machines/${machine.id}`}
