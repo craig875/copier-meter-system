@@ -31,24 +31,41 @@ const MeterInput = memo(function MeterInput({
   error,
   disabled = false,
 }) {
-  const blockStepKeys = (e) => {
-    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-      e.preventDefault();
-    }
-  };
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    /** Capture phase so we win over browser spin/step defaults (incl. some numeric-like text fields). */
+    const blockArrowStep = (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    el.addEventListener('keydown', blockArrowStep, true);
+    return () => el.removeEventListener('keydown', blockArrowStep, true);
+  }, []);
 
   return (
     <div className="space-y-1">
       <input
+        ref={inputRef}
         type="text"
-        inputMode="numeric"
+        pattern="[0-9]*"
+        enterKeyHint="done"
         autoComplete="off"
         value={value === '' || value == null ? '' : String(value)}
         onChange={(e) => onChange(trimLeading(e.target.value.replace(/\D/g, '')))}
-        onKeyDown={blockStepKeys}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         disabled={disabled}
         className={clsx(
-          'w-24 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+          'meter-reading-input w-24 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent',
           error ? 'border-red-500 bg-red-50' : 'border-gray-300',
           disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
         )}

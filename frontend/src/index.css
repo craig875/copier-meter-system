@@ -40,6 +40,18 @@ body {
     @apply bg-white rounded-xl border border-gray-200;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
+  /**
+   * Plain text meter fields: Chromium/Edge may still draw steppers on “numeric” hints.
+   * These rules also suppress spinners if the field is ever type=number.
+   */
+  .meter-reading-input {
+    -moz-appearance: textfield;
+  }
+  .meter-reading-input::-webkit-outer-spin-button,
+  .meter-reading-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
 
 /* Bell jingle animation - gentle shake like a bell */
