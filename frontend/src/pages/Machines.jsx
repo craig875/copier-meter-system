@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { machinesApi, makesApi, modelsApi, customersApi } from '../services/api';
@@ -24,6 +24,22 @@ import MachineModal from '../components/MachineModal';
 import { trimLeading } from '../utils/string';
 import MeterBlocks from '../components/MeterBlocks';
 
+/** Client-side filter; fields align with server search on GET /machines */
+function machineMatchesSearch(machine, queryLower) {
+  if (!queryLower) return true;
+  const parts = [
+    machine.machineSerialNumber,
+    machine.customer?.name,
+    machine.contractReference,
+    machine.location,
+    machine.model?.name,
+    machine.model?.make?.name,
+  ]
+    .filter(Boolean)
+    .map((s) => String(s).toLowerCase());
+  return parts.some((p) => p.includes(queryLower));
+}
+
 const Machines = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -34,10 +50,12 @@ const Machines = () => {
   const [editingMachine, setEditingMachine] = useState(null);
 
   const { data, isLoading, error, isError } = useQuery({
-    queryKey: ['machines', { search, branch: effectiveBranch }],
-    queryFn: () => machinesApi.getAll({ search, limit: '1000', branch: effectiveBranch }),
+    queryKey: ['machines', { branch: effectiveBranch }],
+    queryFn: () => machinesApi.getAll({ limit: '1000', branch: effectiveBranch }),
     enabled: !authLoading && !!user, // Wait for auth to be ready
     retry: 1,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const deleteMutation = useMutation({
@@ -74,13 +92,22 @@ const Machines = () => {
   });
 
   // API now returns response.data directly, so data is { machines, pagination }
-  const machines = data?.machines || [];
+  const allMachines = data?.machines || [];
+  const queryLower = search.trim().toLowerCase();
+  const filteredMachines = useMemo(() => {
+    if (!queryLower) return allMachines;
+    return allMachines.filter((m) => machineMatchesSearch(m, queryLower));
+  }, [allMachines, queryLower]);
+
+  const hasSearch = search.trim().length > 0;
+  const noMatchesFromSearch = hasSearch && filteredMachines.length === 0 && allMachines.length > 0;
+
   const selectedModelId = searchParams.get('model');
 
   // Group key: use __no_model__ when model is missing (deleted or unassigned)
   const getModelKey = (m) => (m.model ? m.modelId : null) || '__no_model__';
 
-  const modelGroups = machines.reduce((acc, m) => {
+  const modelGroups = filteredMachines.reduce((acc, m) => {
     const key = getModelKey(m);
     if (!acc[key]) {
       acc[key] = {
@@ -104,10 +131,10 @@ const Machines = () => {
     a.modelDisplay.localeCompare(b.modelDisplay)
   );
 
-  // Filtered machines for list view (when model selected); search is applied by API
+  // List view when a model tile is selected; search is client-side on filteredMachines
   const displayMachines = selectedModelId
-    ? machines.filter((m) => getModelKey(m) === selectedModelId)
-    : machines;
+    ? filteredMachines.filter((m) => getModelKey(m) === selectedModelId)
+    : filteredMachines;
 
   const selectedModelInfo = selectedModelId
     ? modelTiles.find((t) => t.modelKey === selectedModelId)
@@ -116,8 +143,8 @@ const Machines = () => {
   // Open edit modal when ?edit=<machineId> in URL (e.g. from Customer Detail)
   useEffect(() => {
     const editId = searchParams.get('edit');
-    if (editId && machines.length > 0) {
-      const machine = machines.find((m) => m.id === editId);
+    if (editId && allMachines.length > 0) {
+      const machine = allMachines.find((m) => m.id === editId);
       if (machine) {
         setEditingMachine(machine);
         setShowModal(true);
@@ -127,7 +154,7 @@ const Machines = () => {
         setSearchParams(nextParams, { replace: true });
       }
     }
-  }, [searchParams, machines, setSearchParams]);
+  }, [searchParams, allMachines, setSearchParams]);
 
   const handleEdit = (machine) => {
     setEditingMachine(machine);
@@ -157,15 +184,6 @@ const Machines = () => {
     setShowModal(false);
     setEditingMachine(null);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-        <p className="ml-4 text-gray-600">Loading machines...</p>
-      </div>
-    );
-  }
 
   if (isError) {
     const errorMessage = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Unknown error';
@@ -280,7 +298,9 @@ const Machines = () => {
       <div data-tour="machines-search" className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
         <input
+          id="machines-search-input"
           type="text"
+          autoComplete="off"
           placeholder={selectedModelId ? 'Search within this model...' : 'Search machines...'}
           value={search}
           onChange={(e) => setSearch(trimLeading(e.target.value))}
@@ -288,7 +308,14 @@ const Machines = () => {
         />
       </div>
 
-      {/* Tiles view (default) or Table (when model selected) */}
+      {/* Tiles view (default) or Table (when model selected) — keep mounted while loading so search keeps focus */}
+      {isLoading && !data ? (
+        <div className="flex justify-center items-center py-24 min-h-[16rem]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600" />
+          <p className="ml-4 text-gray-600">Loading machines...</p>
+        </div>
+      ) : (
+        <>
       {!selectedModelId ? (
         /* Tiles view */
         <div className="space-y-4">
@@ -297,7 +324,11 @@ const Machines = () => {
               data-tour="machines-table"
               className="tile-card p-8 text-center text-gray-500"
             >
-              <p className="mb-4">No machines found. {data ? 'Try adjusting your search or branch filter.' : 'Loading...'}</p>
+              <p className="mb-4">
+                {noMatchesFromSearch
+                  ? 'No machines match your search. Clear the search box to see all machines.'
+                  : 'No machines found. Add a machine or try another branch.'}
+              </p>
               {data && (
                 <button
                   onClick={() => setShowModal(true)}
@@ -353,7 +384,9 @@ const Machines = () => {
                 {displayMachines.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
-                      No machines in this model. {data ? 'Try adjusting your search.' : 'Loading...'}
+                      {hasSearch && allMachines.length > 0
+                        ? 'No machines match your search in this model. Clear the search or pick another model.'
+                        : 'No machines in this model.'}
                     </td>
                   </tr>
                 ) : (
@@ -456,6 +489,8 @@ const Machines = () => {
           </table>
         </div>
       </div>
+      )}
+        </>
       )}
 
       {/* Modal */}

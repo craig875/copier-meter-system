@@ -16,6 +16,8 @@ export const KNOWN_MODULES = [MODULE_COPERS, MODULE_CONNECTIVITY];
 export const defaultModulesForRole = (role) => {
   if (role === 'admin') return [MODULE_COPERS, MODULE_CONNECTIVITY];
   if (role === 'manager') return [MODULE_COPERS, MODULE_CONNECTIVITY];
+  if (role === 'management') return [MODULE_COPERS];
+  if (role === 'sales_agent') return [MODULE_COPERS];
   if (role === 'viewer') return [MODULE_CONNECTIVITY];
   return [MODULE_COPERS];
 };
@@ -33,6 +35,12 @@ export const userHasModule = (user, moduleKey) => {
   if (!Array.isArray(list) || list.length === 0) return false;
   return list.includes(moduleKey);
 };
+
+/** Drop module keys that are no longer in the product (keeps DB rows valid). */
+export function sanitizeUserModules(modules) {
+  if (!Array.isArray(modules)) return [];
+  return modules.filter((m) => KNOWN_MODULES.includes(m));
+}
 
 /**
  * Administrator or manager (elevated operational access; managers still use module grants via userHasModule)

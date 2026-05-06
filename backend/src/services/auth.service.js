@@ -6,7 +6,7 @@ import { config } from '../config/index.js';
 import { repositories } from '../repositories/index.js';
 import { UnauthorizedError, ConflictError, NotFoundError } from '../utils/errors.js';
 import prisma from '../config/database.js';
-import { defaultModulesForRole } from '../utils/permissions.js';
+import { defaultModulesForRole, sanitizeUserModules } from '../utils/permissions.js';
 
 /** Safe user shape for API responses (no password hash) */
 function publicUser(user) {
@@ -16,7 +16,7 @@ function publicUser(user) {
     name: user.name,
     role: user.role,
     branch: user.branch,
-    modules: user.modules ?? [],
+    modules: sanitizeUserModules(user.modules ?? []),
     createdAt: user.createdAt,
   };
 }
@@ -73,7 +73,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         branch: user.branch,
-        modules: user.modules ?? [],
+        modules: sanitizeUserModules(user.modules ?? []),
         twoFactorEnabled: !!user.twoFactorEnabled,
       },
     };
@@ -119,7 +119,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         branch: user.branch,
-        modules: user.modules ?? [],
+        modules: sanitizeUserModules(user.modules ?? []),
         twoFactorEnabled: !!user.twoFactorEnabled,
       },
     };
@@ -220,7 +220,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         branch: user.branch,
-        modules: user.modules ?? [],
+        modules: sanitizeUserModules(user.modules ?? []),
         twoFactorEnabled: !!user.twoFactorEnabled,
       },
     };

@@ -11,6 +11,8 @@ import { NotificationService } from './notification.service.js';
  * Service Factory - Centralized service creation
  * Dependency Injection pattern for services
  */
+const notificationService = new NotificationService();
+
 export const services = {
   reading: new ReadingService(),
   machine: new MachineService(),
@@ -20,7 +22,7 @@ export const services = {
   audit: new AuditService(),
   consumable: new ConsumableService(),
   customer: new CustomerService(),
-  notification: new NotificationService(),
+  notification: notificationService,
 };
 
 export {

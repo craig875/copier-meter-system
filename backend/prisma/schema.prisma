@@ -45,7 +45,129 @@ model User {
   partReplacements PartReplacement[]
   notifications   Notification[]
 
+  installationProjectsCreated    InstallationProject[]           @relation("InstallationProjectCreatedBy")
+  installationProjectStepsDone InstallationProjectStep[]
+  installationAssignments      InstallationProjectAssignment[]
+
   @@map("users")
+}
+
+enum InstallationDuty {
+  PROJECT_LEAD
+  TECHNICIAN
+  SALES
+  CONNECTIVITY_SPECIALIST
+}
+
+enum InstallationProjectStatus {
+  draft
+  in_progress
+  completed
+  cancelled
+}
+
+enum InstallationProjectStepStatus {
+  pending
+  in_progress
+  completed
+  skipped
+}
+
+model InstallationType {
+  id          String   @id @default(uuid())
+  code        String   @unique @map("code")
+  name        String   @map("name")
+  description String?  @map("description")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  steps    InstallationTypeStep[]
+  projects InstallationProject[]
+
+  @@map("installation_types")
+}
+
+model InstallationTypeStep {
+  id          String           @id @default(uuid())
+  typeId      String           @map("type_id")
+  sortOrder   Int              @map("sort_order")
+  title       String           @map("title")
+  description String?          @map("description")
+  duty        InstallationDuty @map("duty")
+  isBlocking  Boolean          @default(true) @map("is_blocking")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  type            InstallationType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  projectStepRefs InstallationProjectStep[]
+
+  @@index([typeId])
+  @@map("installation_type_steps")
+}
+
+model InstallationProject {
+  id           String                    @id @default(uuid())
+  typeId       String                    @map("type_id")
+  customerName String?                   @map("customer_name")
+  siteLabel    String?                   @map("site_label")
+  notes        String?                   @map("notes")
+  status       InstallationProjectStatus @default(draft) @map("status")
+  plannedStart DateTime?                 @map("planned_start")
+  plannedEnd   DateTime?                 @map("planned_end")
+  createdById  String                    @map("created_by")
+  createdAt    DateTime                  @default(now()) @map("created_at")
+  updatedAt    DateTime                  @updatedAt @map("updated_at")
+
+  type        InstallationType                @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  createdBy   User                            @relation("InstallationProjectCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  steps       InstallationProjectStep[]
+  assignments InstallationProjectAssignment[]
+
+  @@index([typeId])
+  @@index([status])
+  @@index([createdById])
+  @@map("installation_projects")
+}
+
+model InstallationProjectStep {
+  id             String                        @id @default(uuid())
+  projectId      String                        @map("project_id")
+  templateStepId String?                       @map("template_step_id")
+  sortOrder      Int                           @map("sort_order")
+  title          String                        @map("title")
+  description    String?                       @map("description")
+  duty           InstallationDuty              @map("duty")
+  isBlocking     Boolean                       @default(true) @map("is_blocking")
+  status         InstallationProjectStepStatus @default(pending) @map("status")
+  completedById  String?                       @map("completed_by")
+  completedAt    DateTime?                     @map("completed_at")
+  note           String?                       @map("note")
+  createdAt      DateTime                      @default(now()) @map("created_at")
+  updatedAt      DateTime                      @updatedAt @map("updated_at")
+
+  project      InstallationProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  templateStep InstallationTypeStep? @relation(fields: [templateStepId], references: [id], onDelete: SetNull)
+  completedBy  User?                 @relation(fields: [completedById], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@map("installation_project_steps")
+}
+
+model InstallationProjectAssignment {
+  id        String             @id @default(uuid())
+  projectId String             @map("project_id")
+  duty      InstallationDuty   @map("duty")
+  userId    String             @map("user_id")
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  project InstallationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, duty])
+  @@index([userId])
+  @@map("installation_project_assignments")
 }
 
 enum PartType {

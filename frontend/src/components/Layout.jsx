@@ -20,7 +20,6 @@ import {
   Bell,
   Shield,
   Globe,
-  ClipboardList,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -29,7 +28,7 @@ import logo from '../assets/logo.png';
 import Setup2FAPrompt from './Setup2FAPrompt';
 import ConnectivityAlertBanner from './connectivity/ConnectivityAlertBanner';
 import { notificationsApi } from '../services/api';
-import { MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_INSTALLATIONS } from '../constants/modules';
+import { MODULE_COPERS, MODULE_CONNECTIVITY } from '../constants/modules';
 
 const Layout = ({ children }) => {
   const {
@@ -44,7 +43,6 @@ const Layout = ({ children }) => {
   } = useAuth();
   const showCopiers = hasModule(MODULE_COPERS);
   const showConnectivity = hasModule(MODULE_CONNECTIVITY);
-  const showInstallations = hasModule(MODULE_INSTALLATIONS);
   const navigate = useNavigate();
   const location = useLocation();
   const showBackButton = location.pathname !== '/';
@@ -70,21 +68,13 @@ const Layout = ({ children }) => {
   };
 
   const connectivityNav = { name: 'Connectivity', href: '/connectivity', icon: Globe };
-  const installationsNav = { name: 'Installations', href: '/installations', icon: ClipboardList };
 
   const navigation = (() => {
     const home = { name: 'Home', href: '/', icon: Home };
-    const topLinks = [
-      ...(showInstallations ? [installationsNav] : []),
-      ...(showConnectivity ? [connectivityNav] : []),
-    ];
+    const topLinks = [...(showConnectivity ? [connectivityNav] : [])];
 
     if (!showCopiers && showConnectivity) {
       return [home, ...topLinks];
-    }
-
-    if (!showCopiers && !showConnectivity && showInstallations) {
-      return [home, installationsNav];
     }
 
     if (isCapturer && showCopiers) {

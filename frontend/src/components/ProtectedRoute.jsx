@@ -2,8 +2,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { shouldPromptForBranch } from '../utils/branchSelection';
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { user, loading, isElevated, canSwitchBranches, selectedBranch } = useAuth();
+const ProtectedRoute = ({ children, adminOnly = false, requireModule = null }) => {
+  const { user, loading, isElevated, canSwitchBranches, selectedBranch, hasModule } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -19,6 +19,10 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   }
 
   if (adminOnly && !isElevated) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requireModule && !hasModule(requireModule)) {
     return <Navigate to="/" replace />;
   }
 

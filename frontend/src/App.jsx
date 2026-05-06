@@ -265,13 +265,14 @@ function App() {
       <Route
         path="/notifications"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute>
             <Layout>
               <Notifications />
             </Layout>
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/security"
         element={

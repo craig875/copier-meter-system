@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 import {
   getNotifications,
   markRead,
@@ -10,7 +10,6 @@ import {
 const router = Router();
 
 router.use(authenticate);
-router.use(requireAdmin);
 
 router.get('/', getNotifications);
 router.get('/unread-count', getUnreadCount);

@@ -123,7 +123,7 @@ export const auditApi = {
   getHistory: (params = {}) => api.get('/audit', { params }).then(res => res.data),
 };
 
-// Notifications API (admin only)
+// Notifications API
 export const notificationsApi = {
   getAll: (params = {}) => api.get('/notifications', { params }).then(res => res.data),
   getUnreadCount: () => api.get('/notifications/unread-count').then(res => res.data),

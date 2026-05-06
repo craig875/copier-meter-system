@@ -92,15 +92,23 @@ export class MonitoringEngine {
     });
 
     const previousStatus = target.currentStatus;
-    if (previousStatus === 'up' || previousStatus === 'partial') {
-      if (effectiveStatus === 'down') {
+
+    // Down alert: once per outage only (no open outage yet). Avoids spam when status flaps partial↔down.
+    if ((previousStatus === 'up' || previousStatus === 'partial') && effectiveStatus === 'down') {
+      const openOutage = await this.repo.findOpenOutage(target.id);
+      if (!openOutage) {
         await this.repo.createOutageLog({
           targetId: target.id,
           startedAt: new Date(),
         });
         sendConnectivityAlert(target, 'down').catch(() => {});
       }
-    } else if ((previousStatus === 'down' || previousStatus === 'dns_failure') && (effectiveStatus === 'up' || effectiveStatus === 'partial')) {
+    } else if (
+      (previousStatus === 'down' || previousStatus === 'dns_failure' || previousStatus === 'partial') &&
+      effectiveStatus === 'up'
+    ) {
+      // Recovered: require full "up" (not partial/degraded) so brief flaky success does not
+      // close the outage and trigger another down cycle on the next failures.
       const openOutage = await this.repo.findOpenOutage(target.id);
       if (openOutage) {
         const endedAt = new Date();
@@ -135,11 +143,14 @@ export class MonitoringEngine {
 
     const previousStatus = target.currentStatus;
     if (previousStatus !== 'dns_failure' && previousStatus !== 'down') {
-      await this.repo.createOutageLog({
-        targetId: target.id,
-        startedAt: new Date(),
-      });
-      sendConnectivityAlert(target, 'dns_failure', { message: 'Hostname could not be resolved' }).catch(() => {});
+      const openOutage = await this.repo.findOpenOutage(target.id);
+      if (!openOutage) {
+        await this.repo.createOutageLog({
+          targetId: target.id,
+          startedAt: new Date(),
+        });
+        sendConnectivityAlert(target, 'dns_failure', { message: 'Hostname could not be resolved' }).catch(() => {});
+      }
     }
   }
 

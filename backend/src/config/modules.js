@@ -83,7 +83,7 @@ export function getAccessibleModules(userRole) {
     if (userRole === 'viewer') {
       return ['connectivity-monitoring'].includes(module.id);
     }
-    
+
     // Admins can access all modules
     if (userRole === 'admin') {
       return true;

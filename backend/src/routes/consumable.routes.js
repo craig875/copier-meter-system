@@ -29,6 +29,12 @@ import {
 const router = Router();
 
 router.use(authenticate);
+
+// Toner alerts are used in the meter-reading capture flow (capturers included),
+// but should not grant access to the full consumables module.
+router.get('/toner-alerts', requireMeterReadingAccess, getTonerAlerts);
+
+// Everything else in this router is the Consumables module (excludes capturers)
 router.use(requireConsumableAccess);
 
 // Model part CRUD (admin) - define before /model-parts to avoid :id capturing "all"
@@ -56,8 +62,5 @@ router.get('/machines/:machineId/history', getMachineHistory);
 
 // Summary view with filters
 router.get('/summary', validateQuery(consumableSummaryQuerySchema), getSummary);
-
-// Toner alerts by customer (for warning badges on customer tiles)
-router.get('/toner-alerts', getTonerAlerts);
 
 export default router;

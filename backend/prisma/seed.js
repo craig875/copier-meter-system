@@ -215,6 +215,7 @@ async function main() {
 
   console.log('Created historical readings for last month');
   console.log('(Add makes/models via Admin Tools → Machine Configuration)');
+
   console.log('Seeding completed!');
   console.log('\nTest credentials:');
   console.log('  Admin: admin@example.com / admin123');
