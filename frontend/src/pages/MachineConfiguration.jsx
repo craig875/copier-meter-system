@@ -448,13 +448,6 @@ const MachineConfiguration = () => {
         )}
 
         <div className="space-y-2">
-          {makesData?.linkedCatalog && makes.length > 0 && (
-            <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-amber-900 mb-2">
-              Showing makes linked to copiers on this site. Run{' '}
-              <code className="text-xs bg-white px-1 rounded">npm run db:repair-catalog</code>{' '}
-              on the server to sync the catalog for {effectiveBranch === 'CT' ? 'Cape Town' : 'Johannesburg'}.
-            </div>
-          )}
           {makes.length === 0 && makesData?.needsBranch && (
             <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-amber-900">
               Site not sent to the server. Use Switch branch to pick JHB or CT, then hard refresh (Ctrl+Shift+R).
