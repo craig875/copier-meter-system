@@ -37,6 +37,7 @@ api.interceptors.request.use((config) => {
   const site = resolveStoredAppSite();
   if (site) {
     config.params = { ...(config.params || {}), branch: config.params?.branch || site };
+    config.headers['X-App-Site'] = site;
   }
   return config;
 });

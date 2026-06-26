@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { MODULE_CONNECTIVITY } from '../constants/modules';
+import { clearCatalogQueries } from '../queryClient';
 
 const AuthContext = createContext(null);
 
@@ -145,6 +146,7 @@ export const AuthProvider = ({ children }) => {
     if (canSwitchBranches) {
       setSelectedBranch(branch);
       localStorage.setItem('selectedBranch', branch);
+      clearCatalogQueries();
     }
   };
 

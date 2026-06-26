@@ -1,20 +1,22 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
-import { resolveAppSite, assertMakeInSite } from '../utils/app-site.util.js';
+import { resolveAppSite, resolveAppSiteStrict, assertMakeInSite } from '../utils/app-site.util.js';
 
 export const getMakes = asyncHandler(async (req, res) => {
-  const site = resolveAppSite(req);
+  const site = resolveAppSiteStrict(req);
+  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const makes = await prisma.make.findMany({
     where: { branch: site },
     orderBy: { name: 'asc' },
     include: { models: { orderBy: { name: 'asc' } } },
   });
-  res.json({ makes });
+  res.json({ makes, site });
 });
 
 export const getModels = asyncHandler(async (req, res) => {
-  const site = resolveAppSite(req);
+  const site = resolveAppSiteStrict(req);
+  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const { makeId } = req.query;
   const where = {
     make: { branch: site },
@@ -25,7 +27,7 @@ export const getModels = asyncHandler(async (req, res) => {
     orderBy: { name: 'asc' },
     include: { make: true },
   });
-  res.json({ models });
+  res.json({ models, site });
 });
 
 export const createMake = asyncHandler(async (req, res) => {

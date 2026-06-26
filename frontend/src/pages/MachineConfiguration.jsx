@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { makesApi, modelsApi, consumablesApi } from '../services/api';
 import { trimLeading } from '../utils/string';
+import { filterCatalogBySite } from '../utils/catalog';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
@@ -41,13 +42,14 @@ const MachineConfiguration = () => {
     queryKey: ['makes', effectiveBranch],
     queryFn: () => makesApi.getAll(effectiveBranch),
     enabled: !!effectiveBranch,
+    staleTime: 0,
   });
   const { data: partsData } = useQuery({
     queryKey: ['model-parts-all', effectiveBranch],
     queryFn: () => consumablesApi.getModelPartsAll(effectiveBranch),
   });
 
-  const makes = makesData?.makes || [];
+  const makes = filterCatalogBySite(makesData?.makes, effectiveBranch);
   const allParts = partsData?.parts || [];
   const partsByModel = allParts.reduce((acc, p) => {
     const mid = p.modelId || p.model?.id;
@@ -81,7 +83,7 @@ const MachineConfiguration = () => {
       toast.success('Make added');
       setShowMakeForm(false);
       setMakeForm({ name: '' });
-      queryClient.invalidateQueries(['makes']);
+      queryClient.invalidateQueries({ queryKey: ['makes', effectiveBranch] });
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
