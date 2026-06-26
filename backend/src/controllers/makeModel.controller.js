@@ -2,7 +2,6 @@ import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
 import { resolveAppSiteForWrite, resolveAppSiteForRead, assertMakeInSite } from '../utils/app-site.util.js';
-import { findMakesLinkedToSiteMachines } from '../utils/catalog-query.util.js';
 import { dedupeMakesCatalog } from '../utils/catalog-dedupe.util.js';
 
 export const getMakes = asyncHandler(async (req, res) => {
@@ -11,30 +10,20 @@ export const getMakes = asyncHandler(async (req, res) => {
     return res.json({ makes: [], site: null, needsBranch: true });
   }
 
-  let makes = await prisma.make.findMany({
+  const makes = await prisma.make.findMany({
     where: { branch: site },
     orderBy: { name: 'asc' },
     include: { models: { orderBy: { name: 'asc' } } },
   });
 
-  let linkedCatalog = false;
-  if (makes.length === 0) {
-    const linked = await findMakesLinkedToSiteMachines(site);
-    if (linked.length > 0) {
-      makes = linked;
-      linkedCatalog = true;
-    }
-  }
-
   res.json({
     makes: dedupeMakesCatalog(
       makes.map((m) => ({
         ...m,
-        branch: linkedCatalog ? site : (m.branch === 'CT' ? 'CT' : 'JHB'),
+        branch: m.branch === 'CT' ? 'CT' : 'JHB',
       }))
     ),
     site,
-    ...(linkedCatalog ? { linkedCatalog: true } : {}),
   });
 });
 

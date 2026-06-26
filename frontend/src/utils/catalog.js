@@ -36,13 +36,9 @@ export function catalogMakesFromApi(apiResult, site) {
   if (apiResult?.needsBranch) return [];
   const rows = apiResult?.makes;
   if (!Array.isArray(rows)) return [];
-  let result = rows;
-  if (apiResult?.linkedCatalog) result = rows;
-  else if (!site) result = rows;
-  else if (apiResult?.site === site) result = rows;
-  else if (apiResult?.site == null) result = rows;
-  else result = [];
-  return dedupeMakesCatalog(result);
+  if (!site) return dedupeMakesCatalog(rows);
+  if (apiResult?.site && apiResult.site !== site) return [];
+  return dedupeMakesCatalog(rows.filter((m) => !m.branch || m.branch === site));
 }
 
 export function filterCatalogBySite(items, site) {
