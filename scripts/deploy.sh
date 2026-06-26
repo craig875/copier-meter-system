@@ -31,6 +31,7 @@ echo "==> Backend (install + migrate)"
   cd "$ROOT/backend"
   npm ci --omit=dev
   npx prisma migrate deploy
+  npm run db:repair-catalog || echo "WARN: catalog repair skipped or failed (non-fatal)"
 )
 
 echo "==> Frontend (build)"

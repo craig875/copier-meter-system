@@ -452,6 +452,13 @@ const MachineConfiguration = () => {
               Site not sent to the server. Use Switch branch to pick JHB or CT, then hard refresh (Ctrl+Shift+R).
             </div>
           )}
+          {makes.length === 0 && !makesData?.needsBranch && effectiveBranch === 'CT' && (
+            <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-amber-900 mb-2">
+              Cape Town catalog is empty. On the server run{' '}
+              <code className="text-xs bg-white px-1 rounded">npm run db:repair-catalog</code>{' '}
+              in the backend folder to copy JHB configuration to CT.
+            </div>
+          )}
           {makes.length === 0 && !makesData?.needsBranch && (
             <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-500">
               No makes configured for {effectiveBranch === 'CT' ? 'Cape Town' : 'Johannesburg'} yet.
