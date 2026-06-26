@@ -55,49 +55,72 @@ FROM (
 WHERE pr."model_part_id" = sub."dup_id";
 
 DELETE FROM "model_parts" dup
-USING "model_parts" keep
-WHERE dup."model_id" = keep."model_id"
-  AND dup."branch" = keep."branch"
-  AND dup."part_name" = keep."part_name"
-  AND dup."id" > keep."id";
+WHERE EXISTS (
+  SELECT 1
+  FROM "model_parts" keep
+  WHERE dup."model_id" = keep."model_id"
+    AND dup."branch" = keep."branch"
+    AND dup."part_name" = keep."part_name"
+    AND dup."id" > keep."id"
+);
 
 -- Remove duplicate CT model rows (JHB twin already exists)
 DELETE FROM "part_replacements" pr
-USING "model_parts" mp
-JOIN "models" ct_mod ON mp."model_id" = ct_mod."id"
-JOIN "makes" ct_make ON ct_mod."make_id" = ct_make."id" AND ct_make."branch" = 'CT'
-JOIN "makes" jhb_make ON jhb_make."name" = ct_make."name" AND jhb_make."branch" = 'JHB'
-JOIN "models" jhb_mod ON jhb_mod."make_id" = jhb_make."id" AND jhb_mod."name" = ct_mod."name"
-WHERE pr."model_part_id" = mp."id";
+WHERE EXISTS (
+  SELECT 1
+  FROM "model_parts" mp
+  JOIN "models" ct_mod ON mp."model_id" = ct_mod."id"
+  JOIN "makes" ct_make ON ct_mod."make_id" = ct_make."id" AND ct_make."branch" = 'CT'
+  JOIN "makes" jhb_make ON jhb_make."name" = ct_make."name" AND jhb_make."branch" = 'JHB'
+  JOIN "models" jhb_mod ON jhb_mod."make_id" = jhb_make."id" AND jhb_mod."name" = ct_mod."name"
+  WHERE pr."model_part_id" = mp."id"
+);
 
 DELETE FROM "model_parts" mp
-USING "models" ct_mod
-JOIN "makes" ct_make ON ct_mod."make_id" = ct_make."id" AND ct_make."branch" = 'CT'
-JOIN "makes" jhb_make ON jhb_make."name" = ct_make."name" AND jhb_make."branch" = 'JHB'
-JOIN "models" jhb_mod ON jhb_mod."make_id" = jhb_make."id" AND jhb_mod."name" = ct_mod."name"
-WHERE mp."model_id" = ct_mod."id";
+WHERE EXISTS (
+  SELECT 1
+  FROM "models" ct_mod
+  JOIN "makes" ct_make ON ct_mod."make_id" = ct_make."id" AND ct_make."branch" = 'CT'
+  JOIN "makes" jhb_make ON jhb_make."name" = ct_make."name" AND jhb_make."branch" = 'JHB'
+  JOIN "models" jhb_mod ON jhb_mod."make_id" = jhb_make."id" AND jhb_mod."name" = ct_mod."name"
+  WHERE mp."model_id" = ct_mod."id"
+);
 
 DELETE FROM "models" ct_mod
-USING "makes" ct_make
-JOIN "makes" jhb_make ON jhb_make."name" = ct_make."name" AND jhb_make."branch" = 'JHB'
-JOIN "models" jhb_mod ON jhb_mod."make_id" = jhb_make."id" AND jhb_mod."name" = ct_mod."name"
-WHERE ct_mod."make_id" = ct_make."id" AND ct_make."branch" = 'CT';
+WHERE EXISTS (
+  SELECT 1
+  FROM "makes" ct_make
+  JOIN "makes" jhb_make ON jhb_make."name" = ct_make."name" AND jhb_make."branch" = 'JHB'
+  JOIN "models" jhb_mod ON jhb_mod."make_id" = jhb_make."id" AND jhb_mod."name" = ct_mod."name"
+  WHERE ct_mod."make_id" = ct_make."id"
+    AND ct_make."branch" = 'CT'
+);
 
 -- Drop any remaining CT make rows
 DELETE FROM "part_replacements" pr
-USING "model_parts" mp
-JOIN "models" m ON mp."model_id" = m."id"
-JOIN "makes" ct ON m."make_id" = ct."id" AND ct."branch" = 'CT'
-WHERE pr."model_part_id" = mp."id";
+WHERE EXISTS (
+  SELECT 1
+  FROM "model_parts" mp
+  JOIN "models" m ON mp."model_id" = m."id"
+  JOIN "makes" ct ON m."make_id" = ct."id" AND ct."branch" = 'CT'
+  WHERE pr."model_part_id" = mp."id"
+);
 
 DELETE FROM "model_parts" mp
-USING "models" m
-JOIN "makes" ct ON m."make_id" = ct."id" AND ct."branch" = 'CT'
-WHERE mp."model_id" = m."id";
+WHERE EXISTS (
+  SELECT 1
+  FROM "models" m
+  JOIN "makes" ct ON m."make_id" = ct."id" AND ct."branch" = 'CT'
+  WHERE mp."model_id" = m."id"
+);
 
 DELETE FROM "models" m
-USING "makes" ct
-WHERE m."make_id" = ct."id" AND ct."branch" = 'CT';
+WHERE EXISTS (
+  SELECT 1
+  FROM "makes" ct
+  WHERE m."make_id" = ct."id"
+    AND ct."branch" = 'CT'
+);
 
 DELETE FROM "makes" WHERE "branch" = 'CT';
 
