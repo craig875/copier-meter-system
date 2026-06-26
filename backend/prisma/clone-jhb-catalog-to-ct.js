@@ -1,39 +1,29 @@
 /**
  * Restore / rebuild the CT (Cape Town) machine configuration catalog from JHB.
  *
- * Use when CT site looks empty after site-scoping migration: catalog rows may still
- * exist under branch=JHB only. This clones missing CT makes/models and CT parts,
- * then remaps CT machines to the CT model copies.
+ * WARNING: Clones ALL JHB makes to CT. For ongoing use prefer:
+ *   npm run db:repair-catalog   (selective — only CT machines/parts in use)
  *
- * Does NOT delete JHB catalog. Does NOT touch machines/readings/customers beyond model_id remap.
- *
- * Run on server (production DB):
- *   cd backend && node prisma/clone-jhb-catalog-to-ct.js
- *
- * Dry run:
- *   node prisma/clone-jhb-catalog-to-ct.js --dry-run
+ * One-time baseline only:
+ *   node prisma/clone-jhb-catalog-to-ct.js
+ *   node prisma/clone-jhb-catalog-to-ct.js --full
  */
 
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import { loadJhbMakesWithCatalog, shouldEnsureCtMake } from './catalog-clone.util.js';
 
 const prisma = new PrismaClient();
 const dryRun = process.argv.includes('--dry-run');
+const fullBaseline = !process.argv.includes('--selective');
 
 async function main() {
   console.log(dryRun ? 'DRY RUN — no writes\n' : 'Cloning JHB catalog to CT...\n');
+  if (fullBaseline) {
+    console.warn('WARNING: cloning ALL JHB makes to CT. Pass --selective for in-use catalog only.\n');
+  }
 
-  const jhbMakes = await prisma.make.findMany({
-    where: { branch: 'JHB' },
-    include: {
-      models: {
-        include: {
-          modelParts: true,
-        },
-      },
-    },
-    orderBy: { name: 'asc' },
-  });
+  const jhbMakes = await loadJhbMakesWithCatalog(prisma);
 
   const ctBefore = await prisma.make.count({ where: { branch: 'CT' } });
   console.log(`JHB makes: ${jhbMakes.length}, CT makes before: ${ctBefore}`);
@@ -44,6 +34,9 @@ async function main() {
   let machinesRemapped = 0;
 
   for (const jhbMake of jhbMakes) {
+    const ensure = await shouldEnsureCtMake(prisma, jhbMake, { fullBaseline });
+    if (!ensure) continue;
+
     let ctMake = await prisma.make.findUnique({
       where: { name_branch: { name: jhbMake.name, branch: 'CT' } },
     });
