@@ -113,12 +113,16 @@ export const usersApi = {
 // Machines API
 export const machinesApi = {
   getAll: (params) => {
-    // Remove null/undefined/empty branch from params
     const cleanParams = { ...params };
     if (cleanParams.branch === null || cleanParams.branch === undefined || cleanParams.branch === '') {
       delete cleanParams.branch;
     }
-    return api.get('/machines', { params: cleanParams }).then(res => res.data);
+    const branch = cleanParams.branch;
+    const url =
+      branch === 'JHB' || branch === 'CT'
+        ? `/machines?branch=${encodeURIComponent(branch)}`
+        : '/machines';
+    return api.get(url, { params: cleanParams }).then(res => res.data);
   },
   getOne: (id) => api.get(`/machines/${id}`),
   create: (data, branch = null) => {
@@ -212,7 +216,9 @@ export const makesApi = {
     if (branch !== 'JHB' && branch !== 'CT') {
       return Promise.resolve({ makes: [], site: null, needsBranch: true });
     }
-    return api.get('/makes', { params: makesModelsBranchParams(branch) }).then((r) => r.data);
+    return api
+      .get(`/makes?branch=${encodeURIComponent(branch)}`, { params: makesModelsBranchParams(branch) })
+      .then((r) => r.data);
   },
   create: (data, branch) => {
     if (branch !== 'JHB' && branch !== 'CT') {

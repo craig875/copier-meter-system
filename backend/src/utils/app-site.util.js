@@ -8,6 +8,11 @@ export function readRequestedSite(req) {
   if (Array.isArray(raw)) {
     raw = raw.find((v) => v != null && v !== '') ?? raw[0];
   }
+  if (raw == null || raw === '' || raw === 'null' || raw === 'undefined') {
+    const url = req.originalUrl || req.url || '';
+    const match = url.match(/[?&]branch=(JHB|CT)\b/i);
+    if (match) raw = match[1];
+  }
   if (raw == null || raw === '' || raw === 'null' || raw === 'undefined') return null;
   const upper = String(raw).toUpperCase();
   return VALID.has(upper) ? upper : null;

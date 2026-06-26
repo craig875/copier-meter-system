@@ -67,6 +67,16 @@ Two options: **push to `main`** (GitHub Actions SSHs in and runs the script), or
 
 You can also run the workflow manually: **Actions → Deploy to server → Run workflow**.
 
+### Repair catalog without SSH password
+
+If you lost SSH login credentials but **DEPLOY_SSH_KEY** is set in GitHub Actions secrets, use:
+
+**Actions → Repair catalog → Run workflow**
+
+Choose **selective** (normal), **dry-run** (preview only), or **full** (one-time baseline — clones all JHB makes to CT).
+
+This uses the same deploy key as **Deploy to server**; you do not need to copy the key from GitHub (secrets cannot be viewed after saving).
+
 ## Troubleshooting “deploy failed”
 
 Open the failed job in **GitHub Actions** and read the **Deploy via SSH** log (the server prints `==>` lines from `deploy.sh`). Typical causes:

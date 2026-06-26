@@ -1,0 +1,72 @@
+# Run catalog repair on the server using the same SSH secrets as deploy.yml:
+#   DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY
+# Optional: DEPLOY_PATH (default /var/www/copier-meter-system)
+#
+# GitHub → Actions → Repair catalog → Run workflow
+
+name: Repair catalog
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Repair mode
+        required: true
+        default: selective
+        type: choice
+        options:
+          - selective
+          - dry-run
+          - full
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+    steps:
+      - name: Check deploy secrets are set
+        run: |
+          e=0
+          if [ -z "$DEPLOY_HOST" ]; then echo "::error::Repository secret DEPLOY_HOST is missing or empty"; e=1; fi
+          if [ -z "$DEPLOY_USER" ]; then echo "::error::Repository secret DEPLOY_USER is missing or empty"; e=1; fi
+          if [ -z "$DEPLOY_SSH_KEY" ]; then echo "::error::Repository secret DEPLOY_SSH_KEY is missing or empty"; e=1; fi
+          exit "$e"
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Repair catalog via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: DEPLOY_PATH
+          command_timeout: 30m
+          script_stop: true
+          script: |
+            set -e
+            REPO="${DEPLOY_PATH:-/var/www/copier-meter-system}"
+            MODE="${{ github.event.inputs.mode }}"
+            echo "==> Repair catalog: REPO=$REPO MODE=$MODE"
+            cd "$REPO"
+            git fetch origin
+            git checkout main 2>/dev/null || git checkout -b main origin/main
+            git reset --hard origin/main
+            cd backend
+            npm ci --omit=dev
+            case "$MODE" in
+              dry-run)
+                node prisma/repair-site-catalog.js --dry-run
+                ;;
+              full)
+                echo "WARNING: full mode clones ALL JHB makes to CT"
+                node prisma/repair-site-catalog.js --full
+                ;;
+              *)
+                npm run db:repair-catalog
+                ;;
+            esac
+            echo "==> Repair finished"

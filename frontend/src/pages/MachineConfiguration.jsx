@@ -21,7 +21,7 @@ import MeterBlocks from '../components/MeterBlocks';
 
 const MachineConfiguration = () => {
   const queryClient = useQueryClient();
-  const { effectiveBranch } = useAuth();
+  const { effectiveBranch, loading: authLoading } = useAuth();
   const [expandedMakes, setExpandedMakes] = useState(new Set());
   const [expandedModels, setExpandedModels] = useState(new Set());
   const [editingMake, setEditingMake] = useState(null);
@@ -41,7 +41,7 @@ const MachineConfiguration = () => {
   const { data: makesData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['makes', effectiveBranch],
     queryFn: () => makesApi.getAll(effectiveBranch),
-    enabled: !!effectiveBranch,
+    enabled: !authLoading && !!effectiveBranch,
     staleTime: 0,
     refetchOnMount: 'always',
   });
@@ -286,7 +286,7 @@ const MachineConfiguration = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
@@ -448,6 +448,13 @@ const MachineConfiguration = () => {
         )}
 
         <div className="space-y-2">
+          {makesData?.linkedCatalog && makes.length > 0 && (
+            <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-amber-900 mb-2">
+              Showing makes linked to copiers on this site. Run{' '}
+              <code className="text-xs bg-white px-1 rounded">npm run db:repair-catalog</code>{' '}
+              on the server to sync the catalog for {effectiveBranch === 'CT' ? 'Cape Town' : 'Johannesburg'}.
+            </div>
+          )}
           {makes.length === 0 && makesData?.needsBranch && (
             <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-amber-900">
               Site not sent to the server. Use Switch branch to pick JHB or CT, then hard refresh (Ctrl+Shift+R).
