@@ -54,7 +54,7 @@ const MachineConfiguration = () => {
   const makes = catalogMakesFromApi(makesData, effectiveBranch);
 
   const invalidateMakes = () => {
-    queryClient.invalidateQueries({ queryKey: ['makes', effectiveBranch] });
+    queryClient.invalidateQueries({ queryKey: ['makes'] });
   };
   const invalidateParts = () => {
     queryClient.invalidateQueries({ queryKey: ['model-parts-all', effectiveBranch] });

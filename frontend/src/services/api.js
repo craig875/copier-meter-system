@@ -224,26 +224,46 @@ export const makesApi = {
     if (branch !== 'JHB' && branch !== 'CT') {
       return Promise.reject(new Error('Branch (JHB or CT) is required'));
     }
-    return api.post('/makes', { ...data, branch }, { params: { branch } }).then((r) => r.data);
+    const q = encodeURIComponent(branch);
+    return api.post(`/makes?branch=${q}`, { ...data, branch }, { params: { branch } }).then((r) => r.data);
   },
-  update: (id, data, branch) => api.put(`/makes/${id}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
-  delete: (id, branch) => api.delete(`/makes/${id}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
+  update: (id, data, branch) => {
+    const q = branch === 'JHB' || branch === 'CT' ? `?branch=${encodeURIComponent(branch)}` : '';
+    return api.put(`/makes/${id}${q}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data);
+  },
+  delete: (id, branch) => {
+    const q = branch === 'JHB' || branch === 'CT' ? `?branch=${encodeURIComponent(branch)}` : '';
+    return api.delete(`/makes/${id}${q}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data);
+  },
   import: (data, branch) => api.post('/makes/import', { data, branch }).then((r) => r.data),
 };
 export const modelsApi = {
   getAll: (makeId = null, branch = null) => {
     const params = { ...makesModelsBranchParams(branch) };
     if (makeId) params.makeId = makeId;
-    return api.get('/models', { params }).then((r) => r.data);
+    const q =
+      branch === 'JHB' || branch === 'CT'
+        ? `?branch=${encodeURIComponent(branch)}${makeId ? `&makeId=${encodeURIComponent(makeId)}` : ''}`
+        : makeId
+          ? `?makeId=${encodeURIComponent(makeId)}`
+          : '';
+    return api.get(`/models${q}`, { params }).then((r) => r.data);
   },
   create: (data, branch) => {
     if (branch !== 'JHB' && branch !== 'CT') {
       return Promise.reject(new Error('Branch (JHB or CT) is required'));
     }
-    return api.post('/models', { ...data, branch }, { params: { branch } }).then((r) => r.data);
+    const q = encodeURIComponent(branch);
+    return api.post(`/models?branch=${q}`, { ...data, branch }, { params: { branch } }).then((r) => r.data);
   },
-  update: (id, data, branch) => api.put(`/models/${id}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
-  delete: (id, branch) => api.delete(`/models/${id}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
+  update: (id, data, branch) => {
+    const q = branch === 'JHB' || branch === 'CT' ? `?branch=${encodeURIComponent(branch)}` : '';
+    return api.put(`/models/${id}${q}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data);
+  },
+  delete: (id, branch) => {
+    const q = branch === 'JHB' || branch === 'CT' ? `?branch=${encodeURIComponent(branch)}` : '';
+    return api.delete(`/models/${id}${q}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data);
+  },
 };
 
 // Connectivity Monitoring API (branch must match the user's selected / effective branch)
