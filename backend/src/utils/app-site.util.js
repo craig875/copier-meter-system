@@ -20,7 +20,7 @@ export function resolveAppSite(req) {
 
   if (canSwitch) {
     const site = normalize(requested || userBranch);
-    return site || 'JHB';
+    return site;
   }
   return normalize(userBranch) || 'JHB';
 }

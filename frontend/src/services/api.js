@@ -45,6 +45,16 @@ api.interceptors.request.use((config) => {
     const site = resolveStoredAppSite();
     if (site) {
       config.params = { ...(config.params || {}), branch: config.params?.branch || site };
+      const method = (config.method || 'get').toLowerCase();
+      if (
+        method === 'post'
+        && config.data
+        && typeof config.data === 'object'
+        && !(config.data instanceof FormData)
+        && config.data.branch == null
+      ) {
+        config.data = { ...config.data, branch: config.params.branch || site };
+      }
     }
   }
   return config;

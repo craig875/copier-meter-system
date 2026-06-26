@@ -1,39 +1,16 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
-import { resolveAppSite, assertMakeInSite } from '../utils/app-site.util.js';
+import { resolveAppSiteStrict, assertMakeInSite } from '../utils/app-site.util.js';
 
 export const getMakes = asyncHandler(async (req, res) => {
-  const site = resolveAppSite(req);
-  const includeModels = { models: { orderBy: { name: 'asc' } } };
-
-  let makes = await prisma.make.findMany({
+  const site = resolveAppSiteStrict(req);
+  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
+  const makes = await prisma.make.findMany({
     where: { branch: site },
     orderBy: { name: 'asc' },
-    include: includeModels,
+    include: { models: { orderBy: { name: 'asc' } } },
   });
-
-  // Recovery: site catalog empty but machines on this site still reference models
-  if (makes.length === 0) {
-    const siteMachines = await prisma.machine.findMany({
-      where: { branch: site, modelId: { not: null } },
-      select: { modelId: true },
-    });
-    const modelIds = [...new Set(siteMachines.map((m) => m.modelId).filter(Boolean))];
-    if (modelIds.length > 0) {
-      makes = await prisma.make.findMany({
-        where: { models: { some: { id: { in: modelIds } } } },
-        orderBy: { name: 'asc' },
-        include: {
-          models: {
-            where: { id: { in: modelIds } },
-            orderBy: { name: 'asc' },
-          },
-        },
-      });
-    }
-  }
-
   res.json({
     makes: makes.map((m) => ({ ...m, branch: m.branch ?? site })),
     site,
@@ -41,7 +18,8 @@ export const getMakes = asyncHandler(async (req, res) => {
 });
 
 export const getModels = asyncHandler(async (req, res) => {
-  const site = resolveAppSite(req);
+  const site = resolveAppSiteStrict(req);
+  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const { makeId } = req.query;
   const where = {
     make: { branch: site },
@@ -56,7 +34,8 @@ export const getModels = asyncHandler(async (req, res) => {
 });
 
 export const createMake = asyncHandler(async (req, res) => {
-  const site = resolveAppSite(req);
+  const site = resolveAppSiteStrict(req);
+  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const name = req.body.name.trim();
   const existing = await prisma.make.findUnique({
     where: { name_branch: { name, branch: site } },
@@ -67,7 +46,8 @@ export const createMake = asyncHandler(async (req, res) => {
 });
 
 export const updateMake = asyncHandler(async (req, res) => {
-  const site = resolveAppSite(req);
+  const site = resolveAppSiteStrict(req);
+  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const make = await prisma.make.findUnique({ where: { id: req.params.id } });
   if (!make) throw new NotFoundError('Make');
   assertMakeInSite(make, site);
@@ -85,7 +65,8 @@ export const updateMake = asyncHandler(async (req, res) => {
 });
 
 export const deleteMake = asyncHandler(async (req, res) => {
-  const site = resolveAppSite(req);
+  const site = resolveAppSiteStrict(req);
+  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const make = await prisma.make.findUnique({
     where: { id: req.params.id },
     include: {
@@ -116,7 +97,8 @@ export const deleteMake = asyncHandler(async (req, res) => {
 });
 
 export const createModel = asyncHandler(async (req, res) => {
-  const site = resolveAppSite(req);
+  const site = resolveAppSiteStrict(req);
+  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const make = await prisma.make.findUnique({ where: { id: req.body.makeId } });
   if (!make) throw new NotFoundError('Make');
   assertMakeInSite(make, site);
@@ -138,7 +120,8 @@ export const createModel = asyncHandler(async (req, res) => {
 });
 
 export const updateModel = asyncHandler(async (req, res) => {
-  const site = resolveAppSite(req);
+  const site = resolveAppSiteStrict(req);
+  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const model = await prisma.model.findUnique({
     where: { id: req.params.id },
     include: { make: true },
@@ -175,7 +158,8 @@ export const updateModel = asyncHandler(async (req, res) => {
 });
 
 export const deleteModel = asyncHandler(async (req, res) => {
-  const site = resolveAppSite(req);
+  const site = resolveAppSiteStrict(req);
+  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const model = await prisma.model.findUnique({
     where: { id: req.params.id },
     include: {
