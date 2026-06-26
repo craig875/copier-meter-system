@@ -42,8 +42,26 @@ export const AuthProvider = ({ children }) => {
             setSelectedBranch(storedBranch || userData.branch || null);
           }
         } catch (error) {
-          sessionStorage.removeItem('token');
-          sessionStorage.removeItem('user');
+          if (error.response?.status === 401) {
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+          } else {
+            // Rate limit / network blip — keep session and restore cached user
+            try {
+              const cached = JSON.parse(storedUser);
+              setUser({ ...cached, twoFactorEnabled: cached.twoFactorEnabled ?? false });
+              if (
+                cached.role === 'admin' ||
+                cached.role === 'manager' ||
+                ((cached.role === 'meter_user' || cached.role === 'capturer') && !cached.branch)
+              ) {
+                const storedBranch = localStorage.getItem('selectedBranch');
+                setSelectedBranch(storedBranch || cached.branch || null);
+              }
+            } catch {
+              // invalid cached user JSON — leave logged out
+            }
+          }
         }
       }
       setLoading(false);
