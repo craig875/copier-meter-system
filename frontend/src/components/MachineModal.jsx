@@ -33,16 +33,18 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
   });
 
   const { data: makesData } = useQuery({
-    queryKey: ['makes'],
-    queryFn: () => makesApi.getAll(),
+    queryKey: ['makes', effectiveBranch],
+    queryFn: () => makesApi.getAll(effectiveBranch),
+    enabled: !!effectiveBranch,
   });
   const { data: customersData } = useQuery({
     queryKey: ['customers', effectiveBranch],
     queryFn: () => customersApi.getAll(effectiveBranch),
   });
   const { data: modelsData } = useQuery({
-    queryKey: ['models', formData.makeId],
-    queryFn: () => modelsApi.getAll(formData.makeId || null),
+    queryKey: ['models', formData.makeId, effectiveBranch],
+    queryFn: () => modelsApi.getAll(formData.makeId || null, effectiveBranch),
+    enabled: !!effectiveBranch,
   });
   const makes = makesData?.makes || [];
   const models = modelsData?.models || [];

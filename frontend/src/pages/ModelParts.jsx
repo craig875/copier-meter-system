@@ -76,10 +76,15 @@ const ModelParts = () => {
     });
   };
 
-  const { data: makesData } = useQuery({ queryKey: ['makes'], queryFn: () => makesApi.getAll() });
+  const { data: makesData } = useQuery({
+    queryKey: ['makes', effectiveBranch],
+    queryFn: () => makesApi.getAll(effectiveBranch),
+    enabled: !!effectiveBranch,
+  });
   const { data: modelsData } = useQuery({
-    queryKey: ['models', form.makeId],
-    queryFn: () => modelsApi.getAll(form.makeId || null),
+    queryKey: ['models', form.makeId, effectiveBranch],
+    queryFn: () => modelsApi.getAll(form.makeId || null, effectiveBranch),
+    enabled: !!effectiveBranch,
   });
   const makes = makesData?.makes || [];
   const models = modelsData?.models || [];

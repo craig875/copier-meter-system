@@ -2,6 +2,7 @@ import { services } from '../services/index.js';
 import { ImportService } from '../services/import.service.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { hasAdminAccess } from '../utils/permissions.js';
+import { resolveAppSite } from '../utils/app-site.util.js';
 
 /**
  * Import Controller - HTTP request/response handling for imports
@@ -64,17 +65,17 @@ export class ImportController {
   });
 
   importMakeModelParts = asyncHandler(async (req, res) => {
-    const { data, branch } = req.body;
-    const partBranch = branch || req.user?.branch || 'JHB';
+    const { data } = req.body;
+    const catalogSite = resolveAppSite(req);
 
     if (!data || !Array.isArray(data) || data.length === 0) {
       return res.status(400).json({ error: 'Import data array is required' });
     }
 
     const userId = req.user.id;
-    const result = await this.importService.importMakeModelParts(data, partBranch);
+    const result = await this.importService.importMakeModelParts(data, catalogSite);
     this.auditService.log(userId, 'make_model_part_import', 'import', null, {
-      branch: partBranch,
+      branch: catalogSite,
       makesCreated: result.results?.makesCreated,
       modelsCreated: result.results?.modelsCreated,
       partsCreated: result.results?.partsCreated,

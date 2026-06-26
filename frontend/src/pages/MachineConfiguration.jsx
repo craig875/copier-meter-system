@@ -38,8 +38,9 @@ const MachineConfiguration = () => {
   const [importErrors, setImportErrors] = useState([]);
 
   const { data: makesData, isLoading } = useQuery({
-    queryKey: ['makes'],
-    queryFn: () => makesApi.getAll(),
+    queryKey: ['makes', effectiveBranch],
+    queryFn: () => makesApi.getAll(effectiveBranch),
+    enabled: !!effectiveBranch,
   });
   const { data: partsData } = useQuery({
     queryKey: ['model-parts-all', effectiveBranch],
@@ -75,7 +76,7 @@ const MachineConfiguration = () => {
   };
 
   const createMake = useMutation({
-    mutationFn: makesApi.create,
+    mutationFn: (data) => makesApi.create(data, effectiveBranch),
     onSuccess: () => {
       toast.success('Make added');
       setShowMakeForm(false);
@@ -86,7 +87,7 @@ const MachineConfiguration = () => {
   });
 
   const updateMake = useMutation({
-    mutationFn: ({ id, data }) => makesApi.update(id, data),
+    mutationFn: ({ id, data }) => makesApi.update(id, data, effectiveBranch),
     onSuccess: () => {
       toast.success('Make updated');
       setEditingMake(null);
@@ -96,7 +97,7 @@ const MachineConfiguration = () => {
   });
 
   const deleteMake = useMutation({
-    mutationFn: makesApi.delete,
+    mutationFn: (id) => makesApi.delete(id, effectiveBranch),
     onSuccess: () => {
       toast.success('Make deleted');
       queryClient.invalidateQueries(['makes']);
@@ -106,7 +107,7 @@ const MachineConfiguration = () => {
   });
 
   const createModel = useMutation({
-    mutationFn: modelsApi.create,
+    mutationFn: (data) => modelsApi.create(data, effectiveBranch),
     onSuccess: () => {
       toast.success('Model added');
       setShowModelForm(null);
@@ -117,7 +118,7 @@ const MachineConfiguration = () => {
   });
 
   const updateModel = useMutation({
-    mutationFn: ({ id, data }) => modelsApi.update(id, data),
+    mutationFn: ({ id, data }) => modelsApi.update(id, data, effectiveBranch),
     onSuccess: () => {
       toast.success('Model updated');
       setEditingModel(null);
@@ -128,7 +129,7 @@ const MachineConfiguration = () => {
   });
 
   const deleteModel = useMutation({
-    mutationFn: modelsApi.delete,
+    mutationFn: (id) => modelsApi.delete(id, effectiveBranch),
     onSuccess: () => {
       toast.success('Model deleted');
       queryClient.invalidateQueries(['makes']);
@@ -262,7 +263,7 @@ const MachineConfiguration = () => {
   };
 
   const downloadTemplate = () => {
-    const headers = 'make,model,paper_size,model_type,machine_life,part_name,item_code,part_type,toner_color,expected_yield,cost_rand,meter_type';
+    const headers = 'make,model,paper_size,model_type,machine_life,part_name,item_code,part_type,toner_color,expected_yield,cost_rand,meter_type,branch';
     const example = 'Canon,iR-ADV C5535,A4,colour,,Drum Unit,DR-101,general,,50000,1500,mono\nCanon,iR-ADV C5535,A4,colour,,Cyan Toner,CT-C,toner,cyan,15000,800,colour';
     const csv = `${headers}\n${example}`;
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -373,6 +374,12 @@ const MachineConfiguration = () => {
       {/* Main config: refined accordion */}
       <div data-tour="machine-config-makes" className="liquid-glass rounded-xl p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Machine Configuration</h1>
+        {effectiveBranch && (
+          <p className="text-sm text-gray-500 mb-4">
+            Site: <span className="font-medium text-gray-700">{effectiveBranch === 'CT' ? 'Cape Town (CT)' : 'Johannesburg (JHB)'}</span>
+            {' '}— makes and models are separate per site
+          </p>
+        )}
         <p className="text-gray-500 mb-6">
           Configure machine makes, models, and consumable parts. Client-level machines are assigned a make and model in <strong>Meter Readings → Machines</strong>.
         </p>
