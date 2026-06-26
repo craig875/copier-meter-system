@@ -4,17 +4,12 @@ import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.j
 import { resolveCatalogWriteSite, resolveAppSiteForRead, assertMakeInSite } from '../utils/app-site.util.js';
 import { dedupeMakesCatalog } from '../utils/catalog-dedupe.util.js';
 import { deleteModelCatalog } from '../../prisma/catalog-delete.util.js';
-import { pruneUnusedCtMirror, pruneAllStaleCtMirrors } from '../../prisma/catalog-prune.util.js';
+import { pruneUnusedCtMirror } from '../../prisma/catalog-prune.util.js';
 
 export const getMakes = asyncHandler(async (req, res) => {
   const site = resolveAppSiteForRead(req);
   if (!site) {
     return res.json({ makes: [], site: null, needsBranch: true });
-  }
-
-  let prunedCt = [];
-  if (site === 'CT') {
-    prunedCt = await pruneAllStaleCtMirrors(prisma);
   }
 
   const makes = await prisma.make.findMany({
@@ -31,7 +26,6 @@ export const getMakes = asyncHandler(async (req, res) => {
       }))
     ),
     site,
-    ...(prunedCt.length > 0 ? { prunedCtMirrors: prunedCt } : {}),
   });
 });
 
