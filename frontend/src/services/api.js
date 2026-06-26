@@ -28,16 +28,24 @@ function resolveStoredAppSite() {
   return null;
 }
 
-// Add auth token and app site to requests (sessionStorage = logout when tab closes)
+/** Routes that must not receive site query params or custom headers (avoids CORS preflight on login). */
+function isAuthRequest(url = '') {
+  return url.includes('/auth/login')
+    || url.includes('/auth/verify-2fa')
+    || url.includes('/auth/me');
+}
+
+// Add auth token; attach site scope only on data API calls (not login/session)
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  const site = resolveStoredAppSite();
-  if (site) {
-    config.params = { ...(config.params || {}), branch: config.params?.branch || site };
-    config.headers['X-App-Site'] = site;
+  if (!isAuthRequest(config.url)) {
+    const site = resolveStoredAppSite();
+    if (site) {
+      config.params = { ...(config.params || {}), branch: config.params?.branch || site };
+    }
   }
   return config;
 });
@@ -49,7 +57,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const isAuthStep = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/verify-2fa');
-      if (!isAuthStep) {
+      const onLoginPage = window.location.pathname === '/login';
+      if (!isAuthStep && !onLoginPage) {
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('user');
         window.location.href = '/login';

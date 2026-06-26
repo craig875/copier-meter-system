@@ -42,12 +42,17 @@ app.use(cors({
       },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-App-Site'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 204,
 }));
 app.use(express.json());
 
-app.use('/api', apiLimiter);
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth') || req.path === '/health') {
+    return next();
+  }
+  return apiLimiter(req, res, next);
+});
 
 // Root route
 app.get('/', (req, res) => {
