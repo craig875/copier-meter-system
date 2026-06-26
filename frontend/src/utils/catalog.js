@@ -5,7 +5,8 @@
  */
 export function filterCatalogBySite(items, site) {
   if (!site || !Array.isArray(items)) return items || [];
-  return items.filter((item) => item.branch === site);
+  // Keep rows without branch when the server already scoped the list (older responses).
+  return items.filter((item) => item.branch == null || item.branch === site);
 }
 
 /**
