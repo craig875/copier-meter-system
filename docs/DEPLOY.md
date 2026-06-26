@@ -73,7 +73,7 @@ If you lost SSH login credentials but **DEPLOY_SSH_KEY** is set in GitHub Action
 
 **Actions → Repair catalog → Run workflow**
 
-Choose **selective** (normal), **dry-run** (preview only), or **full** (one-time baseline — clones all JHB makes to CT).
+Choose **selective** (repair + dedupe), **dedupe** (remove duplicate makes/models only), **dedupe-dry-run** (preview dedupe), **dry-run** (preview repair), or **full** (one-time baseline — clones all JHB makes to CT).
 
 This uses the same deploy key as **Deploy to server**; you do not need to copy the key from GitHub (secrets cannot be viewed after saving).
 

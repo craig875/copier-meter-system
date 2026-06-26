@@ -16,6 +16,8 @@ on:
         type: choice
         options:
           - selective
+          - dedupe
+          - dedupe-dry-run
           - dry-run
           - full
 
@@ -64,9 +66,17 @@ jobs:
               full)
                 echo "WARNING: full mode clones ALL JHB makes to CT"
                 node prisma/repair-site-catalog.js --full
+                npm run db:dedupe-catalog
+                ;;
+              dedupe-dry-run)
+                node prisma/dedupe-site-catalog.mjs --dry-run
+                ;;
+              dedupe)
+                npm run db:dedupe-catalog
                 ;;
               *)
                 npm run db:repair-catalog
+                npm run db:dedupe-catalog
                 ;;
             esac
             echo "==> Repair finished"
