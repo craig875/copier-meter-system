@@ -44,7 +44,15 @@ api.interceptors.request.use((config) => {
   if (!isAuthRequest(config.url)) {
     const site = resolveStoredAppSite();
     if (site) {
-      config.params = { ...(config.params || {}), branch: config.params?.branch || site };
+      // Explicit branch on the request wins; interceptor fills in when missing.
+      const existingBranch = config.params?.branch;
+      config.params = {
+        ...(config.params || {}),
+        branch:
+          existingBranch === 'JHB' || existingBranch === 'CT'
+            ? existingBranch
+            : site,
+      };
       const method = (config.method || 'get').toLowerCase();
       if (
         method === 'post'

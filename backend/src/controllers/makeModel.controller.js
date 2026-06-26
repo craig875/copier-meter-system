@@ -10,17 +10,25 @@ export const getMakes = asyncHandler(async (req, res) => {
     return res.json({ makes: [], site: null, needsBranch: true });
   }
 
-  let makes = await prisma.make.findMany({
-    where: { branch: site },
-    orderBy: { name: 'asc' },
-    include: { models: { orderBy: { name: 'asc' } } },
-  });
+  const includeModels = { models: { orderBy: { name: 'asc' } } };
+  const [siteTagged, linked] = await Promise.all([
+    prisma.make.findMany({
+      where: { branch: site },
+      orderBy: { name: 'asc' },
+      include: includeModels,
+    }),
+    findMakesLinkedToSiteMachines(site),
+  ]);
 
-  let fromMachineLinks = false;
-  if (makes.length === 0) {
-    makes = await findMakesLinkedToSiteMachines(site);
-    fromMachineLinks = makes.length > 0;
+  const byId = new Map();
+  for (const make of siteTagged) byId.set(make.id, make);
+  for (const make of linked) {
+    if (!byId.has(make.id)) {
+      byId.set(make.id, make);
+    }
   }
+  const makes = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const fromMachineLinks = siteTagged.length === 0 && linked.length > 0;
 
   res.json({
     makes: makes.map((m) => ({ ...m, branch: m.branch ?? site })),

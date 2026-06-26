@@ -4,7 +4,10 @@ const VALID = new Set(['JHB', 'CT']);
 
 /** Parse branch from query/body (ignores string "null" / empty). */
 export function readRequestedSite(req) {
-  const raw = req.query?.branch ?? req.body?.branch;
+  let raw = req.query?.branch ?? req.body?.branch;
+  if (Array.isArray(raw)) {
+    raw = raw.find((v) => v != null && v !== '') ?? raw[0];
+  }
   if (raw == null || raw === '' || raw === 'null' || raw === 'undefined') return null;
   const upper = String(raw).toUpperCase();
   return VALID.has(upper) ? upper : null;
