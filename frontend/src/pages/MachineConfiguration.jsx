@@ -87,7 +87,7 @@ const MachineConfiguration = () => {
   };
 
   const createMake = useMutation({
-    mutationFn: (data) => makesApi.create(data, effectiveBranch),
+    mutationFn: ({ name, branch }) => makesApi.create({ name: name.trim() }, branch),
     onSuccess: () => {
       toast.success('Make added');
       setShowMakeForm(false);
@@ -434,7 +434,10 @@ const MachineConfiguration = () => {
                 className="flex-1 px-3 py-2 border rounded-lg"
               />
               <button
-                onClick={() => createMake.mutate(makeForm)}
+                onClick={() => {
+                  if (!effectiveBranch || !makeForm.name.trim()) return;
+                  createMake.mutate({ name: makeForm.name, branch: effectiveBranch });
+                }}
                 disabled={!makeForm.name.trim() || createMake.isPending}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
               >

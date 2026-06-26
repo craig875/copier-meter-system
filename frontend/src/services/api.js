@@ -42,31 +42,41 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   if (!isAuthRequest(config.url)) {
-    const site = resolveStoredAppSite();
-    if (site) {
-      // Explicit branch on the request wins; interceptor fills in when missing.
-      const existingBranch = config.params?.branch;
-      config.params = {
-        ...(config.params || {}),
-        branch:
-          existingBranch === 'JHB' || existingBranch === 'CT'
-            ? existingBranch
-            : site,
-      };
-      const method = (config.method || 'get').toLowerCase();
-      if (
-        method === 'post'
-        && config.data
-        && typeof config.data === 'object'
-        && !(config.data instanceof FormData)
-        && config.data.branch !== 'JHB'
-        && config.data.branch !== 'CT'
-      ) {
-        const branch =
-          config.params?.branch === 'JHB' || config.params?.branch === 'CT'
-            ? config.params.branch
-            : site;
-        config.data = { ...config.data, branch };
+    const method = (config.method || 'get').toLowerCase();
+    const existingBranch = config.params?.branch;
+    const explicitBranch =
+      existingBranch === 'JHB' || existingBranch === 'CT' ? existingBranch : null;
+
+    // Never override an explicit branch on catalog makes/models calls (avoids stale localStorage bleed).
+    const isCatalogMakeModel =
+      /\/makes(\/|$|\?)/.test(config.url || '')
+      || /\/models(\/|$|\?)/.test(config.url || '');
+
+    if (isCatalogMakeModel && explicitBranch) {
+      config.params = { ...(config.params || {}), branch: explicitBranch };
+    } else if (!isCatalogMakeModel) {
+      const site = resolveStoredAppSite();
+      if (site) {
+        config.params = {
+          ...(config.params || {}),
+          branch: explicitBranch || site,
+        };
+        if (
+          method === 'post'
+          && config.data
+          && typeof config.data === 'object'
+          && !(config.data instanceof FormData)
+          && config.data.branch !== 'JHB'
+          && config.data.branch !== 'CT'
+        ) {
+          const branch = explicitBranch || site;
+          config.data = { ...config.data, branch };
+        }
+      }
+    } else {
+      const site = resolveStoredAppSite();
+      if (site && !explicitBranch) {
+        config.params = { ...(config.params || {}), branch: site };
       }
     }
   }
