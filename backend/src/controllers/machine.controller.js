@@ -1,7 +1,7 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { hasAdminAccess } from '../utils/permissions.js';
-import { resolveAppSite, resolveAppSiteStrict, assertMachineInSite } from '../utils/app-site.util.js';
+import { resolveAppSite, resolveAppSiteStrict, resolveAppSiteForRead, assertMachineInSite } from '../utils/app-site.util.js';
 import { ForbiddenError, ValidationError } from '../utils/errors.js';
 
 /**
@@ -21,8 +21,10 @@ export class MachineController {
 
   getMachines = asyncHandler(async (req, res) => {
     const { branch: _queryBranch, ...filters } = req.query;
-    const site = resolveAppSiteStrict(req);
-    if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
+    const site = resolveAppSiteForRead(req);
+    if (!site) {
+      return res.json({ machines: [], pagination: { total: 0, page: 1, limit: 50, totalPages: 0 }, site: null, needsBranch: true });
+    }
     const result = await this.machineService.getMachines({ ...filters, branch: site });
     res.json({ ...result, site });
   });

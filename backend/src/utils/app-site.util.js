@@ -2,14 +2,22 @@ import { ForbiddenError } from './errors.js';
 
 const VALID = new Set(['JHB', 'CT']);
 
+/** Parse branch from query/body (ignores string "null" / empty). */
+export function readRequestedSite(req) {
+  const raw = req.query?.branch ?? req.body?.branch;
+  if (raw == null || raw === '' || raw === 'null' || raw === 'undefined') return null;
+  const upper = String(raw).toUpperCase();
+  return VALID.has(upper) ? upper : null;
+}
+
 /**
  * Resolves app site scope (JHB/CT) aligned with frontend `effectiveBranch`.
  * @param {import('express').Request} req
- * @returns {'JHB' | 'CT'}
+ * @returns {'JHB' | 'CT' | null}
  */
 export function resolveAppSite(req) {
   const user = req.user;
-  const requested = req.query.branch ?? req.body?.branch ?? req.headers['x-app-site'];
+  const requested = readRequestedSite(req);
   const userBranch = user?.branch;
   const canSwitch =
     user?.role === 'admin' ||
@@ -19,28 +27,19 @@ export function resolveAppSite(req) {
   const normalize = (b) => (b && VALID.has(String(b).toUpperCase()) ? String(b).toUpperCase() : null);
 
   if (canSwitch) {
-    const site = normalize(requested || userBranch);
-    return site;
+    return requested || normalize(userBranch) || null;
   }
   return normalize(userBranch) || 'JHB';
 }
 
-/** Like resolveAppSite but returns null when site-switching users omit branch (for strict catalog reads). */
+/** For GET list endpoints — never default site for branch-switching users. */
+export function resolveAppSiteForRead(req) {
+  return resolveAppSite(req);
+}
+
+/** For POST/PUT/DELETE — require an explicit or assigned site. */
 export function resolveAppSiteStrict(req) {
-  const user = req.user;
-  const requested = req.query.branch ?? req.body?.branch ?? req.headers['x-app-site'];
-  const userBranch = user?.branch;
-  const canSwitch =
-    user?.role === 'admin' ||
-    user?.role === 'manager' ||
-    ((user?.role === 'meter_user' || user?.role === 'capturer') && !userBranch);
-
-  const normalize = (b) => (b && VALID.has(String(b).toUpperCase()) ? String(b).toUpperCase() : null);
-
-  if (canSwitch) {
-    return normalize(requested || userBranch);
-  }
-  return normalize(userBranch) || 'JHB';
+  return resolveAppSite(req);
 }
 
 export function assertMakeInSite(make, site) {
