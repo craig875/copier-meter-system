@@ -1,6 +1,7 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { resolveAppSite } from '../utils/app-site.util.js';
+import { resolveAppSite, resolveAppSiteStrict } from '../utils/app-site.util.js';
+import { ValidationError } from '../utils/errors.js';
 
 /**
  * Customer Controller - HTTP request/response for customers
@@ -11,19 +12,21 @@ export class CustomerController {
   }
 
   getCustomers = asyncHandler(async (req, res) => {
-    const site = resolveAppSite(req);
+    const site = resolveAppSiteStrict(req);
+    if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
     const result = await this.customerService.getCustomers(site);
     res.json(result);
   });
 
   getCustomer = asyncHandler(async (req, res) => {
-    const site = resolveAppSite(req);
+    const site = resolveAppSiteStrict(req);
+    if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
     const result = await this.customerService.getCustomer(req.params.id, site);
     res.json(result);
   });
 
   createCustomer = asyncHandler(async (req, res) => {
-    const site = resolveAppSite(req);
+    const site = resolveAppSiteStrict(req) || resolveAppSite(req);
     const result = await this.customerService.createCustomer({
       ...req.body,
       branch: req.body.branch || site,

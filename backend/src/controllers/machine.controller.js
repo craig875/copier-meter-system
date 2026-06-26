@@ -1,8 +1,8 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { hasAdminAccess } from '../utils/permissions.js';
-import { resolveAppSite, assertMachineInSite } from '../utils/app-site.util.js';
-import { ForbiddenError } from '../utils/errors.js';
+import { resolveAppSite, resolveAppSiteStrict, assertMachineInSite } from '../utils/app-site.util.js';
+import { ForbiddenError, ValidationError } from '../utils/errors.js';
 
 /**
  * Machine Controller - HTTP request/response handling for machines
@@ -21,7 +21,8 @@ export class MachineController {
 
   getMachines = asyncHandler(async (req, res) => {
     const { branch: _queryBranch, ...filters } = req.query;
-    const site = resolveAppSite(req);
+    const site = resolveAppSiteStrict(req);
+    if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
     const result = await this.machineService.getMachines({ ...filters, branch: site });
     res.json({ ...result, site });
   });
@@ -34,7 +35,8 @@ export class MachineController {
   });
 
   createMachine = asyncHandler(async (req, res) => {
-    const site = resolveAppSite(req);
+    const site = resolveAppSiteStrict(req);
+    if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
     const machineData = { ...req.body, branch: site };
     const result = await this.machineService.createMachine(machineData);
     this.auditService.log(req.user.id, 'machine_create', 'machine', result.machine.id, {
