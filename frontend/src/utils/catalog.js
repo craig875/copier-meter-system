@@ -5,6 +5,10 @@
  */
 export function filterCatalogBySite(items, site) {
   if (!site || !Array.isArray(items)) return items || [];
+  // Server already scopes by site; only filter when branch is present on rows.
+  if (!items.some((item) => item?.branch != null && item.branch !== '')) {
+    return items;
+  }
   return items.filter((item) => item.branch === site);
 }
 

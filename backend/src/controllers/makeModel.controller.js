@@ -5,12 +5,39 @@ import { resolveAppSite, assertMakeInSite } from '../utils/app-site.util.js';
 
 export const getMakes = asyncHandler(async (req, res) => {
   const site = resolveAppSite(req);
-  const makes = await prisma.make.findMany({
+  const includeModels = { models: { orderBy: { name: 'asc' } } };
+
+  let makes = await prisma.make.findMany({
     where: { branch: site },
     orderBy: { name: 'asc' },
-    include: { models: { orderBy: { name: 'asc' } } },
+    include: includeModels,
   });
-  res.json({ makes, site });
+
+  // Recovery: site catalog empty but machines on this site still reference models
+  if (makes.length === 0) {
+    const siteMachines = await prisma.machine.findMany({
+      where: { branch: site, modelId: { not: null } },
+      select: { modelId: true },
+    });
+    const modelIds = [...new Set(siteMachines.map((m) => m.modelId).filter(Boolean))];
+    if (modelIds.length > 0) {
+      makes = await prisma.make.findMany({
+        where: { models: { some: { id: { in: modelIds } } } },
+        orderBy: { name: 'asc' },
+        include: {
+          models: {
+            where: { id: { in: modelIds } },
+            orderBy: { name: 'asc' },
+          },
+        },
+      });
+    }
+  }
+
+  res.json({
+    makes: makes.map((m) => ({ ...m, branch: m.branch ?? site })),
+    site,
+  });
 });
 
 export const getModels = asyncHandler(async (req, res) => {

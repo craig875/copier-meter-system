@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { makesApi, modelsApi, consumablesApi } from '../services/api';
 import { trimLeading } from '../utils/string';
-import { filterCatalogBySite } from '../utils/catalog';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
@@ -38,7 +37,7 @@ const MachineConfiguration = () => {
   const [importPreview, setImportPreview] = useState(null);
   const [importErrors, setImportErrors] = useState([]);
 
-  const { data: makesData, isLoading } = useQuery({
+  const { data: makesData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['makes', effectiveBranch],
     queryFn: () => makesApi.getAll(effectiveBranch),
     enabled: !!effectiveBranch,
@@ -49,7 +48,7 @@ const MachineConfiguration = () => {
     queryFn: () => consumablesApi.getModelPartsAll(effectiveBranch),
   });
 
-  const makes = filterCatalogBySite(makesData?.makes, effectiveBranch);
+  const makes = makesData?.makes ?? [];
   const allParts = partsData?.parts || [];
   const partsByModel = allParts.reduce((acc, p) => {
     const mid = p.modelId || p.model?.id;
@@ -285,6 +284,33 @@ const MachineConfiguration = () => {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="liquid-glass rounded-xl p-8 text-center max-w-lg mx-auto">
+        <p className="text-gray-900 font-medium">Could not load machine configuration</p>
+        <p className="text-sm text-gray-500 mt-2">
+          {error?.response?.data?.error || error?.message || 'The catalog API did not respond.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!effectiveBranch) {
+    return (
+      <div className="liquid-glass rounded-xl p-8 text-center max-w-lg mx-auto">
+        <p className="text-gray-900 font-medium">Select a site first</p>
+        <p className="text-sm text-gray-500 mt-2">Use Switch branch to choose Johannesburg or Cape Town.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Import section */}
@@ -412,6 +438,12 @@ const MachineConfiguration = () => {
         )}
 
         <div className="space-y-2">
+          {makes.length === 0 && (
+            <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-500">
+              No makes configured for {effectiveBranch === 'CT' ? 'Cape Town' : 'Johannesburg'} yet.
+              Add a make below, or ask your admin to run <code className="text-xs bg-gray-100 px-1 rounded">npm run db:repair-catalog</code> on the server if machines still have models assigned.
+            </div>
+          )}
           {makes.map((make) => (
             <div key={make.id} className="border border-gray-200 rounded-lg overflow-hidden">
               <div
