@@ -1,8 +1,7 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
-import { resolveAppSiteStrict, resolveAppSiteForRead, assertMakeInSite } from '../utils/app-site.util.js';
-import { findMakesLinkedToSiteMachines } from '../utils/catalog-query.util.js';
+import { resolveAppSiteForWrite, resolveAppSiteForRead, assertMakeInSite } from '../utils/app-site.util.js';
 
 export const getMakes = asyncHandler(async (req, res) => {
   const site = resolveAppSiteForRead(req);
@@ -10,31 +9,13 @@ export const getMakes = asyncHandler(async (req, res) => {
     return res.json({ makes: [], site: null, needsBranch: true });
   }
 
-  const includeModels = { models: { orderBy: { name: 'asc' } } };
-  const [siteTagged, linked] = await Promise.all([
-    prisma.make.findMany({
-      where: { branch: site },
-      orderBy: { name: 'asc' },
-      include: includeModels,
-    }),
-    findMakesLinkedToSiteMachines(site),
-  ]);
-
-  const byId = new Map();
-  for (const make of siteTagged) byId.set(make.id, make);
-  for (const make of linked) {
-    if (!byId.has(make.id)) {
-      byId.set(make.id, make);
-    }
-  }
-  const makes = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
-  const fromMachineLinks = siteTagged.length === 0 && linked.length > 0;
-
-  res.json({
-    makes: makes.map((m) => ({ ...m, branch: m.branch ?? site })),
-    site,
-    fromMachineLinks,
+  const makes = await prisma.make.findMany({
+    where: { branch: site },
+    orderBy: { name: 'asc' },
+    include: { models: { orderBy: { name: 'asc' } } },
   });
+
+  res.json({ makes, site });
 });
 
 export const getModels = asyncHandler(async (req, res) => {
@@ -56,7 +37,7 @@ export const getModels = asyncHandler(async (req, res) => {
 });
 
 export const createMake = asyncHandler(async (req, res) => {
-  const site = resolveAppSiteStrict(req);
+  const site = resolveAppSiteForWrite(req);
   if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const name = req.body.name.trim();
   const existing = await prisma.make.findUnique({
@@ -68,7 +49,7 @@ export const createMake = asyncHandler(async (req, res) => {
 });
 
 export const updateMake = asyncHandler(async (req, res) => {
-  const site = resolveAppSiteStrict(req);
+  const site = resolveAppSiteForWrite(req);
   if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const make = await prisma.make.findUnique({ where: { id: req.params.id } });
   if (!make) throw new NotFoundError('Make');
@@ -87,7 +68,7 @@ export const updateMake = asyncHandler(async (req, res) => {
 });
 
 export const deleteMake = asyncHandler(async (req, res) => {
-  const site = resolveAppSiteStrict(req);
+  const site = resolveAppSiteForWrite(req);
   if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const make = await prisma.make.findUnique({
     where: { id: req.params.id },
@@ -119,7 +100,7 @@ export const deleteMake = asyncHandler(async (req, res) => {
 });
 
 export const createModel = asyncHandler(async (req, res) => {
-  const site = resolveAppSiteStrict(req);
+  const site = resolveAppSiteForWrite(req);
   if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const make = await prisma.make.findUnique({ where: { id: req.body.makeId } });
   if (!make) throw new NotFoundError('Make');
@@ -142,7 +123,7 @@ export const createModel = asyncHandler(async (req, res) => {
 });
 
 export const updateModel = asyncHandler(async (req, res) => {
-  const site = resolveAppSiteStrict(req);
+  const site = resolveAppSiteForWrite(req);
   if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const model = await prisma.model.findUnique({
     where: { id: req.params.id },
@@ -180,7 +161,7 @@ export const updateModel = asyncHandler(async (req, res) => {
 });
 
 export const deleteModel = asyncHandler(async (req, res) => {
-  const site = resolveAppSiteStrict(req);
+  const site = resolveAppSiteForWrite(req);
   if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
   const model = await prisma.model.findUnique({
     where: { id: req.params.id },

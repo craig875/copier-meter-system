@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { makesApi, modelsApi, consumablesApi } from '../services/api';
 import { trimLeading } from '../utils/string';
+import { filterCatalogBySite } from '../utils/catalog';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
@@ -49,7 +50,14 @@ const MachineConfiguration = () => {
     enabled: !!effectiveBranch,
   });
 
-  const makes = makesData?.makes ?? [];
+  const makes = filterCatalogBySite(makesData?.makes ?? [], effectiveBranch);
+
+  const invalidateMakes = () => {
+    queryClient.invalidateQueries({ queryKey: ['makes', effectiveBranch] });
+  };
+  const invalidateParts = () => {
+    queryClient.invalidateQueries({ queryKey: ['model-parts-all', effectiveBranch] });
+  };
   const allParts = partsData?.parts || [];
   const partsByModel = allParts.reduce((acc, p) => {
     const mid = p.modelId || p.model?.id;
@@ -83,7 +91,7 @@ const MachineConfiguration = () => {
       toast.success('Make added');
       setShowMakeForm(false);
       setMakeForm({ name: '' });
-      queryClient.invalidateQueries({ queryKey: ['makes', effectiveBranch] });
+      invalidateMakes();
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -93,7 +101,7 @@ const MachineConfiguration = () => {
     onSuccess: () => {
       toast.success('Make updated');
       setEditingMake(null);
-      queryClient.invalidateQueries(['makes']);
+      invalidateMakes();
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -102,8 +110,8 @@ const MachineConfiguration = () => {
     mutationFn: (id) => makesApi.delete(id, effectiveBranch),
     onSuccess: () => {
       toast.success('Make deleted');
-      queryClient.invalidateQueries(['makes']);
-      queryClient.invalidateQueries(['model-parts-all']);
+      invalidateMakes();
+      invalidateParts();
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -114,7 +122,7 @@ const MachineConfiguration = () => {
       toast.success('Model added');
       setShowModelForm(null);
       setModelForm({ makeId: '', name: '', paperSize: 'A4', modelType: 'mono', machineLife: '' });
-      queryClient.invalidateQueries(['makes']);
+      invalidateMakes();
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -125,7 +133,7 @@ const MachineConfiguration = () => {
       toast.success('Model updated');
       setEditingModel(null);
       setEditingModelMake(null);
-      queryClient.invalidateQueries(['makes']);
+      invalidateMakes();
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -134,8 +142,8 @@ const MachineConfiguration = () => {
     mutationFn: (id) => modelsApi.delete(id, effectiveBranch),
     onSuccess: () => {
       toast.success('Model deleted');
-      queryClient.invalidateQueries(['makes']);
-      queryClient.invalidateQueries(['model-parts-all']);
+      invalidateMakes();
+      invalidateParts();
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -145,7 +153,7 @@ const MachineConfiguration = () => {
     onSuccess: () => {
       toast.success('Part added');
       setAddPartModel(null);
-      queryClient.invalidateQueries(['model-parts-all']);
+      invalidateParts();
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -155,7 +163,7 @@ const MachineConfiguration = () => {
     onSuccess: () => {
       toast.success('Part updated');
       setEditingPart(null);
-      queryClient.invalidateQueries(['model-parts-all']);
+      invalidateParts();
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -164,7 +172,7 @@ const MachineConfiguration = () => {
     mutationFn: consumablesApi.deleteModelPart,
     onSuccess: () => {
       toast.success('Part deleted');
-      queryClient.invalidateQueries(['model-parts-all']);
+      invalidateParts();
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -179,8 +187,8 @@ const MachineConfiguration = () => {
       if ((r.errors || []).length > 0) {
         toast(`${r.errors.length} row(s) had errors`, { icon: '⚠️' });
       }
-      queryClient.invalidateQueries(['makes']);
-      queryClient.invalidateQueries(['model-parts-all']);
+      invalidateMakes();
+      invalidateParts();
       setImportFile(null);
       setImportPreview(null);
       setShowImport(false);

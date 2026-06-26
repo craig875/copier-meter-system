@@ -40,9 +40,27 @@ export function resolveAppSiteForRead(req) {
   return resolveAppSite(req);
 }
 
-/** For POST/PUT/DELETE — require an explicit or assigned site. */
+/** For POST/PUT/DELETE — branch must be explicit in query/body for site-switching users. */
+export function resolveAppSiteForWrite(req) {
+  const user = req.user;
+  const requested = readRequestedSite(req);
+  const userBranch = user?.branch;
+  const canSwitch =
+    user?.role === 'admin' ||
+    user?.role === 'manager' ||
+    ((user?.role === 'meter_user' || user?.role === 'capturer') && !userBranch);
+
+  const normalize = (b) => (b && VALID.has(String(b).toUpperCase()) ? String(b).toUpperCase() : null);
+
+  if (canSwitch) {
+    return requested;
+  }
+  return normalize(userBranch) || 'JHB';
+}
+
+/** @deprecated Use resolveAppSiteForWrite for mutations */
 export function resolveAppSiteStrict(req) {
-  return resolveAppSite(req);
+  return resolveAppSiteForWrite(req);
 }
 
 export function assertMakeInSite(make, site) {
