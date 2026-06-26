@@ -1,6 +1,6 @@
 /**
- * Remove CT catalog makes/models not used by any CT copier or CT parts.
- * Deletes orphan rows like TEST JHB1 on CT left by old full JHB→CT clones.
+ * Remove CT catalog makes/models not assigned to any CT copier.
+ * Orphan parts from old JHB→CT clones are deleted with the unused models.
  *
  * Dry run:
  *   node prisma/cleanup-ct-catalog.mjs --dry-run
@@ -11,7 +11,7 @@
 
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import { isCtMakeInUse } from './catalog-clone.util.js';
+import { isCtMakeUsedByCopiers } from './catalog-clone.util.js';
 
 const prisma = new PrismaClient();
 const dryRun = process.argv.includes('--dry-run');
@@ -27,12 +27,29 @@ async function main() {
 
   let removedMakes = 0;
   let removedModels = 0;
+  let kept = 0;
 
   for (const make of ctMakes) {
-    const inUse = await isCtMakeInUse(prisma, make.id);
-    if (inUse) continue;
+    const modelIds = make.models.map((m) => m.id);
+    const machines =
+      modelIds.length === 0
+        ? 0
+        : await prisma.machine.count({ where: { branch: 'CT', modelId: { in: modelIds } } });
 
-    console.log(`  - unused CT make: ${make.name} (${make.models.length} model(s))`);
+    if (machines > 0) {
+      console.log(`  keep ${make.name} (${machines} CT copier(s) assigned)`);
+      kept++;
+      continue;
+    }
+
+    const parts =
+      modelIds.length === 0
+        ? 0
+        : await prisma.modelPart.count({ where: { branch: 'CT', modelId: { in: modelIds } } });
+
+    console.log(
+      `  - remove unused CT make: ${make.name} (${make.models.length} model(s), ${parts} orphan part(s), 0 copiers)`
+    );
     if (!dryRun) {
       for (const model of make.models) {
         await prisma.model.delete({ where: { id: model.id } });
@@ -45,7 +62,7 @@ async function main() {
     removedMakes++;
   }
 
-  console.log('\nRemoved:', { makes: removedMakes, models: removedModels });
+  console.log('\nRemoved:', { makes: removedMakes, models: removedModels, kept });
   const summary = await prisma.make.groupBy({ by: ['branch'], _count: true });
   console.log('Catalog summary:', summary);
 }
