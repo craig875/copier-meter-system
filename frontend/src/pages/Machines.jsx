@@ -92,8 +92,10 @@ const Machines = () => {
     },
   });
 
-  // API now returns response.data directly, so data is { machines, pagination }
-  const allMachines = filterMachinesBySite(data?.machines, effectiveBranch);
+  // API returns machines scoped to effectiveBranch; avoid double-filter hiding rows.
+  const allMachines = data?.site === effectiveBranch
+    ? (data?.machines ?? [])
+    : filterMachinesBySite(data?.machines, effectiveBranch);
   const queryLower = search.trim().toLowerCase();
   const filteredMachines = useMemo(() => {
     if (!queryLower) return allMachines;

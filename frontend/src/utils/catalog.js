@@ -3,6 +3,19 @@
  * @param {Array<{ branch?: string }>|null|undefined} items
  * @param {string|null|undefined} site
  */
+/**
+ * Catalog rows returned by GET /makes are already scoped server-side — use directly.
+ * @param {{ makes?: Array, site?: string|null }|null|undefined} apiResult
+ * @param {string|null|undefined} site
+ */
+export function catalogMakesFromApi(apiResult, site) {
+  const rows = apiResult?.makes;
+  if (!Array.isArray(rows)) return [];
+  if (!site) return rows;
+  if (apiResult?.site === site) return rows;
+  return rows.filter((m) => m.branch === site);
+}
+
 export function filterCatalogBySite(items, site) {
   if (!site || !Array.isArray(items)) return items || [];
   return items.filter((item) => item.branch === site);
