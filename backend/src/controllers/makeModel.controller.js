@@ -3,6 +3,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
 import { resolveAppSiteForWrite, resolveAppSiteForRead, assertMakeInSite } from '../utils/app-site.util.js';
 import { findMakesLinkedToSiteMachines } from '../utils/catalog-query.util.js';
+import { dedupeMakesCatalog } from '../utils/catalog-dedupe.util.js';
 
 export const getMakes = asyncHandler(async (req, res) => {
   const site = resolveAppSiteForRead(req);
@@ -26,10 +27,12 @@ export const getMakes = asyncHandler(async (req, res) => {
   }
 
   res.json({
-    makes: makes.map((m) => ({
-      ...m,
-      branch: linkedCatalog ? site : (m.branch === 'CT' ? 'CT' : 'JHB'),
-    })),
+    makes: dedupeMakesCatalog(
+      makes.map((m) => ({
+        ...m,
+        branch: linkedCatalog ? site : (m.branch === 'CT' ? 'CT' : 'JHB'),
+      }))
+    ),
     site,
     ...(linkedCatalog ? { linkedCatalog: true } : {}),
   });
