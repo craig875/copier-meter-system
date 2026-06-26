@@ -158,6 +158,12 @@ export const AuthProvider = ({ children }) => {
   const canSwitchBranches =
     isAdmin || isManager || ((isMeterUser || isCapturer) && !user?.branch);
   const effectiveBranch = canSwitchBranches ? (selectedBranch ?? null) : (user?.branch || null);
+
+  useEffect(() => {
+    if (effectiveBranch === 'JHB' || effectiveBranch === 'CT') {
+      localStorage.setItem('selectedBranch', effectiveBranch);
+    }
+  }, [effectiveBranch]);
   
   // Helper to update selectedBranch and persist to localStorage
   const updateSelectedBranch = (branch) => {

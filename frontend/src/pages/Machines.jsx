@@ -22,7 +22,7 @@ import {
 import clsx from 'clsx';
 import MachineModal from '../components/MachineModal';
 import { trimLeading } from '../utils/string';
-import { filterMachinesBySite } from '../utils/catalog';
+import { machinesFromApi } from '../utils/catalog';
 import MeterBlocks from '../components/MeterBlocks';
 
 /** Client-side filter; fields align with server search on GET /machines */
@@ -93,9 +93,7 @@ const Machines = () => {
   });
 
   // API returns machines scoped to effectiveBranch; avoid double-filter hiding rows.
-  const allMachines = data?.site === effectiveBranch
-    ? (data?.machines ?? [])
-    : filterMachinesBySite(data?.machines, effectiveBranch);
+  const allMachines = machinesFromApi(data, effectiveBranch);
   const queryLower = search.trim().toLowerCase();
   const filteredMachines = useMemo(() => {
     if (!queryLower) return allMachines;
