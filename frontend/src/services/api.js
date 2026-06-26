@@ -189,10 +189,18 @@ export const customersApi = {
 };
 
 // Makes & Models API (branch = app site: JHB or CT)
-const makesModelsBranchParams = (branch) => (branch ? { branch } : {});
+const makesModelsBranchParams = (branch) => {
+  if (branch !== 'JHB' && branch !== 'CT') return {};
+  return { branch };
+};
 
 export const makesApi = {
-  getAll: (branch) => api.get('/makes', { params: makesModelsBranchParams(branch) }).then((r) => r.data),
+  getAll: (branch) => {
+    if (branch !== 'JHB' && branch !== 'CT') {
+      return Promise.resolve({ makes: [], site: null, needsBranch: true });
+    }
+    return api.get('/makes', { params: makesModelsBranchParams(branch) }).then((r) => r.data);
+  },
   create: (data, branch) => api.post('/makes', data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
   update: (id, data, branch) => api.put(`/makes/${id}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
   delete: (id, branch) => api.delete(`/makes/${id}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data),

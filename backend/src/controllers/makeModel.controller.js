@@ -1,25 +1,39 @@
 import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
-import { resolveAppSiteStrict, assertMakeInSite } from '../utils/app-site.util.js';
+import { resolveAppSiteStrict, resolveAppSiteForRead, assertMakeInSite } from '../utils/app-site.util.js';
+import { findMakesLinkedToSiteMachines } from '../utils/catalog-query.util.js';
 
 export const getMakes = asyncHandler(async (req, res) => {
-  const site = resolveAppSiteStrict(req);
-  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
-  const makes = await prisma.make.findMany({
+  const site = resolveAppSiteForRead(req);
+  if (!site) {
+    return res.json({ makes: [], site: null, needsBranch: true });
+  }
+
+  let makes = await prisma.make.findMany({
     where: { branch: site },
     orderBy: { name: 'asc' },
     include: { models: { orderBy: { name: 'asc' } } },
   });
+
+  let fromMachineLinks = false;
+  if (makes.length === 0) {
+    makes = await findMakesLinkedToSiteMachines(site);
+    fromMachineLinks = makes.length > 0;
+  }
+
   res.json({
     makes: makes.map((m) => ({ ...m, branch: m.branch ?? site })),
     site,
+    fromMachineLinks,
   });
 });
 
 export const getModels = asyncHandler(async (req, res) => {
-  const site = resolveAppSiteStrict(req);
-  if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
+  const site = resolveAppSiteForRead(req);
+  if (!site) {
+    return res.json({ models: [], site: null, needsBranch: true });
+  }
   const { makeId } = req.query;
   const where = {
     make: { branch: site },
