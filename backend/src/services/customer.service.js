@@ -37,12 +37,17 @@ export class CustomerService {
     return { customers };
   }
 
-  async getCustomer(id) {
+  async getCustomer(id, branch = null) {
     const existing = await this.customerRepo.findById(id);
     if (!existing) throw new NotFoundError('Customer');
     const customer = await this.prisma.customer.findUnique({
       where: { id },
-      include: { machines: { include: { model: { include: { make: true } } } } },
+      include: {
+        machines: {
+          where: branch && ['JHB', 'CT'].includes(branch) ? { branch } : undefined,
+          include: { model: { include: { make: true } } },
+        },
+      },
     });
     if (customer?.machines?.length > 0) {
       const latestByMachine = await this.readingRepo.findLatestByMachineIds(customer.machines.map((m) => m.id));

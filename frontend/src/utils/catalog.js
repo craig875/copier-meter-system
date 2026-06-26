@@ -5,8 +5,6 @@
  */
 export function filterCatalogBySite(items, site) {
   if (!site || !Array.isArray(items)) return items || [];
-  // If API omits branch (older backend), don't hide everything — server filter should still apply.
-  if (!items.some((item) => item.branch)) return items;
   return items.filter((item) => item.branch === site);
 }
 
@@ -18,4 +16,10 @@ export function filterCatalogBySite(items, site) {
 export function filterModelsBySite(models, site) {
   if (!site || !Array.isArray(models)) return models || [];
   return models.filter((model) => model.make?.branch === site);
+}
+
+/** Physical copiers — filter list by branch column. */
+export function filterMachinesBySite(machines, site) {
+  if (!site || !Array.isArray(machines)) return machines || [];
+  return machines.filter((machine) => machine.branch === site);
 }

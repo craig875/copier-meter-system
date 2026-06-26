@@ -48,3 +48,9 @@ export function assertMakeInSite(make, site) {
     throw new ForbiddenError('Make not available for this site');
   }
 }
+
+export function assertMachineInSite(machine, site) {
+  if (!machine || machine.branch !== site) {
+    throw new ForbiddenError('Machine not available for this site');
+  }
+}
