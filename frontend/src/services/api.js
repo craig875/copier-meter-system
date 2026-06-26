@@ -59,9 +59,14 @@ api.interceptors.request.use((config) => {
         && config.data
         && typeof config.data === 'object'
         && !(config.data instanceof FormData)
-        && config.data.branch == null
+        && config.data.branch !== 'JHB'
+        && config.data.branch !== 'CT'
       ) {
-        config.data = { ...config.data, branch: config.params.branch || site };
+        const branch =
+          config.params?.branch === 'JHB' || config.params?.branch === 'CT'
+            ? config.params.branch
+            : site;
+        config.data = { ...config.data, branch };
       }
     }
   }
@@ -209,7 +214,12 @@ export const makesApi = {
     }
     return api.get('/makes', { params: makesModelsBranchParams(branch) }).then((r) => r.data);
   },
-  create: (data, branch) => api.post('/makes', data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
+  create: (data, branch) => {
+    if (branch !== 'JHB' && branch !== 'CT') {
+      return Promise.reject(new Error('Branch (JHB or CT) is required'));
+    }
+    return api.post('/makes', { ...data, branch }, { params: { branch } }).then((r) => r.data);
+  },
   update: (id, data, branch) => api.put(`/makes/${id}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
   delete: (id, branch) => api.delete(`/makes/${id}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
   import: (data, branch) => api.post('/makes/import', { data, branch }).then((r) => r.data),
@@ -220,7 +230,12 @@ export const modelsApi = {
     if (makeId) params.makeId = makeId;
     return api.get('/models', { params }).then((r) => r.data);
   },
-  create: (data, branch) => api.post('/models', data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
+  create: (data, branch) => {
+    if (branch !== 'JHB' && branch !== 'CT') {
+      return Promise.reject(new Error('Branch (JHB or CT) is required'));
+    }
+    return api.post('/models', { ...data, branch }, { params: { branch } }).then((r) => r.data);
+  },
   update: (id, data, branch) => api.put(`/models/${id}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
   delete: (id, branch) => api.delete(`/models/${id}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
 };

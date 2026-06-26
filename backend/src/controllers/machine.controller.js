@@ -1,7 +1,7 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { hasAdminAccess } from '../utils/permissions.js';
-import { resolveAppSite, resolveAppSiteStrict, resolveAppSiteForRead, assertMachineInSite } from '../utils/app-site.util.js';
+import { resolveAppSite, resolveAppSiteForWrite, resolveAppSiteForRead, assertMachineInSite } from '../utils/app-site.util.js';
 import { ForbiddenError, ValidationError } from '../utils/errors.js';
 
 /**
@@ -37,7 +37,7 @@ export class MachineController {
   });
 
   createMachine = asyncHandler(async (req, res) => {
-    const site = resolveAppSiteStrict(req);
+    const site = resolveAppSiteForWrite(req);
     if (!site) throw new ValidationError('Site (branch) is required — select Johannesburg or Cape Town');
     const machineData = { ...req.body, branch: site };
     const result = await this.machineService.createMachine(machineData);

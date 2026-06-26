@@ -1,6 +1,6 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { resolveAppSite, resolveAppSiteStrict, resolveAppSiteForRead } from '../utils/app-site.util.js';
+import { resolveAppSite, resolveAppSiteForWrite, resolveAppSiteForRead } from '../utils/app-site.util.js';
 
 /**
  * Customer Controller - HTTP request/response for customers
@@ -29,7 +29,7 @@ export class CustomerController {
   });
 
   createCustomer = asyncHandler(async (req, res) => {
-    const site = resolveAppSiteStrict(req) || resolveAppSite(req);
+    const site = resolveAppSiteForWrite(req) || resolveAppSite(req);
     const result = await this.customerService.createCustomer({
       ...req.body,
       branch: req.body.branch || site,
