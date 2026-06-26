@@ -46,12 +46,10 @@ const MachineConfiguration = () => {
   const { data: partsData } = useQuery({
     queryKey: ['model-parts-all', effectiveBranch],
     queryFn: () => consumablesApi.getModelPartsAll(effectiveBranch),
+    enabled: !!effectiveBranch,
   });
 
-  const makes =
-    makesData?.site === effectiveBranch
-      ? (makesData?.makes ?? [])
-      : [];
+  const makes = makesData?.makes ?? [];
   const allParts = partsData?.parts || [];
   const partsByModel = allParts.reduce((acc, p) => {
     const mid = p.modelId || p.model?.id;
@@ -441,7 +439,12 @@ const MachineConfiguration = () => {
         )}
 
         <div className="space-y-2">
-          {makes.length === 0 && (
+          {makes.length === 0 && makesData?.needsBranch && (
+            <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-amber-900">
+              Site not sent to the server. Use Switch branch to pick JHB or CT, then hard refresh (Ctrl+Shift+R).
+            </div>
+          )}
+          {makes.length === 0 && !makesData?.needsBranch && (
             <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-500">
               No makes configured for {effectiveBranch === 'CT' ? 'Cape Town' : 'Johannesburg'} yet.
               Add a make below, or ask your admin to run <code className="text-xs bg-gray-100 px-1 rounded">npm run db:repair-catalog</code> on the server if machines still have models assigned.
