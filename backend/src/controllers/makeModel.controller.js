@@ -2,7 +2,6 @@ import prisma from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
 import { resolveAppSiteForWrite, resolveAppSiteForRead, assertMakeInSite } from '../utils/app-site.util.js';
-import { findMakesLinkedToSiteMachines } from '../utils/catalog-query.util.js';
 
 export const getMakes = asyncHandler(async (req, res) => {
   const site = resolveAppSiteForRead(req);
@@ -10,20 +9,17 @@ export const getMakes = asyncHandler(async (req, res) => {
     return res.json({ makes: [], site: null, needsBranch: true });
   }
 
-  let makes = await prisma.make.findMany({
+  const makes = await prisma.make.findMany({
     where: { branch: site },
     orderBy: { name: 'asc' },
     include: { models: { orderBy: { name: 'asc' } } },
   });
 
-  // CT (or any site) may have copiers but no site-tagged catalog yet — show in-use models only.
-  if (makes.length === 0) {
-    const linked = await findMakesLinkedToSiteMachines(site);
-    makes = linked.filter((m) => m.branch === site);
-  }
-
   res.json({
-    makes: makes.map((m) => ({ ...m, branch: m.branch ?? site })),
+    makes: makes.map((m) => ({
+      ...m,
+      branch: m.branch === 'CT' ? 'CT' : 'JHB',
+    })),
     site,
   });
 });

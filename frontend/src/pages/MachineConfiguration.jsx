@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { makesApi, modelsApi, consumablesApi } from '../services/api';
 import { trimLeading } from '../utils/string';
-import { filterCatalogBySite } from '../utils/catalog';
+import { catalogMakesFromApi } from '../utils/catalog';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
@@ -43,6 +43,7 @@ const MachineConfiguration = () => {
     queryFn: () => makesApi.getAll(effectiveBranch),
     enabled: !!effectiveBranch,
     staleTime: 0,
+    refetchOnMount: 'always',
   });
   const { data: partsData } = useQuery({
     queryKey: ['model-parts-all', effectiveBranch],
@@ -50,7 +51,7 @@ const MachineConfiguration = () => {
     enabled: !!effectiveBranch,
   });
 
-  const makes = filterCatalogBySite(makesData?.makes ?? [], effectiveBranch);
+  const makes = catalogMakesFromApi(makesData, effectiveBranch);
 
   const invalidateMakes = () => {
     queryClient.invalidateQueries({ queryKey: ['makes', effectiveBranch] });
