@@ -5,6 +5,8 @@
  */
 export function filterCatalogBySite(items, site) {
   if (!site || !Array.isArray(items)) return items || [];
+  // If API omits branch (older backend), don't hide everything — server filter should still apply.
+  if (!items.some((item) => item.branch)) return items;
   return items.filter((item) => item.branch === site);
 }
 
