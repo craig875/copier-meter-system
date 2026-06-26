@@ -27,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      REPAIR_MODE: ${{ github.event.inputs.mode }}
     steps:
       - name: Check deploy secrets are set
         run: |
@@ -46,45 +47,15 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: DEPLOY_PATH
+          envs: DEPLOY_PATH,REPAIR_MODE
           command_timeout: 30m
           script_stop: true
           script: |
             set -e
             REPO="${DEPLOY_PATH:-/var/www/copier-meter-system}"
-            MODE="${{ github.event.inputs.mode }}"
-            echo "==> Repair catalog: REPO=$REPO MODE=$MODE"
             cd "$REPO"
             git fetch origin
             git checkout main 2>/dev/null || git checkout -b main origin/main
             git reset --hard origin/main
-            cd backend
-            npm ci --omit=dev
-            npx prisma generate
-            case "$MODE" in
-              dry-run)
-                node prisma/repair-site-catalog.js --dry-run
-                ;;
-              full)
-                echo "WARNING: full mode clones ALL JHB makes to CT"
-                node prisma/repair-site-catalog.js --full
-                npm run db:dedupe-catalog
-                npm run db:cleanup-ct-catalog
-                ;;
-              dedupe-dry-run)
-                node prisma/dedupe-site-catalog.mjs --dry-run
-                ;;
-              dedupe)
-                npm run db:dedupe-catalog
-                npm run db:cleanup-ct-catalog
-                ;;
-              cleanup-ct)
-                npm run db:cleanup-ct-catalog
-                ;;
-              *)
-                npm run db:repair-catalog
-                npm run db:dedupe-catalog
-                npm run db:cleanup-ct-catalog
-                ;;
-            esac
-            echo "==> Repair finished"
+            chmod +x scripts/repair-catalog.sh
+            ./scripts/repair-catalog.sh "${REPAIR_MODE:-cleanup-ct}"
