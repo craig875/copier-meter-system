@@ -181,6 +181,14 @@ export class ConsumableService {
 
   async createModelPart(data) {
     const branch = data.branch || 'JHB';
+    const model = await prisma.model.findUnique({
+      where: { id: data.modelId },
+      include: { make: true },
+    });
+    if (!model) throw new NotFoundError('Model');
+    if (model.make.branch !== branch) {
+      throw new ValidationError('Part site must match the model site');
+    }
     const { modelId, ...rest } = data;
     const part = await this.modelPartRepo.create({ ...rest, modelId, branch });
     return { part };

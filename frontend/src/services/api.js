@@ -15,11 +15,29 @@ const api = axios.create({
   },
 });
 
-// Add auth token to requests (sessionStorage = logout when tab closes)
+/** App site (JHB/CT) for API scoping — matches AuthContext effectiveBranch. */
+function resolveStoredAppSite() {
+  const fromStorage = localStorage.getItem('selectedBranch');
+  if (fromStorage === 'JHB' || fromStorage === 'CT') return fromStorage;
+  try {
+    const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+    if (user?.branch === 'JHB' || user?.branch === 'CT') return user.branch;
+  } catch {
+    // ignore invalid session user JSON
+  }
+  return null;
+}
+
+// Add auth token and app site to requests (sessionStorage = logout when tab closes)
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const site = resolveStoredAppSite();
+  if (site) {
+    config.params = { ...(config.params || {}), branch: config.params?.branch || site };
+    config.headers['X-App-Site'] = site;
   }
   return config;
 });
@@ -148,22 +166,25 @@ export const customersApi = {
   importBulk: (data, branch) => api.post('/customers/import', { data, branch }).then((r) => r.data),
 };
 
-// Makes & Models API
+// Makes & Models API (branch = app site: JHB or CT)
+const makesModelsBranchParams = (branch) => (branch ? { branch } : {});
+
 export const makesApi = {
-  getAll: () => api.get('/makes').then((r) => r.data),
-  create: (data) => api.post('/makes', data).then((r) => r.data),
-  update: (id, data) => api.put(`/makes/${id}`, data).then((r) => r.data),
-  delete: (id) => api.delete(`/makes/${id}`).then((r) => r.data),
+  getAll: (branch) => api.get('/makes', { params: makesModelsBranchParams(branch) }).then((r) => r.data),
+  create: (data, branch) => api.post('/makes', data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
+  update: (id, data, branch) => api.put(`/makes/${id}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
+  delete: (id, branch) => api.delete(`/makes/${id}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
   import: (data, branch) => api.post('/makes/import', { data, branch }).then((r) => r.data),
 };
 export const modelsApi = {
-  getAll: (makeId = null) => {
-    const params = makeId ? { makeId } : {};
+  getAll: (makeId = null, branch = null) => {
+    const params = { ...makesModelsBranchParams(branch) };
+    if (makeId) params.makeId = makeId;
     return api.get('/models', { params }).then((r) => r.data);
   },
-  create: (data) => api.post('/models', data).then((r) => r.data),
-  update: (id, data) => api.put(`/models/${id}`, data).then((r) => r.data),
-  delete: (id) => api.delete(`/models/${id}`).then((r) => r.data),
+  create: (data, branch) => api.post('/models', data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
+  update: (id, data, branch) => api.put(`/models/${id}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
+  delete: (id, branch) => api.delete(`/models/${id}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data),
 };
 
 // Connectivity Monitoring API (branch must match the user's selected / effective branch)

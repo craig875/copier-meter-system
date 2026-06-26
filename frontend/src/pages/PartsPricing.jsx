@@ -36,9 +36,9 @@ const PartsPricing = () => {
   });
 
   const { data: makesData } = useQuery({
-    queryKey: ['makes'],
-    queryFn: () => makesApi.getAll(),
-    enabled: showIncreaseModal,
+    queryKey: ['makes', branchFilter || effectiveBranch],
+    queryFn: () => makesApi.getAll(branchFilter || effectiveBranch),
+    enabled: showIncreaseModal && !!(branchFilter || effectiveBranch),
   });
   const makes = makesData?.makes || [];
 
