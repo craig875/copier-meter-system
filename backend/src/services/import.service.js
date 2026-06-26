@@ -77,7 +77,6 @@ export class ImportService {
 
         // Resolve model: prefer Model Id (UUID) when present, else legacy "Make ModelName" string
         let modelId = null;
-        const machineBranch = row.branch ? row.branch.toUpperCase() : branch;
         const rawModelId =
           (typeof row.modelId === 'string' && row.modelId.trim()) ||
           (typeof row.model_id === 'string' && row.model_id.trim()) ||
@@ -94,22 +93,12 @@ export class ImportService {
           }
           const foundById = await prisma.model.findUnique({
             where: { id: rawModelId.trim() },
-            include: { make: true },
           });
           if (!foundById) {
             results.errors.push({
               row: rowNumber,
               machineSerialNumber,
               error: `No model found for Model Id: ${rawModelId.trim()}`,
-            });
-            results.skipped++;
-            continue;
-          }
-          if (foundById.make.branch !== machineBranch) {
-            results.errors.push({
-              row: rowNumber,
-              machineSerialNumber,
-              error: `Model Id belongs to ${foundById.make.branch} site, not ${machineBranch}`,
             });
             results.skipped++;
             continue;
@@ -122,7 +111,7 @@ export class ImportService {
           const modelName = firstSpace > 0 ? modelStr.slice(firstSpace + 1) : modelStr;
           const found = await prisma.model.findFirst({
             where: {
-              make: { name: makeName, branch: machineBranch },
+              make: { name: makeName },
               name: modelName,
             },
           });
@@ -132,6 +121,7 @@ export class ImportService {
         // Resolve customer - find or create by name; optional contact fields on create only
         let customerId = null;
         const customerName = row.customer?.trim();
+        const machineBranch = row.branch ? row.branch.toUpperCase() : branch;
         if (customerName) {
           let customer = await prisma.customer.findFirst({
             where: { name: customerName, OR: [{ branch: machineBranch }, { branch: null }] },
@@ -539,8 +529,8 @@ export class ImportService {
       throw new ValidationError('Import data must be a non-empty array');
     }
 
-    const catalogSite = (branch || 'JHB').toUpperCase();
-    if (catalogSite !== 'JHB' && catalogSite !== 'CT') {
+    const partBranch = (branch || 'JHB').toUpperCase();
+    if (partBranch !== 'JHB' && partBranch !== 'CT') {
       throw new ValidationError('Branch must be JHB or CT');
     }
 
@@ -573,31 +563,14 @@ export class ImportService {
           continue;
         }
 
-        const rowBranch = (row.branch || row.Branch || '').toString().toUpperCase();
-        if (rowBranch === 'JHB' || rowBranch === 'CT') {
-          if (rowBranch !== catalogSite) {
-            results.errors.push({
-              row: rowNumber,
-              make: makeName,
-              model: modelName,
-              error: `Row branch ${rowBranch} does not match import site ${catalogSite}`,
-            });
-            results.skipped++;
-            continue;
-          }
-        }
-
-        const makeKey = `${catalogSite}:${makeName}`;
-        let make = makeCache.get(makeKey);
+        let make = makeCache.get(makeName);
         if (!make) {
-          make = await prisma.make.findUnique({
-            where: { name_branch: { name: makeName, branch: catalogSite } },
-          });
+          make = await prisma.make.findUnique({ where: { name: makeName } });
           if (!make) {
-            make = await prisma.make.create({ data: { name: makeName, branch: catalogSite } });
+            make = await prisma.make.create({ data: { name: makeName } });
             results.makesCreated++;
           }
-          makeCache.set(makeKey, make);
+          makeCache.set(makeName, make);
         }
 
         const modelKey = `${make.id}:${modelName}`;
@@ -668,7 +641,9 @@ export class ImportService {
         const meterType = meterTypes.includes(meterTypeVal) ? meterTypeVal : 'mono';
         const itemCode = (row.item_code || row.itemCode || '').trim() || null;
 
-        const partBranchForRow = catalogSite;
+        // Use row branch if provided and valid, else use request branch
+        const rowBranch = (row.branch || row.Branch || '').toString().toUpperCase();
+        const partBranchForRow = rowBranch === 'JHB' || rowBranch === 'CT' ? rowBranch : partBranch;
 
         const existingPart = await prisma.modelPart.findFirst({
           where: {

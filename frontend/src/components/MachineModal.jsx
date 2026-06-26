@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { machinesApi, makesApi, modelsApi, customersApi } from '../services/api';
 import { trimLeading } from '../utils/string';
-import { catalogMakesFromApi, filterModelsBySite } from '../utils/catalog';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { X, Check } from 'lucide-react';
@@ -34,21 +33,19 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
   });
 
   const { data: makesData } = useQuery({
-    queryKey: ['makes', effectiveBranch],
-    queryFn: () => makesApi.getAll(effectiveBranch),
-    enabled: !!effectiveBranch,
+    queryKey: ['makes'],
+    queryFn: () => makesApi.getAll(),
   });
   const { data: customersData } = useQuery({
     queryKey: ['customers', effectiveBranch],
     queryFn: () => customersApi.getAll(effectiveBranch),
   });
   const { data: modelsData } = useQuery({
-    queryKey: ['models', formData.makeId, effectiveBranch],
-    queryFn: () => modelsApi.getAll(formData.makeId || null, effectiveBranch),
-    enabled: !!effectiveBranch,
+    queryKey: ['models', formData.makeId],
+    queryFn: () => modelsApi.getAll(formData.makeId || null),
   });
-  const makes = catalogMakesFromApi(makesData, effectiveBranch);
-  const models = filterModelsBySite(modelsData?.models, effectiveBranch);
+  const makes = makesData?.makes || [];
+  const models = modelsData?.models || [];
   const customers = customersData?.customers || [];
 
   const mutation = useMutation({
@@ -64,7 +61,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
         return machinesApi.update(machine.id, payload);
       }
       payload.branch = effectiveBranch || 'JHB';
-      return machinesApi.create(payload, effectiveBranch || 'JHB');
+      return machinesApi.create(payload);
     },
     onSuccess: () => {
       toast.success(isEditing ? 'Machine updated' : 'Machine created');

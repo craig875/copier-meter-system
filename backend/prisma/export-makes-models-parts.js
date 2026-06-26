@@ -34,24 +34,14 @@ function escapeCsv(value) {
   return str;
 }
 
-const branchArg = process.argv.find((a) => a.startsWith('--branch='));
-const exportBranch = branchArg ? branchArg.split('=')[1]?.toUpperCase() : null;
-
 async function main() {
   console.log('Exporting makes, models, model parts, and machines...\n');
-  if (exportBranch && exportBranch !== 'JHB' && exportBranch !== 'CT') {
-    throw new Error('Invalid --branch value. Use JHB or CT.');
-  }
-  if (exportBranch) {
-    console.log(`Filtering catalog to site: ${exportBranch}\n`);
-  }
 
   // --- Export makes, models, model parts ---
   const makes = await prisma.make.findMany({
-    where: exportBranch ? { branch: exportBranch } : undefined,
     include: {
       models: {
-        include: { modelParts: exportBranch ? { where: { branch: exportBranch } } : true },
+        include: { modelParts: true },
       },
     },
     orderBy: { name: 'asc' },
@@ -79,7 +69,7 @@ async function main() {
           expected_yield: '',
           cost_rand: '',
           meter_type: '',
-          branch: make.branch || 'JHB',
+          branch: 'JHB',
         });
       } else {
         for (const part of model.modelParts) {

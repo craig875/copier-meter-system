@@ -209,13 +209,10 @@ model Customer {
 
 model Make {
   id      String   @id @default(uuid())
-  name    String   @map("name")
-  branch  Branch   @default(JHB)
+  name    String   @unique @map("name")
 
   models  Model[]
 
-  @@unique([name, branch])
-  @@index([branch])
   @@map("makes")
 }
 

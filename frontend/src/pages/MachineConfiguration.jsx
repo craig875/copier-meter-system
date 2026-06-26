@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { makesApi, modelsApi, consumablesApi } from '../services/api';
 import { trimLeading } from '../utils/string';
-import { catalogMakesFromApi } from '../utils/catalog';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
@@ -21,7 +20,7 @@ import MeterBlocks from '../components/MeterBlocks';
 
 const MachineConfiguration = () => {
   const queryClient = useQueryClient();
-  const { effectiveBranch, loading: authLoading } = useAuth();
+  const { effectiveBranch } = useAuth();
   const [expandedMakes, setExpandedMakes] = useState(new Set());
   const [expandedModels, setExpandedModels] = useState(new Set());
   const [editingMake, setEditingMake] = useState(null);
@@ -38,27 +37,16 @@ const MachineConfiguration = () => {
   const [importPreview, setImportPreview] = useState(null);
   const [importErrors, setImportErrors] = useState([]);
 
-  const { data: makesData, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['makes', effectiveBranch],
-    queryFn: () => makesApi.getAll(effectiveBranch),
-    enabled: !authLoading && !!effectiveBranch,
-    staleTime: 0,
-    refetchOnMount: 'always',
+  const { data: makesData, isLoading } = useQuery({
+    queryKey: ['makes'],
+    queryFn: () => makesApi.getAll(),
   });
   const { data: partsData } = useQuery({
     queryKey: ['model-parts-all', effectiveBranch],
     queryFn: () => consumablesApi.getModelPartsAll(effectiveBranch),
-    enabled: !!effectiveBranch,
   });
 
-  const makes = catalogMakesFromApi(makesData, effectiveBranch);
-
-  const invalidateMakes = () => {
-    queryClient.invalidateQueries({ queryKey: ['makes'] });
-  };
-  const invalidateParts = () => {
-    queryClient.invalidateQueries({ queryKey: ['model-parts-all', effectiveBranch] });
-  };
+  const makes = makesData?.makes || [];
   const allParts = partsData?.parts || [];
   const partsByModel = allParts.reduce((acc, p) => {
     const mid = p.modelId || p.model?.id;
@@ -87,64 +75,64 @@ const MachineConfiguration = () => {
   };
 
   const createMake = useMutation({
-    mutationFn: ({ name, branch }) => makesApi.create({ name: name.trim() }, branch),
+    mutationFn: makesApi.create,
     onSuccess: () => {
       toast.success('Make added');
       setShowMakeForm(false);
       setMakeForm({ name: '' });
-      invalidateMakes();
+      queryClient.invalidateQueries(['makes']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
 
   const updateMake = useMutation({
-    mutationFn: ({ id, data }) => makesApi.update(id, data, effectiveBranch),
+    mutationFn: ({ id, data }) => makesApi.update(id, data),
     onSuccess: () => {
       toast.success('Make updated');
       setEditingMake(null);
-      invalidateMakes();
+      queryClient.invalidateQueries(['makes']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
 
   const deleteMake = useMutation({
-    mutationFn: (id) => makesApi.delete(id, effectiveBranch),
+    mutationFn: makesApi.delete,
     onSuccess: () => {
       toast.success('Make deleted');
-      invalidateMakes();
-      invalidateParts();
+      queryClient.invalidateQueries(['makes']);
+      queryClient.invalidateQueries(['model-parts-all']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
 
   const createModel = useMutation({
-    mutationFn: (data) => modelsApi.create(data, effectiveBranch),
+    mutationFn: modelsApi.create,
     onSuccess: () => {
       toast.success('Model added');
       setShowModelForm(null);
       setModelForm({ makeId: '', name: '', paperSize: 'A4', modelType: 'mono', machineLife: '' });
-      invalidateMakes();
+      queryClient.invalidateQueries(['makes']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
 
   const updateModel = useMutation({
-    mutationFn: ({ id, data }) => modelsApi.update(id, data, effectiveBranch),
+    mutationFn: ({ id, data }) => modelsApi.update(id, data),
     onSuccess: () => {
       toast.success('Model updated');
       setEditingModel(null);
       setEditingModelMake(null);
-      invalidateMakes();
+      queryClient.invalidateQueries(['makes']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
 
   const deleteModel = useMutation({
-    mutationFn: (id) => modelsApi.delete(id, effectiveBranch),
+    mutationFn: modelsApi.delete,
     onSuccess: () => {
       toast.success('Model deleted');
-      invalidateMakes();
-      invalidateParts();
+      queryClient.invalidateQueries(['makes']);
+      queryClient.invalidateQueries(['model-parts-all']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -154,7 +142,7 @@ const MachineConfiguration = () => {
     onSuccess: () => {
       toast.success('Part added');
       setAddPartModel(null);
-      invalidateParts();
+      queryClient.invalidateQueries(['model-parts-all']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -164,7 +152,7 @@ const MachineConfiguration = () => {
     onSuccess: () => {
       toast.success('Part updated');
       setEditingPart(null);
-      invalidateParts();
+      queryClient.invalidateQueries(['model-parts-all']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -173,7 +161,7 @@ const MachineConfiguration = () => {
     mutationFn: consumablesApi.deleteModelPart,
     onSuccess: () => {
       toast.success('Part deleted');
-      invalidateParts();
+      queryClient.invalidateQueries(['model-parts-all']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed'),
   });
@@ -188,8 +176,8 @@ const MachineConfiguration = () => {
       if ((r.errors || []).length > 0) {
         toast(`${r.errors.length} row(s) had errors`, { icon: '⚠️' });
       }
-      invalidateMakes();
-      invalidateParts();
+      queryClient.invalidateQueries(['makes']);
+      queryClient.invalidateQueries(['model-parts-all']);
       setImportFile(null);
       setImportPreview(null);
       setShowImport(false);
@@ -274,7 +262,7 @@ const MachineConfiguration = () => {
   };
 
   const downloadTemplate = () => {
-    const headers = 'make,model,paper_size,model_type,machine_life,part_name,item_code,part_type,toner_color,expected_yield,cost_rand,meter_type,branch';
+    const headers = 'make,model,paper_size,model_type,machine_life,part_name,item_code,part_type,toner_color,expected_yield,cost_rand,meter_type';
     const example = 'Canon,iR-ADV C5535,A4,colour,,Drum Unit,DR-101,general,,50000,1500,mono\nCanon,iR-ADV C5535,A4,colour,,Cyan Toner,CT-C,toner,cyan,15000,800,colour';
     const csv = `${headers}\n${example}`;
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -286,37 +274,10 @@ const MachineConfiguration = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (isLoading || authLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="liquid-glass rounded-xl p-8 text-center max-w-lg mx-auto">
-        <p className="text-gray-900 font-medium">Could not load machine configuration</p>
-        <p className="text-sm text-gray-500 mt-2">
-          {error?.response?.data?.error || error?.message || 'The catalog API did not respond.'}
-        </p>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  if (!effectiveBranch) {
-    return (
-      <div className="liquid-glass rounded-xl p-8 text-center max-w-lg mx-auto">
-        <p className="text-gray-900 font-medium">Select a site first</p>
-        <p className="text-sm text-gray-500 mt-2">Use Switch branch to choose Johannesburg or Cape Town.</p>
       </div>
     );
   }
@@ -412,12 +373,6 @@ const MachineConfiguration = () => {
       {/* Main config: refined accordion */}
       <div data-tour="machine-config-makes" className="liquid-glass rounded-xl p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Machine Configuration</h1>
-        {effectiveBranch && (
-          <p className="text-sm text-gray-500 mb-4">
-            Site: <span className="font-medium text-gray-700">{effectiveBranch === 'CT' ? 'Cape Town (CT)' : 'Johannesburg (JHB)'}</span>
-            {' '}— makes and models are separate per site
-          </p>
-        )}
         <p className="text-gray-500 mb-6">
           Configure machine makes, models, and consumable parts. Client-level machines are assigned a make and model in <strong>Meter Readings → Machines</strong>.
         </p>
@@ -434,10 +389,7 @@ const MachineConfiguration = () => {
                 className="flex-1 px-3 py-2 border rounded-lg"
               />
               <button
-                onClick={() => {
-                  if (!effectiveBranch || !makeForm.name.trim()) return;
-                  createMake.mutate({ name: makeForm.name, branch: effectiveBranch });
-                }}
+                onClick={() => createMake.mutate(makeForm)}
                 disabled={!makeForm.name.trim() || createMake.isPending}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
               >
@@ -451,24 +403,6 @@ const MachineConfiguration = () => {
         )}
 
         <div className="space-y-2">
-          {makes.length === 0 && makesData?.needsBranch && (
-            <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-amber-900">
-              Site not sent to the server. Use Switch branch to pick JHB or CT, then hard refresh (Ctrl+Shift+R).
-            </div>
-          )}
-          {makes.length === 0 && !makesData?.needsBranch && effectiveBranch === 'CT' && (
-            <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-amber-900 mb-2">
-              Cape Town catalog is empty. On the server run{' '}
-              <code className="text-xs bg-white px-1 rounded">npm run db:repair-catalog</code>{' '}
-              in the backend folder to copy JHB configuration to CT.
-            </div>
-          )}
-          {makes.length === 0 && !makesData?.needsBranch && (
-            <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-500">
-              No makes configured for {effectiveBranch === 'CT' ? 'Cape Town' : 'Johannesburg'} yet.
-              Add a make below, or ask your admin to run <code className="text-xs bg-gray-100 px-1 rounded">npm run db:repair-catalog</code> on the server if machines still have models assigned.
-            </div>
-          )}
           {makes.map((make) => (
             <div key={make.id} className="border border-gray-200 rounded-lg overflow-hidden">
               <div

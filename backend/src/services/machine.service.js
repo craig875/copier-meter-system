@@ -1,4 +1,3 @@
-import prisma from '../config/database.js';
 import { repositories } from '../repositories/index.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
 
@@ -119,31 +118,11 @@ export class MachineService {
   }
 
   /**
-   * Ensure model belongs to the same app site as the machine.
-   * @param {string|null|undefined} modelId
-   * @param {string} branch
-   */
-  async assertModelMatchesSite(modelId, branch) {
-    if (!modelId) return;
-    const model = await prisma.model.findUnique({
-      where: { id: modelId },
-      include: { make: true },
-    });
-    if (!model) throw new NotFoundError('Model');
-    if (model.make.branch !== branch) {
-      throw new ValidationError('Selected model is not available for this site');
-    }
-  }
-
-  /**
    * Create a new machine
    * @param {Object} data
    * @returns {Promise<Object>}
    */
   async createMachine(data) {
-    const branch = data.branch || 'JHB';
-    await this.assertModelMatchesSite(data.modelId, branch);
-
     // Check for duplicate serial number
     const existing = await this.machineRepo.findBySerialNumber(data.machineSerialNumber);
     if (existing) {
@@ -172,11 +151,6 @@ export class MachineService {
       if (conflicting) {
         throw new ConflictError('Machine serial number already exists');
       }
-    }
-
-    if (data.modelId !== undefined) {
-      const branch = data.branch || existing.branch;
-      await this.assertModelMatchesSite(data.modelId, branch);
     }
 
     const machine = await this.machineRepo.update(id, data);

@@ -1,6 +1,5 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { resolveAppSite, resolveAppSiteForWrite, resolveAppSiteForRead } from '../utils/app-site.util.js';
 
 /**
  * Customer Controller - HTTP request/response for customers
@@ -11,29 +10,18 @@ export class CustomerController {
   }
 
   getCustomers = asyncHandler(async (req, res) => {
-    const site = resolveAppSiteForRead(req);
-    if (!site) {
-      return res.json({ customers: [], site: null, needsBranch: true });
-    }
-    const result = await this.customerService.getCustomers(site);
+    const branch = req.query.branch || req.user?.branch || null;
+    const result = await this.customerService.getCustomers(branch);
     res.json(result);
   });
 
   getCustomer = asyncHandler(async (req, res) => {
-    const site = resolveAppSiteForRead(req);
-    if (!site) {
-      return res.status(400).json({ error: 'Site (branch) is required' });
-    }
-    const result = await this.customerService.getCustomer(req.params.id, site);
+    const result = await this.customerService.getCustomer(req.params.id);
     res.json(result);
   });
 
   createCustomer = asyncHandler(async (req, res) => {
-    const site = resolveAppSiteForWrite(req) || resolveAppSite(req);
-    const result = await this.customerService.createCustomer({
-      ...req.body,
-      branch: req.body.branch || site,
-    });
+    const result = await this.customerService.createCustomer(req.body);
     res.status(201).json(result);
   });
 

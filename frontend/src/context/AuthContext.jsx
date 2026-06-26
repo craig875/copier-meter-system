@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { MODULE_CONNECTIVITY } from '../constants/modules';
-import { clearSiteScopedQueries } from '../queryClient';
 
 const AuthContext = createContext(null);
 
@@ -42,26 +41,8 @@ export const AuthProvider = ({ children }) => {
             setSelectedBranch(storedBranch || userData.branch || null);
           }
         } catch (error) {
-          if (error.response?.status === 401) {
-            sessionStorage.removeItem('token');
-            sessionStorage.removeItem('user');
-          } else {
-            // Rate limit / network blip — keep session and restore cached user
-            try {
-              const cached = JSON.parse(storedUser);
-              setUser({ ...cached, twoFactorEnabled: cached.twoFactorEnabled ?? false });
-              if (
-                cached.role === 'admin' ||
-                cached.role === 'manager' ||
-                ((cached.role === 'meter_user' || cached.role === 'capturer') && !cached.branch)
-              ) {
-                const storedBranch = localStorage.getItem('selectedBranch');
-                setSelectedBranch(storedBranch || cached.branch || null);
-              }
-            } catch {
-              // invalid cached user JSON — leave logged out
-            }
-          }
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
         }
       }
       setLoading(false);
@@ -158,19 +139,12 @@ export const AuthProvider = ({ children }) => {
   const canSwitchBranches =
     isAdmin || isManager || ((isMeterUser || isCapturer) && !user?.branch);
   const effectiveBranch = canSwitchBranches ? (selectedBranch ?? null) : (user?.branch || null);
-
-  useEffect(() => {
-    if (effectiveBranch === 'JHB' || effectiveBranch === 'CT') {
-      localStorage.setItem('selectedBranch', effectiveBranch);
-    }
-  }, [effectiveBranch]);
   
   // Helper to update selectedBranch and persist to localStorage
   const updateSelectedBranch = (branch) => {
     if (canSwitchBranches) {
       setSelectedBranch(branch);
       localStorage.setItem('selectedBranch', branch);
-      clearSiteScopedQueries();
     }
   };
 

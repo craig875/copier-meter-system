@@ -15,70 +15,11 @@ const api = axios.create({
   },
 });
 
-/** App site (JHB/CT) for API scoping — matches AuthContext effectiveBranch. */
-function resolveStoredAppSite() {
-  const fromStorage = localStorage.getItem('selectedBranch');
-  if (fromStorage === 'JHB' || fromStorage === 'CT') return fromStorage;
-  try {
-    const user = JSON.parse(sessionStorage.getItem('user') || 'null');
-    if (user?.branch === 'JHB' || user?.branch === 'CT') return user.branch;
-  } catch {
-    // ignore invalid session user JSON
-  }
-  return null;
-}
-
-/** Routes that must not receive site query params or custom headers (avoids CORS preflight on login). */
-function isAuthRequest(url = '') {
-  return url.includes('/auth/login')
-    || url.includes('/auth/verify-2fa')
-    || url.includes('/auth/me');
-}
-
-// Add auth token; attach site scope only on data API calls (not login/session)
+// Add auth token to requests (sessionStorage = logout when tab closes)
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  }
-  if (!isAuthRequest(config.url)) {
-    const method = (config.method || 'get').toLowerCase();
-    const existingBranch = config.params?.branch;
-    const explicitBranch =
-      existingBranch === 'JHB' || existingBranch === 'CT' ? existingBranch : null;
-
-    // Never override an explicit branch on catalog makes/models calls (avoids stale localStorage bleed).
-    const isCatalogMakeModel =
-      /\/makes(\/|$|\?)/.test(config.url || '')
-      || /\/models(\/|$|\?)/.test(config.url || '');
-
-    if (isCatalogMakeModel && explicitBranch) {
-      config.params = { ...(config.params || {}), branch: explicitBranch };
-    } else if (!isCatalogMakeModel) {
-      const site = resolveStoredAppSite();
-      if (site) {
-        config.params = {
-          ...(config.params || {}),
-          branch: explicitBranch || site,
-        };
-        if (
-          method === 'post'
-          && config.data
-          && typeof config.data === 'object'
-          && !(config.data instanceof FormData)
-          && config.data.branch !== 'JHB'
-          && config.data.branch !== 'CT'
-        ) {
-          const branch = explicitBranch || site;
-          config.data = { ...config.data, branch };
-        }
-      }
-    } else {
-      const site = resolveStoredAppSite();
-      if (site && !explicitBranch) {
-        config.params = { ...(config.params || {}), branch: site };
-      }
-    }
   }
   return config;
 });
@@ -90,8 +31,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const isAuthStep = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/verify-2fa');
-      const onLoginPage = window.location.pathname === '/login';
-      if (!isAuthStep && !onLoginPage) {
+      if (!isAuthStep) {
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('user');
         window.location.href = '/login';
@@ -123,22 +63,15 @@ export const usersApi = {
 // Machines API
 export const machinesApi = {
   getAll: (params) => {
+    // Remove null/undefined/empty branch from params
     const cleanParams = { ...params };
     if (cleanParams.branch === null || cleanParams.branch === undefined || cleanParams.branch === '') {
       delete cleanParams.branch;
     }
-    const branch = cleanParams.branch;
-    const url =
-      branch === 'JHB' || branch === 'CT'
-        ? `/machines?branch=${encodeURIComponent(branch)}`
-        : '/machines';
-    return api.get(url, { params: cleanParams }).then(res => res.data);
+    return api.get('/machines', { params: cleanParams }).then(res => res.data);
   },
   getOne: (id) => api.get(`/machines/${id}`),
-  create: (data, branch = null) => {
-    const params = branch ? { branch } : {};
-    return api.post('/machines', data, { params });
-  },
+  create: (data) => api.post('/machines', data),
   update: (id, data) => api.put(`/machines/${id}`, data),
   delete: (id) => api.delete(`/machines/${id}`),
   import: (data, year, month, branch) => {
@@ -215,65 +148,22 @@ export const customersApi = {
   importBulk: (data, branch) => api.post('/customers/import', { data, branch }).then((r) => r.data),
 };
 
-// Makes & Models API (branch = app site: JHB or CT)
-const makesModelsBranchParams = (branch) => {
-  if (branch !== 'JHB' && branch !== 'CT') return {};
-  return { branch };
-};
-
+// Makes & Models API
 export const makesApi = {
-  getAll: (branch) => {
-    if (branch !== 'JHB' && branch !== 'CT') {
-      return Promise.resolve({ makes: [], site: null, needsBranch: true });
-    }
-    return api
-      .get(`/makes?branch=${encodeURIComponent(branch)}`, { params: makesModelsBranchParams(branch) })
-      .then((r) => r.data);
-  },
-  create: (data, branch) => {
-    if (branch !== 'JHB' && branch !== 'CT') {
-      return Promise.reject(new Error('Branch (JHB or CT) is required'));
-    }
-    const q = encodeURIComponent(branch);
-    return api.post(`/makes?branch=${q}`, { ...data, branch }, { params: { branch } }).then((r) => r.data);
-  },
-  update: (id, data, branch) => {
-    const q = branch === 'JHB' || branch === 'CT' ? `?branch=${encodeURIComponent(branch)}` : '';
-    return api.put(`/makes/${id}${q}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data);
-  },
-  delete: (id, branch) => {
-    const q = branch === 'JHB' || branch === 'CT' ? `?branch=${encodeURIComponent(branch)}` : '';
-    return api.delete(`/makes/${id}${q}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data);
-  },
+  getAll: () => api.get('/makes').then((r) => r.data),
+  create: (data) => api.post('/makes', data).then((r) => r.data),
+  update: (id, data) => api.put(`/makes/${id}`, data).then((r) => r.data),
+  delete: (id) => api.delete(`/makes/${id}`).then((r) => r.data),
   import: (data, branch) => api.post('/makes/import', { data, branch }).then((r) => r.data),
 };
 export const modelsApi = {
-  getAll: (makeId = null, branch = null) => {
-    const params = { ...makesModelsBranchParams(branch) };
-    if (makeId) params.makeId = makeId;
-    const q =
-      branch === 'JHB' || branch === 'CT'
-        ? `?branch=${encodeURIComponent(branch)}${makeId ? `&makeId=${encodeURIComponent(makeId)}` : ''}`
-        : makeId
-          ? `?makeId=${encodeURIComponent(makeId)}`
-          : '';
-    return api.get(`/models${q}`, { params }).then((r) => r.data);
+  getAll: (makeId = null) => {
+    const params = makeId ? { makeId } : {};
+    return api.get('/models', { params }).then((r) => r.data);
   },
-  create: (data, branch) => {
-    if (branch !== 'JHB' && branch !== 'CT') {
-      return Promise.reject(new Error('Branch (JHB or CT) is required'));
-    }
-    const q = encodeURIComponent(branch);
-    return api.post(`/models?branch=${q}`, { ...data, branch }, { params: { branch } }).then((r) => r.data);
-  },
-  update: (id, data, branch) => {
-    const q = branch === 'JHB' || branch === 'CT' ? `?branch=${encodeURIComponent(branch)}` : '';
-    return api.put(`/models/${id}${q}`, data, { params: makesModelsBranchParams(branch) }).then((r) => r.data);
-  },
-  delete: (id, branch) => {
-    const q = branch === 'JHB' || branch === 'CT' ? `?branch=${encodeURIComponent(branch)}` : '';
-    return api.delete(`/models/${id}${q}`, { params: makesModelsBranchParams(branch) }).then((r) => r.data);
-  },
+  create: (data) => api.post('/models', data).then((r) => r.data),
+  update: (id, data) => api.put(`/models/${id}`, data).then((r) => r.data),
+  delete: (id) => api.delete(`/models/${id}`).then((r) => r.data),
 };
 
 // Connectivity Monitoring API (branch must match the user's selected / effective branch)

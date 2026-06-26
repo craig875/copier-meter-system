@@ -1,7 +1,7 @@
 import { services } from '../services/index.js';
 import { ImportService } from '../services/import.service.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { resolveAppSite, resolveAppSiteForWrite } from '../utils/app-site.util.js';
+import { hasAdminAccess } from '../utils/permissions.js';
 
 /**
  * Import Controller - HTTP request/response handling for imports
@@ -15,7 +15,12 @@ export class ImportController {
 
   importMachines = asyncHandler(async (req, res) => {
     const { data, year, month } = req.body;
-    const branch = resolveAppSiteForWrite(req) || resolveAppSite(req);
+    const branch = hasAdminAccess(req.user.role) ? req.body.branch || req.user.branch : req.user.branch;
+    
+    if (!branch) {
+      return res.status(400).json({ error: 'Branch is required' });
+    }
+
     const userId = req.user.id;
     const result = await this.importService.importMachines(data, year, month, branch, userId);
     this.auditService.log(userId, 'machine_import', 'import', null, { year, month, branch, created: result.results?.created, updated: result.results?.updated });
@@ -25,7 +30,12 @@ export class ImportController {
   /** Bulk CSV: create customers only (machines added separately). */
   importCustomers = asyncHandler(async (req, res) => {
     const { data } = req.body;
-    const branch = resolveAppSiteForWrite(req) || resolveAppSite(req);
+    const branch = hasAdminAccess(req.user.role) ? req.body.branch || req.user.branch : req.user.branch;
+
+    if (!branch) {
+      return res.status(400).json({ error: 'Branch is required' });
+    }
+
     const userId = req.user.id;
     const result = await this.importService.importCustomers(data, branch);
     this.auditService.log(userId, 'customer_import', 'import', null, {
@@ -37,8 +47,11 @@ export class ImportController {
   });
 
   importReadings = asyncHandler(async (req, res) => {
-    const { data, year, month } = req.body;
-    const branch = resolveAppSiteForWrite(req) || resolveAppSite(req);
+    const { data, year, month, branch } = req.body;
+    
+    if (!branch) {
+      return res.status(400).json({ error: 'Branch is required' });
+    }
 
     if (!year || !month) {
       return res.status(400).json({ error: 'Year and month are required' });
@@ -51,17 +64,17 @@ export class ImportController {
   });
 
   importMakeModelParts = asyncHandler(async (req, res) => {
-    const { data } = req.body;
-    const catalogSite = resolveAppSiteForWrite(req) || resolveAppSite(req);
+    const { data, branch } = req.body;
+    const partBranch = branch || req.user?.branch || 'JHB';
 
     if (!data || !Array.isArray(data) || data.length === 0) {
       return res.status(400).json({ error: 'Import data array is required' });
     }
 
     const userId = req.user.id;
-    const result = await this.importService.importMakeModelParts(data, catalogSite);
+    const result = await this.importService.importMakeModelParts(data, partBranch);
     this.auditService.log(userId, 'make_model_part_import', 'import', null, {
-      branch: catalogSite,
+      branch: partBranch,
       makesCreated: result.results?.makesCreated,
       modelsCreated: result.results?.modelsCreated,
       partsCreated: result.results?.partsCreated,

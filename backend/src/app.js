@@ -47,12 +47,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-app.use('/api', (req, res, next) => {
-  if (req.path.startsWith('/auth') || req.path === '/health') {
-    return next();
-  }
-  return apiLimiter(req, res, next);
-});
+app.use('/api', apiLimiter);
 
 // Root route
 app.get('/', (req, res) => {
