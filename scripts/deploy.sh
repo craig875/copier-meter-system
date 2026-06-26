@@ -30,6 +30,9 @@ echo "==> Backend (install + migrate)"
 (
   cd "$ROOT/backend"
   npm ci --omit=dev
+  npx prisma generate
+  # Clear failed migration record if a previous deploy attempt rolled back (P3009)
+  npx prisma migrate resolve --rolled-back 20260626210000_rollback_make_branch 2>/dev/null || true
   npx prisma migrate deploy
 )
 
