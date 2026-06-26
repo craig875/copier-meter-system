@@ -22,6 +22,7 @@ import {
 import clsx from 'clsx';
 import MachineModal from '../components/MachineModal';
 import { trimLeading } from '../utils/string';
+import { filterMachinesBySite } from '../utils/catalog';
 import MeterBlocks from '../components/MeterBlocks';
 
 /** Client-side filter; fields align with server search on GET /machines */
@@ -52,7 +53,7 @@ const Machines = () => {
   const { data, isLoading, error, isError } = useQuery({
     queryKey: ['machines', { branch: effectiveBranch }],
     queryFn: () => machinesApi.getAll({ limit: '1000', branch: effectiveBranch }),
-    enabled: !authLoading && !!user, // Wait for auth to be ready
+    enabled: !authLoading && !!user && !!effectiveBranch,
     retry: 1,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
@@ -92,7 +93,7 @@ const Machines = () => {
   });
 
   // API now returns response.data directly, so data is { machines, pagination }
-  const allMachines = data?.machines || [];
+  const allMachines = filterMachinesBySite(data?.machines, effectiveBranch);
   const queryLower = search.trim().toLowerCase();
   const filteredMachines = useMemo(() => {
     if (!queryLower) return allMachines;

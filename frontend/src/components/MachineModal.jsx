@@ -64,7 +64,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
         return machinesApi.update(machine.id, payload);
       }
       payload.branch = effectiveBranch || 'JHB';
-      return machinesApi.create(payload);
+      return machinesApi.create(payload, effectiveBranch || 'JHB');
     },
     onSuccess: () => {
       toast.success(isEditing ? 'Machine updated' : 'Machine created');

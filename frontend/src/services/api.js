@@ -98,7 +98,10 @@ export const machinesApi = {
     return api.get('/machines', { params: cleanParams }).then(res => res.data);
   },
   getOne: (id) => api.get(`/machines/${id}`),
-  create: (data) => api.post('/machines', data),
+  create: (data, branch = null) => {
+    const params = branch ? { branch } : {};
+    return api.post('/machines', data, { params });
+  },
   update: (id, data) => api.put(`/machines/${id}`, data),
   delete: (id) => api.delete(`/machines/${id}`),
   import: (data, year, month, branch) => {

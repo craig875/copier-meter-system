@@ -1,7 +1,6 @@
 import { services } from '../services/index.js';
 import { ImportService } from '../services/import.service.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { hasAdminAccess } from '../utils/permissions.js';
 import { resolveAppSite } from '../utils/app-site.util.js';
 
 /**
@@ -16,12 +15,7 @@ export class ImportController {
 
   importMachines = asyncHandler(async (req, res) => {
     const { data, year, month } = req.body;
-    const branch = hasAdminAccess(req.user.role) ? req.body.branch || req.user.branch : req.user.branch;
-    
-    if (!branch) {
-      return res.status(400).json({ error: 'Branch is required' });
-    }
-
+    const branch = resolveAppSite(req);
     const userId = req.user.id;
     const result = await this.importService.importMachines(data, year, month, branch, userId);
     this.auditService.log(userId, 'machine_import', 'import', null, { year, month, branch, created: result.results?.created, updated: result.results?.updated });
@@ -31,12 +25,7 @@ export class ImportController {
   /** Bulk CSV: create customers only (machines added separately). */
   importCustomers = asyncHandler(async (req, res) => {
     const { data } = req.body;
-    const branch = hasAdminAccess(req.user.role) ? req.body.branch || req.user.branch : req.user.branch;
-
-    if (!branch) {
-      return res.status(400).json({ error: 'Branch is required' });
-    }
-
+    const branch = resolveAppSite(req);
     const userId = req.user.id;
     const result = await this.importService.importCustomers(data, branch);
     this.auditService.log(userId, 'customer_import', 'import', null, {
@@ -48,11 +37,8 @@ export class ImportController {
   });
 
   importReadings = asyncHandler(async (req, res) => {
-    const { data, year, month, branch } = req.body;
-    
-    if (!branch) {
-      return res.status(400).json({ error: 'Branch is required' });
-    }
+    const { data, year, month } = req.body;
+    const branch = resolveAppSite(req);
 
     if (!year || !month) {
       return res.status(400).json({ error: 'Year and month are required' });

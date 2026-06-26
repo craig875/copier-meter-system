@@ -1,5 +1,6 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { resolveAppSite } from '../utils/app-site.util.js';
 
 /**
  * Customer Controller - HTTP request/response for customers
@@ -10,18 +11,23 @@ export class CustomerController {
   }
 
   getCustomers = asyncHandler(async (req, res) => {
-    const branch = req.query.branch || req.user?.branch || null;
-    const result = await this.customerService.getCustomers(branch);
+    const site = resolveAppSite(req);
+    const result = await this.customerService.getCustomers(site);
     res.json(result);
   });
 
   getCustomer = asyncHandler(async (req, res) => {
-    const result = await this.customerService.getCustomer(req.params.id);
+    const site = resolveAppSite(req);
+    const result = await this.customerService.getCustomer(req.params.id, site);
     res.json(result);
   });
 
   createCustomer = asyncHandler(async (req, res) => {
-    const result = await this.customerService.createCustomer(req.body);
+    const site = resolveAppSite(req);
+    const result = await this.customerService.createCustomer({
+      ...req.body,
+      branch: req.body.branch || site,
+    });
     res.status(201).json(result);
   });
 

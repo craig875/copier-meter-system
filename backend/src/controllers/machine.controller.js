@@ -1,6 +1,8 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { hasAdminAccess } from '../utils/permissions.js';
+import { resolveAppSite, assertMachineInSite } from '../utils/app-site.util.js';
+import { ForbiddenError } from '../utils/errors.js';
 
 /**
  * Machine Controller - HTTP request/response handling for machines
@@ -12,106 +14,55 @@ export class MachineController {
     this.auditService = auditService;
   }
 
+  assertMachineAccess(req, machine) {
+    const site = resolveAppSite(req);
+    assertMachineInSite(machine, site);
+  }
+
   getMachines = asyncHandler(async (req, res) => {
-    const { branch: queryBranch, ...filters } = req.query;
-    
-    // Handle string "null" or "undefined" from query params
-    const cleanQueryBranch = queryBranch === 'null' || queryBranch === 'undefined' || queryBranch === '' 
-      ? null 
-      : (queryBranch && String(queryBranch).toUpperCase());
-    
-    // Validate branch is JHB or CT if provided
-    const validBranch = (cleanQueryBranch === 'JHB' || cleanQueryBranch === 'CT') ? cleanQueryBranch : null;
-    
-    // Admins: use selected branch from UI, or their branch, or all
-    // Meter users with branch assigned: use their branch only (cannot switch)
-    // Meter users with no branch (can switch): use selected branch from UI
-    let branch = null;
-    if (hasAdminAccess(req.user.role)) {
-      branch = validBranch || (req.user.branch ? String(req.user.branch).toUpperCase() : null) || null;
-    } else if ((req.user.role === 'meter_user' || req.user.role === 'capturer') && !req.user.branch) {
-      // Meter user / capturer with no branch - can switch, use UI selection
-      branch = validBranch || null;
-    } else {
-      branch = req.user.branch ? String(req.user.branch).toUpperCase() : null;
-    }
-    
-    const result = await this.machineService.getMachines({ ...filters, branch });
-    res.json(result);
+    const { branch: _queryBranch, ...filters } = req.query;
+    const site = resolveAppSite(req);
+    const result = await this.machineService.getMachines({ ...filters, branch: site });
+    res.json({ ...result, site });
   });
 
   getMachine = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const machine = await this.machineService.getMachine(id);
-    
-    // Enforce branch access: non-admins can only access machines from their branch (if they have one)
-    // If no branch assigned, they can access all branches
-    if (req.user.role !== 'admin' && req.user.branch && machine.machine.branch !== req.user.branch) {
-      return res.status(403).json({ error: 'Access denied: Machine belongs to a different branch' });
-    }
-    
+    this.assertMachineAccess(req, machine.machine);
     res.json(machine);
   });
 
   createMachine = asyncHandler(async (req, res) => {
-    // Enforce branch: 
-    // - Admins can specify or use their branch
-    // - Meter users can use their assigned branch, or any branch if no branch assigned (all branches access)
-    // - Default to JHB if no branch is set
-    let branch;
-    if (hasAdminAccess(req.user.role)) {
-      branch = req.body.branch || req.user.branch || 'JHB';
-    } else if (req.user.role === 'meter_user') {
-      // Meter users can create machines for their assigned branch, or any branch if no branch assigned
-      if (req.user.branch) {
-        // If they have a branch assigned, use it (ignore any branch they try to specify)
-        branch = req.user.branch;
-      } else {
-        // If no branch assigned, they can specify any branch (all branches access)
-        branch = req.body.branch || 'JHB';
-      }
-    } else {
-      branch = req.user.branch || 'JHB';
-    }
-
-    const machineData = { ...req.body, branch };
+    const site = resolveAppSite(req);
+    const machineData = { ...req.body, branch: site };
     const result = await this.machineService.createMachine(machineData);
-    this.auditService.log(req.user.id, 'machine_create', 'machine', result.machine.id, { serialNumber: result.machine.machineSerialNumber, branch });
+    this.auditService.log(req.user.id, 'machine_create', 'machine', result.machine.id, {
+      serialNumber: result.machine.machineSerialNumber,
+      branch: site,
+    });
     res.status(201).json(result);
   });
 
   updateMachine = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    
-    // Check machine exists and user has access
     const existing = await this.machineService.getMachine(id);
-    // If user has a branch assigned, they can only access machines from that branch
-    // If no branch assigned, they can access all branches
-    if (!hasAdminAccess(req.user.role) && req.user.branch && existing.machine.branch !== req.user.branch) {
-      return res.status(403).json({ error: 'Access denied: Machine belongs to a different branch' });
-    }
-    
-    // For non-admins, ensure they can't change branch or access machines from other branches
-    // Meter users with no branch assigned can change branch (all branches access)
+    this.assertMachineAccess(req, existing.machine);
+
     if (!hasAdminAccess(req.user.role) && req.body.branch) {
       if (req.user.role === 'meter_user' && !req.user.branch) {
-        // Meter user with no branch can change branch (all branches access)
-        // Allow the branch change
+        // meter user with all-branch access may change branch
       } else {
-        // Meter users with a branch assigned, or other non-admins, cannot change branch
-        return res.status(403).json({ error: 'Only administrators can change machine branch' });
+        throw new ForbiddenError('Only administrators can change machine branch');
       }
     }
 
-    // If branch is being updated, validate it
     if (req.body.branch) {
-      const branch = hasAdminAccess(req.user.role)
-        ? req.body.branch 
+      req.body.branch = hasAdminAccess(req.user.role)
+        ? req.body.branch
         : (req.user.role === 'meter_user' && !req.user.branch)
-          ? req.body.branch // Meter user with no branch can specify any branch
-          : req.user.branch || 'JHB';
-      
-      req.body.branch = branch;
+          ? req.body.branch
+          : req.user.branch || resolveAppSite(req);
     }
 
     const result = await this.machineService.updateMachine(id, req.body);
@@ -121,15 +72,8 @@ export class MachineController {
 
   deleteMachine = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    
-    // Check machine exists and user has access
     const existing = await this.machineService.getMachine(id);
-    // If user has a branch assigned, they can only access machines from that branch
-    // If no branch assigned, they can access all branches
-    if (!hasAdminAccess(req.user.role) && req.user.branch && existing.machine.branch !== req.user.branch) {
-      return res.status(403).json({ error: 'Access denied: Machine belongs to a different branch' });
-    }
-    
+    this.assertMachineAccess(req, existing.machine);
     const result = await this.machineService.deleteMachine(id);
     this.auditService.log(req.user.id, 'machine_delete', 'machine', id, { serialNumber: existing?.machine?.machineSerialNumber });
     res.json(result);
@@ -137,15 +81,8 @@ export class MachineController {
 
   decommissionMachine = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    
-    // Check machine exists and user has access
     const existing = await this.machineService.getMachine(id);
-    // If user has a branch assigned, they can only access machines from that branch
-    // If no branch assigned, they can access all branches
-    if (!hasAdminAccess(req.user.role) && req.user.branch && existing.machine.branch !== req.user.branch) {
-      return res.status(403).json({ error: 'Access denied: Machine belongs to a different branch' });
-    }
-    
+    this.assertMachineAccess(req, existing.machine);
     const result = await this.machineService.decommissionMachine(id);
     this.auditService.log(req.user.id, 'machine_decommission', 'machine', id, { serialNumber: existing?.machine?.machineSerialNumber });
     res.json(result);
@@ -153,15 +90,8 @@ export class MachineController {
 
   recommissionMachine = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    
-    // Check machine exists and user has access
     const existing = await this.machineService.getMachine(id);
-    // If user has a branch assigned, they can only access machines from that branch
-    // If no branch assigned, they can access all branches
-    if (!hasAdminAccess(req.user.role) && req.user.branch && existing.machine.branch !== req.user.branch) {
-      return res.status(403).json({ error: 'Access denied: Machine belongs to a different branch' });
-    }
-    
+    this.assertMachineAccess(req, existing.machine);
     const result = await this.machineService.recommissionMachine(id);
     this.auditService.log(req.user.id, 'machine_recommission', 'machine', id, { serialNumber: existing?.machine?.machineSerialNumber });
     res.json(result);
