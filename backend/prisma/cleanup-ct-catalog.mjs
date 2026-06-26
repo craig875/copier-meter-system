@@ -11,7 +11,7 @@
 
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import { isCtMakeUsedByCopiers } from './catalog-clone.util.js';
+import { deleteMakeCatalog } from './catalog-delete.util.js';
 
 const prisma = new PrismaClient();
 const dryRun = process.argv.includes('--dry-run');
@@ -51,15 +51,18 @@ async function main() {
       `  - remove unused CT make: ${make.name} (${make.models.length} model(s), ${parts} orphan part(s), 0 copiers)`
     );
     if (!dryRun) {
-      for (const model of make.models) {
-        await prisma.model.delete({ where: { id: model.id } });
-        removedModels++;
+      try {
+        await deleteMakeCatalog(prisma, make);
+        removedModels += make.models.length;
+        removedMakes++;
+      } catch (err) {
+        console.error(`  ! failed to remove ${make.name}:`, err.message);
+        throw err;
       }
-      await prisma.make.delete({ where: { id: make.id } });
     } else {
       removedModels += make.models.length;
+      removedMakes++;
     }
-    removedMakes++;
   }
 
   console.log('\nRemoved:', { makes: removedMakes, models: removedModels, kept });

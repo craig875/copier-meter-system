@@ -60,6 +60,7 @@ jobs:
             git reset --hard origin/main
             cd backend
             npm ci --omit=dev
+            npx prisma generate
             case "$MODE" in
               dry-run)
                 node prisma/repair-site-catalog.js --dry-run

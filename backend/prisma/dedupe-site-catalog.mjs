@@ -11,6 +11,7 @@
 
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import { deleteModelCatalog } from './catalog-delete.util.js';
 
 const prisma = new PrismaClient();
 const dryRun = process.argv.includes('--dry-run');
@@ -59,8 +60,7 @@ async function mergeModels(keeperMake, dupMake, stats) {
 
     console.log(`    remove duplicate model ${dupModel.name} under ${dupMake.name}`);
     if (!dryRun) {
-      await prisma.modelPart.deleteMany({ where: { modelId: dupModel.id } });
-      await prisma.model.delete({ where: { id: dupModel.id } });
+      await deleteModelCatalog(prisma, dupModel.id);
     }
     stats.modelsDeleted++;
   }
@@ -146,8 +146,7 @@ async function dedupeBranch(branch) {
       }
       stats.machinesRemapped += count;
       if (!dryRun) {
-        await prisma.modelPart.deleteMany({ where: { modelId: dup.id } });
-        await prisma.model.delete({ where: { id: dup.id } });
+        await deleteModelCatalog(prisma, dup.id);
       }
       stats.modelsDeleted++;
     }
