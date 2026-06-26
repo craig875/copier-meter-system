@@ -15,11 +15,28 @@ const api = axios.create({
   },
 });
 
-// Add auth token to requests (sessionStorage = logout when tab closes)
+/** App site (JHB/CT) for API scoping — matches AuthContext effectiveBranch. */
+function resolveStoredAppSite() {
+  const fromStorage = localStorage.getItem('selectedBranch');
+  if (fromStorage === 'JHB' || fromStorage === 'CT') return fromStorage;
+  try {
+    const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+    if (user?.branch === 'JHB' || user?.branch === 'CT') return user.branch;
+  } catch {
+    // ignore invalid session user JSON
+  }
+  return null;
+}
+
+// Add auth token and app site to requests (sessionStorage = logout when tab closes)
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const site = resolveStoredAppSite();
+  if (site) {
+    config.params = { ...(config.params || {}), branch: config.params?.branch || site };
   }
   return config;
 });
