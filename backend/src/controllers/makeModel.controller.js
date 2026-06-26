@@ -3,6 +3,8 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
 import { resolveAppSiteForWrite, resolveAppSiteForRead, assertMakeInSite } from '../utils/app-site.util.js';
 import { dedupeMakesCatalog } from '../utils/catalog-dedupe.util.js';
+import { deleteModelCatalog } from '../../prisma/catalog-delete.util.js';
+import { pruneUnusedCtMirror } from '../../prisma/catalog-prune.util.js';
 
 export const getMakes = asyncHandler(async (req, res) => {
   const site = resolveAppSiteForRead(req);
@@ -54,7 +56,17 @@ export const createMake = asyncHandler(async (req, res) => {
   });
   if (existing) throw new ConflictError('Make already exists for this site');
   const make = await prisma.make.create({ data: { name, branch: site } });
-  res.status(201).json({ make });
+
+  let prunedMirror = null;
+  if (site === 'JHB') {
+    prunedMirror = await pruneUnusedCtMirror(prisma, name);
+  }
+
+  res.status(201).json({
+    make: { ...make, branch: site },
+    site,
+    ...(prunedMirror?.removed ? { prunedCtMirror: true } : {}),
+  });
 });
 
 export const updateMake = asyncHandler(async (req, res) => {
@@ -73,7 +85,10 @@ export const updateMake = asyncHandler(async (req, res) => {
     where: { id: req.params.id },
     data: { name },
   });
-  res.json({ make: updated });
+  if (site === 'JHB' && name !== make.name) {
+    await pruneUnusedCtMirror(prisma, make.name);
+  }
+  res.json({ make: updated, site });
 });
 
 export const deleteMake = asyncHandler(async (req, res) => {
@@ -85,7 +100,6 @@ export const deleteMake = asyncHandler(async (req, res) => {
       models: {
         include: {
           modelParts: {
-            where: { branch: site },
             include: { _count: { select: { replacements: true } } },
           },
         },
@@ -98,14 +112,25 @@ export const deleteMake = asyncHandler(async (req, res) => {
     m.modelParts?.some((p) => (p._count?.replacements ?? 0) > 0)
   );
   if (hasReplacements) throw new ConflictError('Cannot delete make: some parts have replacement history');
+
+  const deletedName = make.name;
   await prisma.$transaction(async (tx) => {
     for (const model of make.models || []) {
-      await tx.modelPart.deleteMany({ where: { modelId: model.id, branch: site } });
-      await tx.model.delete({ where: { id: model.id } });
+      await deleteModelCatalog(tx, model.id);
     }
     await tx.make.delete({ where: { id: req.params.id } });
   });
-  res.json({ message: 'Make deleted' });
+
+  let prunedMirror = null;
+  if (site === 'JHB') {
+    prunedMirror = await pruneUnusedCtMirror(prisma, deletedName);
+  }
+
+  res.json({
+    message: 'Make deleted',
+    site,
+    ...(prunedMirror?.removed ? { prunedCtMirror: true } : {}),
+  });
 });
 
 export const createModel = asyncHandler(async (req, res) => {
@@ -128,7 +153,7 @@ export const createModel = asyncHandler(async (req, res) => {
     },
     include: { make: true },
   });
-  res.status(201).json({ model });
+  res.status(201).json({ model, site });
 });
 
 export const updateModel = asyncHandler(async (req, res) => {
@@ -166,7 +191,7 @@ export const updateModel = asyncHandler(async (req, res) => {
     data: updateData,
     include: { make: true },
   });
-  res.json({ model: updated });
+  res.json({ model: updated, site });
 });
 
 export const deleteModel = asyncHandler(async (req, res) => {
@@ -177,7 +202,6 @@ export const deleteModel = asyncHandler(async (req, res) => {
     include: {
       make: true,
       modelParts: {
-        where: { branch: site },
         include: { _count: { select: { replacements: true } } },
       },
     },
@@ -186,9 +210,6 @@ export const deleteModel = asyncHandler(async (req, res) => {
   assertMakeInSite(model.make, site);
   const hasReplacements = model.modelParts?.some((p) => (p._count?.replacements ?? 0) > 0);
   if (hasReplacements) throw new ConflictError('Cannot delete model: some parts have replacement history');
-  await prisma.$transaction(async (tx) => {
-    await tx.modelPart.deleteMany({ where: { modelId: req.params.id, branch: site } });
-    await tx.model.delete({ where: { id: req.params.id } });
-  });
-  res.json({ message: 'Model deleted' });
+  await deleteModelCatalog(prisma, req.params.id);
+  res.json({ message: 'Model deleted', site });
 });

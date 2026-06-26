@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { machinesApi, makesApi, modelsApi, customersApi } from '../services/api';
 import { trimLeading } from '../utils/string';
-import { filterCatalogBySite, filterModelsBySite } from '../utils/catalog';
+import { catalogMakesFromApi, filterModelsBySite } from '../utils/catalog';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { X, Check } from 'lucide-react';
@@ -47,7 +47,7 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
     queryFn: () => modelsApi.getAll(formData.makeId || null, effectiveBranch),
     enabled: !!effectiveBranch,
   });
-  const makes = filterCatalogBySite(makesData?.makes, effectiveBranch);
+  const makes = catalogMakesFromApi(makesData, effectiveBranch);
   const models = filterModelsBySite(modelsData?.models, effectiveBranch);
   const customers = customersData?.customers || [];
 
