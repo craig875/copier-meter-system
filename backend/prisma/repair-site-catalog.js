@@ -1,13 +1,12 @@
 /**
- * Repair site catalog when Machine Configuration looks empty but machines still
- * have models assigned (catalog branch tags / CT clones out of sync).
+ * Sync CT catalog copies only where CT operational data needs them.
+ * Does NOT copy new JHB-only makes (e.g. test makes) to CT.
  *
- * 1. Clone full JHB makes/models/parts to CT (same as clone-jhb-catalog-to-ct.js)
- * 2. Remap CT machines to CT model copies where needed
- * 3. Report catalog counts per site
- *
- * Run on server:
+ * Run on server when CT machines exist but CT catalog is missing entries:
  *   cd backend && npm run db:repair-catalog
+ *
+ * One-time full JHB→CT baseline (clones ALL makes — do not use after go-live):
+ *   node prisma/repair-site-catalog.js --full
  *
  * Dry run:
  *   node prisma/repair-site-catalog.js --dry-run
@@ -15,23 +14,28 @@
 
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import { loadJhbMakesWithCatalog, shouldEnsureCtMake } from './catalog-clone.util.js';
 
 const prisma = new PrismaClient();
 const dryRun = process.argv.includes('--dry-run');
+const fullBaseline = process.argv.includes('--full');
 
 async function cloneJhbToCt() {
-  const jhbMakes = await prisma.make.findMany({
-    where: { branch: 'JHB' },
-    include: { models: { include: { modelParts: true } } },
-    orderBy: { name: 'asc' },
-  });
+  const jhbMakes = await loadJhbMakesWithCatalog(prisma);
 
   let makesCreated = 0;
   let modelsCreated = 0;
   let partsCreated = 0;
   let machinesRemapped = 0;
+  let skipped = 0;
 
   for (const jhbMake of jhbMakes) {
+    const ensure = await shouldEnsureCtMake(prisma, jhbMake, { fullBaseline });
+    if (!ensure) {
+      skipped++;
+      continue;
+    }
+
     let ctMake = await prisma.make.findUnique({
       where: { name_branch: { name: jhbMake.name, branch: 'CT' } },
     });
@@ -70,15 +74,16 @@ async function cloneJhbToCt() {
       }
 
       if (!dryRun && ctModel) {
-        for (const jhbPart of jhbModel.modelParts) {
+        for (const jhbPart of jhbModel.modelParts.filter((p) => p.branch === 'JHB' || p.branch === 'CT')) {
+          const branch = 'CT';
           const existingPart = await prisma.modelPart.findFirst({
-            where: { modelId: ctModel.id, branch: 'CT', partName: jhbPart.partName },
+            where: { modelId: ctModel.id, branch, partName: jhbPart.partName },
           });
           if (!existingPart) {
             await prisma.modelPart.create({
               data: {
                 modelId: ctModel.id,
-                branch: 'CT',
+                branch,
                 partName: jhbPart.partName,
                 itemCode: jhbPart.itemCode,
                 partType: jhbPart.partType,
@@ -101,25 +106,24 @@ async function cloneJhbToCt() {
     }
   }
 
-  return { makesCreated, modelsCreated, partsCreated, machinesRemapped };
+  return { makesCreated, modelsCreated, partsCreated, machinesRemapped, skipped };
 }
 
 async function report() {
   const makes = await prisma.make.groupBy({ by: ['branch'], _count: true });
-  const parts = await prisma.modelPart.groupBy({ by: ['branch'], _count: true });
-  const jhbMachines = await prisma.machine.count({ where: { branch: 'JHB', modelId: { not: null } } });
-  const ctMachines = await prisma.machine.count({ where: { branch: 'CT', modelId: { not: null } } });
-  console.log('\nCatalog summary:', { makes, parts, jhbMachinesWithModel: jhbMachines, ctMachinesWithModel: ctMachines });
+  console.log('\nCatalog summary:', { makes });
 }
 
 async function main() {
-  console.log(dryRun ? 'DRY RUN — no writes\n' : 'Repairing site catalog...\n');
-  const before = await prisma.make.groupBy({ by: ['branch'], _count: true });
-  console.log('Makes before:', before);
+  console.log(
+    dryRun ? 'DRY RUN — no writes\n' : `Repairing CT catalog (${fullBaseline ? 'FULL baseline' : 'selective'})...\n`
+  );
+  if (fullBaseline) {
+    console.warn('WARNING: --full clones every JHB make to CT. Use only for initial baseline.\n');
+  }
 
   const stats = await cloneJhbToCt();
   console.log('\nChanges:', stats);
-
   await report();
 }
 
