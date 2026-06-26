@@ -1,27 +1,30 @@
-import { isCtMakeUsedByCopiers } from './catalog-clone.util.js';
+import { countCtCopiersOnMakeFamily, isMakeNameUsedByCtCopiers } from './catalog-clone.util.js';
 import { deleteMakeCatalog } from './catalog-delete.util.js';
 
 /**
- * Remove an unused CT catalog copy that mirrors a JHB make name (leftover from old clones).
+ * Remove an unused CT catalog copy (JHB-only test makes with no CT copiers anywhere).
+ * Never removes CT catalog still needed by CT copiers (including via JHB model IDs).
  * @param {import('@prisma/client').PrismaClient} prisma
  * @param {string} name
  */
 export async function pruneUnusedCtMirror(prisma, name) {
+  if (await isMakeNameUsedByCtCopiers(prisma, name)) {
+    return { removed: false, reason: 'ct_copiers_assigned' };
+  }
+
   const mirror = await prisma.make.findUnique({
     where: { name_branch: { name, branch: 'CT' } },
     include: { models: { select: { id: true, name: true } } },
   });
   if (!mirror) return { removed: false };
-  if (await isCtMakeUsedByCopiers(prisma, mirror.id)) {
-    return { removed: false, reason: 'ct_copiers_assigned' };
-  }
+
   await deleteMakeCatalog(prisma, mirror);
   return { removed: true, name };
 }
 
 /**
- * Remove all CT catalog rows that duplicate a JHB make name but have no CT copiers assigned.
- * JHB-only entries (e.g. test makes) must not appear on Cape Town.
+ * Remove CT catalog duplicates only when no CT copier uses that make name (JHB or CT models).
+ * Safe to run manually — NOT called automatically on page load.
  * @param {import('@prisma/client').PrismaClient} prisma
  */
 export async function pruneAllStaleCtMirrors(prisma) {
@@ -35,9 +38,16 @@ export async function pruneAllStaleCtMirrors(prisma) {
   for (const ctMake of ctMakes) {
     const jhbTwin = await prisma.make.findUnique({
       where: { name_branch: { name: ctMake.name, branch: 'JHB' } },
+      select: { id: true },
     });
     if (!jhbTwin) continue;
-    if (await isCtMakeUsedByCopiers(prisma, ctMake.id)) continue;
+
+    const ctCopiers = await countCtCopiersOnMakeFamily(prisma, {
+      jhbMakeId: jhbTwin.id,
+      ctMakeId: ctMake.id,
+    });
+    if (ctCopiers > 0) continue;
+
     await deleteMakeCatalog(prisma, ctMake);
     removed.push(ctMake.name);
   }

@@ -1,6 +1,6 @@
 /**
  * Remove CT catalog makes/models not assigned to any CT copier.
- * Orphan parts from old JHB→CT clones are deleted with the unused models.
+ * Counts copiers on both CT model rows AND JHB model rows (pre-remap assignments).
  *
  * Dry run:
  *   node prisma/cleanup-ct-catalog.mjs --dry-run
@@ -11,6 +11,7 @@
 
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import { countCtCopiersOnMakeFamily } from './catalog-clone.util.js';
 import { deleteMakeCatalog } from './catalog-delete.util.js';
 
 const prisma = new PrismaClient();
@@ -30,11 +31,15 @@ async function main() {
   let kept = 0;
 
   for (const make of ctMakes) {
-    const modelIds = make.models.map((m) => m.id);
-    const machines =
-      modelIds.length === 0
-        ? 0
-        : await prisma.machine.count({ where: { branch: 'CT', modelId: { in: modelIds } } });
+    const jhbTwin = await prisma.make.findUnique({
+      where: { name_branch: { name: make.name, branch: 'JHB' } },
+      select: { id: true },
+    });
+
+    const machines = await countCtCopiersOnMakeFamily(prisma, {
+      jhbMakeId: jhbTwin?.id,
+      ctMakeId: make.id,
+    });
 
     if (machines > 0) {
       console.log(`  keep ${make.name} (${machines} CT copier(s) assigned)`);
@@ -43,22 +48,19 @@ async function main() {
     }
 
     const parts =
-      modelIds.length === 0
+      make.models.length === 0
         ? 0
-        : await prisma.modelPart.count({ where: { branch: 'CT', modelId: { in: modelIds } } });
+        : await prisma.modelPart.count({
+            where: { branch: 'CT', modelId: { in: make.models.map((m) => m.id) } },
+          });
 
     console.log(
       `  - remove unused CT make: ${make.name} (${make.models.length} model(s), ${parts} orphan part(s), 0 copiers)`
     );
     if (!dryRun) {
-      try {
-        await deleteMakeCatalog(prisma, make);
-        removedModels += make.models.length;
-        removedMakes++;
-      } catch (err) {
-        console.error(`  ! failed to remove ${make.name}:`, err.message);
-        throw err;
-      }
+      await deleteMakeCatalog(prisma, make);
+      removedModels += make.models.length;
+      removedMakes++;
     } else {
       removedModels += make.models.length;
       removedMakes++;
