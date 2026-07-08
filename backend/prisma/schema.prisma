@@ -176,19 +176,33 @@ model InstallationProjectAssignment {
   @@map("installation_project_assignments")
 }
 
-enum OrderStatus {
+enum FibrePipelineStatus {
   order_placed
-  awaiting_cx_creation
+  awaiting_cx_number
   awaiting_site_survey_scheduling
   site_survey_scheduled
-  awaiting_planning_documents
-  awaiting_planning_sign_off
+  site_survey_complete
+  planning_documents_unsigned
+  planning_documents_signed
   wayleave_pending
   wayleave_approved
-  scheduled
+  awaiting_installation_date
+  installation_date_received
+  installation_in_progress
+  installation_complete
+  awaiting_fno_cpe_installation
+  awaiting_atc_testing_date
+  atc_testing_complete
+  awaiting_handover
+  handover_received
+  awaiting_cutover
   complete
-  cancelled
+}
+
+enum FibreOverlayStatus {
+  wip
   on_hold
+  cancelled
 }
 
 model FibreProduct {
@@ -216,8 +230,9 @@ model FibreOrder {
   salesAgentId         String      @map("sales_agent_id")
   orderPlacementDate   DateTime    @map("order_placement_date") @db.Date
   expectedInstallDate  DateTime    @map("expected_install_date") @db.Date
-  status               OrderStatus @default(order_placed) @map("status")
-  notes                String?     @map("notes")
+  pipelineStatus       FibrePipelineStatus @default(order_placed) @map("pipeline_status")
+  overlayStatus        FibreOverlayStatus? @map("overlay_status")
+  notes                String?             @map("notes")
   createdById          String      @map("created_by")
   createdAt            DateTime    @default(now()) @map("created_at")
   updatedAt            DateTime    @updatedAt @map("updated_at")
@@ -229,7 +244,8 @@ model FibreOrder {
   updateRequests FibreOrderUpdateRequest[]
 
   @@index([branch])
-  @@index([status])
+  @@index([pipelineStatus])
+  @@index([overlayStatus])
   @@index([salesAgentId])
   @@index([orderPlacementDate])
   @@map("fibre_orders")
@@ -238,8 +254,10 @@ model FibreOrder {
 model OrderUpdate {
   id             String       @id @default(uuid())
   orderId        String       @map("order_id")
-  previousStatus OrderStatus? @map("previous_status")
-  newStatus      OrderStatus? @map("new_status")
+  previousPipelineStatus FibrePipelineStatus? @map("previous_pipeline_status")
+  newPipelineStatus      FibrePipelineStatus? @map("new_pipeline_status")
+  previousOverlayStatus FibreOverlayStatus? @map("previous_overlay_status")
+  newOverlayStatus       FibreOverlayStatus? @map("new_overlay_status")
   note           String?      @map("note")
   updatedById    String       @map("updated_by")
   createdAt      DateTime     @default(now()) @map("created_at")

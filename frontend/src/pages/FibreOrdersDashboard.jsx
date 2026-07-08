@@ -46,7 +46,7 @@ export default function FibreOrdersDashboard() {
   const recent = orders.slice(0, 5);
 
   const almostComplete = ALMOST_COMPLETE_STATUSES.reduce(
-    (sum, status) => sum + (stats?.byStatus?.[status] ?? 0),
+    (sum, status) => sum + (stats?.byPipelineStatus?.[status] ?? 0),
     0
   );
 
@@ -176,7 +176,10 @@ export default function FibreOrdersDashboard() {
                       {formatWeeksRemaining(order.weeksRemaining)}
                     </span>
                   )}
-                  <FibreStatusBadge status={order.status} />
+                  <FibreStatusBadge
+                    pipelineStatus={order.pipelineStatus}
+                    overlayStatus={order.overlayStatus}
+                  />
                 </div>
               </Link>
             ))}

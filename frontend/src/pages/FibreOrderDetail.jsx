@@ -6,7 +6,17 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ORDER_STATUSES, STATUS_BORDER_STYLES, formatWeeksRemaining } from '../constants/fibreOrders';
+import {
+  PIPELINE_STATUSES,
+  OVERLAY_STATUSES,
+  STATUS_BORDER_STYLES,
+  formatWeeksRemaining,
+  formatOrderUpdateStatusChange,
+  hasOrderUpdateStatusChange,
+  isActiveFibreOrder,
+  pipelineStatusLabel,
+  overlayStatusLabel,
+} from '../constants/fibreOrders';
 import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderCompleteModal from '../components/fibre/FibreOrderCompleteModal';
@@ -31,7 +41,8 @@ export default function FibreOrderDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasModule, isElevated, isSalesAgent, canManageConnectivity } = useAuth();
-  const [newStatus, setNewStatus] = useState('');
+  const [newPipelineStatus, setNewPipelineStatus] = useState('');
+  const [newOverlayStatus, setNewOverlayStatus] = useState('');
   const [noteText, setNoteText] = useState('');
   const [completeModalOrder, setCompleteModalOrder] = useState(null);
   const [showInstalledBanner, setShowInstalledBanner] = useState(false);
@@ -53,13 +64,14 @@ export default function FibreOrderDetail() {
     mutationFn: (payload) => fibreOrdersApi.update(id, payload),
     onSuccess: (result, variables) => {
       toast.success('Order updated');
-      setNewStatus('');
+      setNewPipelineStatus('');
+      setNewOverlayStatus('');
       setNoteText('');
       queryClient.invalidateQueries({ queryKey: ['fibre-orders', id] });
       queryClient.invalidateQueries({ queryKey: ['fibre-orders', id, 'updates'] });
       queryClient.invalidateQueries({ queryKey: ['fibre-orders', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['fibre-orders', 'stats'] });
-      if (variables.status === 'complete') {
+      if (variables.pipelineStatus === 'complete') {
         setCompleteModalOrder(result.order);
       }
     },
@@ -82,12 +94,12 @@ export default function FibreOrderDetail() {
   const order = data?.order;
 
   useEffect(() => {
-    if (order?.status === 'complete' && !isConnectivityPromptDismissed(order.id)) {
+    if (order?.pipelineStatus === 'complete' && !isConnectivityPromptDismissed(order.id)) {
       setShowInstalledBanner(true);
     } else {
       setShowInstalledBanner(false);
     }
-  }, [order?.status, order?.id]);
+  }, [order?.pipelineStatus, order?.id]);
 
   if (!hasModule(MODULE_FIBRE_ORDERS)) {
     return (
@@ -117,10 +129,13 @@ export default function FibreOrderDetail() {
   }
 
   const updates = updatesData?.updates ?? [];
-  const latestStatusUpdate = updates.find(
-    (u) => u.newStatus && u.previousStatus !== u.newStatus
-  );
-  const statusWillChange = newStatus && newStatus !== order.status;
+  const latestStatusUpdate = updates.find(hasOrderUpdateStatusChange);
+  const pipelineWillChange = newPipelineStatus && newPipelineStatus !== order.pipelineStatus;
+  const overlayWillChange =
+    newOverlayStatus === '__clear__'
+      ? Boolean(order.overlayStatus)
+      : Boolean(newOverlayStatus && newOverlayStatus !== (order.overlayStatus ?? ''));
+  const statusWillChange = pipelineWillChange || overlayWillChange;
   const hasNote = Boolean(noteText.trim());
   const canSubmit = statusWillChange || hasNote;
 
@@ -129,7 +144,9 @@ export default function FibreOrderDetail() {
     if (!canSubmit) return;
 
     const payload = {};
-    if (statusWillChange) payload.status = newStatus;
+    if (pipelineWillChange) payload.pipelineStatus = newPipelineStatus;
+    if (newOverlayStatus === '__clear__') payload.overlayStatus = null;
+    else if (overlayWillChange && newOverlayStatus) payload.overlayStatus = newOverlayStatus;
     if (hasNote) payload.note = noteText.trim();
     updateMutation.mutate(payload);
   };
@@ -193,7 +210,11 @@ export default function FibreOrderDetail() {
             <p className="text-xs text-gray-400 mt-1">Read-only — contact an administrator to update this order</p>
           )}
         </div>
-        <FibreStatusBadge status={order.status} className="text-sm" />
+        <FibreStatusBadge
+          pipelineStatus={order.pipelineStatus}
+          overlayStatus={order.overlayStatus}
+          className="text-sm"
+        />
         {isElevated && (
           <Link
             to={`/fibre-orders/${id}/edit`}
@@ -231,7 +252,7 @@ export default function FibreOrderDetail() {
                 <dd className={`font-medium ${order.isOverdue ? 'text-amber-700' : 'text-gray-900'}`}>
                   {formatDate(order.expectedInstallDate)}
                   {order.isOverdue && ` (${formatWeeksRemaining(order.weeksRemaining)})`}
-                  {!order.isOverdue && order.weeksRemaining > 0 && order.status !== 'complete' && order.status !== 'cancelled' && (
+                  {!order.isOverdue && order.weeksRemaining > 0 && isActiveFibreOrder(order) && (
                     ` (${formatWeeksRemaining(order.weeksRemaining)})`
                   )}
                 </dd>
@@ -253,13 +274,17 @@ export default function FibreOrderDetail() {
             <div
               className={clsx(
                 'px-5 py-4 border-l-4',
-                STATUS_BORDER_STYLES[order.status] ?? 'border-gray-300 bg-gray-50/80'
+                STATUS_BORDER_STYLES[order.pipelineStatus] ?? 'border-gray-300 bg-gray-50/80'
               )}
             >
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                 Current status
               </p>
-              <FibreStatusBadge status={order.status} className="text-sm px-3 py-1" />
+              <FibreStatusBadge
+                pipelineStatus={order.pipelineStatus}
+                overlayStatus={order.overlayStatus}
+                className="text-sm px-3 py-1"
+              />
               {latestStatusUpdate && (
                 <p className="text-xs text-gray-500 mt-2">
                   Updated {formatDateTime(latestStatusUpdate.createdAt)}
@@ -276,10 +301,9 @@ export default function FibreOrderDetail() {
                   {updates.map((u) => (
                     <li key={u.id} className="border-l-2 border-gray-200 pl-4">
                       <p className="text-sm text-gray-500">{formatDateTime(u.createdAt)} · {u.updatedBy?.name}</p>
-                      {u.previousStatus !== u.newStatus && u.newStatus && (
+                      {hasOrderUpdateStatusChange(u) && (
                         <p className="text-sm font-medium text-gray-800 mt-0.5">
-                          Status: {u.previousStatus ? `${u.previousStatus.replace(/_/g, ' ')} → ` : ''}
-                          {u.newStatus.replace(/_/g, ' ')}
+                          {formatOrderUpdateStatusChange(u)}
                         </p>
                       )}
                       {u.note && <p className="text-sm text-gray-700 mt-1">{u.note}</p>}
@@ -296,14 +320,36 @@ export default function FibreOrderDetail() {
             <h2 className="font-semibold text-gray-900">Update Order</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Pipeline stage</label>
                 <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
+                  value={newPipelineStatus}
+                  onChange={(e) => setNewPipelineStatus(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 >
-                  <option value="">Keep current status ({ORDER_STATUSES.find((s) => s.value === order.status)?.label})</option>
-                  {ORDER_STATUSES.filter((s) => s.value !== order.status).map((s) => (
+                  <option value="">
+                    Keep current stage ({pipelineStatusLabel(order.pipelineStatus)})
+                  </option>
+                  {PIPELINE_STATUSES.filter((s) => s.value !== order.pipelineStatus).map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Overlay</label>
+                <select
+                  value={newOverlayStatus}
+                  onChange={(e) => setNewOverlayStatus(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="">
+                    Keep current overlay (
+                    {order.overlayStatus ? overlayStatusLabel(order.overlayStatus) : 'None'}
+                    )
+                  </option>
+                  {order.overlayStatus && (
+                    <option value="__clear__">Clear overlay (return to pipeline stage only)</option>
+                  )}
+                  {OVERLAY_STATUSES.filter((s) => s.value !== order.overlayStatus).map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
                 </select>
@@ -326,7 +372,7 @@ export default function FibreOrderDetail() {
                 {updateMutation.isPending ? 'Saving...' : 'Save Update'}
               </button>
               <p className="text-xs text-gray-500">
-                Change the status, add a note, or both — saved as one timeline entry.
+                Change the pipeline stage, set/clear an overlay, add a note, or any combination — saved as one timeline entry.
               </p>
             </form>
           </div>

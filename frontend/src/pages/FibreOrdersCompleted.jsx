@@ -117,7 +117,12 @@ export default function FibreOrdersCompleted() {
                   <td className="px-4 py-3 text-sm text-gray-700">{order.branch}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{formatDate(order.orderPlacementDate)}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{formatDate(order.expectedInstallDate)}</td>
-                  <td className="px-4 py-3"><FibreStatusBadge status={order.status} /></td>
+                  <td className="px-4 py-3">
+                    <FibreStatusBadge
+                      pipelineStatus={order.pipelineStatus}
+                      overlayStatus={order.overlayStatus}
+                    />
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{order.salesAgent?.name}</td>
                 </tr>
               ))}

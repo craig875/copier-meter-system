@@ -1,8 +1,10 @@
 import { repositories } from '../repositories/index.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { hasAdminAccess } from '../utils/permissions.js';
-
-const TERMINAL_STATUSES = ['complete', 'cancelled'];
+import {
+  FIBRE_PIPELINE_TERMINAL,
+  isActiveFibreOrderRecord,
+} from '../constants/fibre-order-statuses.js';
 
 /**
  * Add calendar weeks to a date (UTC-safe for date-only fields).
@@ -38,13 +40,28 @@ function enrichOrder(order) {
   if (!order) return order;
   const daysRemaining = daysUntilInstall(order.expectedInstallDate);
   const weeksRemaining = daysToWeeksRemaining(daysRemaining);
-  const isOverdue =
-    !TERMINAL_STATUSES.includes(order.status) && weeksRemaining < 0;
+  const isOverdue = isActiveFibreOrderRecord(order) && weeksRemaining < 0;
   return {
     ...order,
     weeksRemaining,
     isOverdue,
   };
+}
+
+function activeListWhere(base = {}) {
+  return {
+    ...base,
+    pipelineStatus: { not: FIBRE_PIPELINE_TERMINAL },
+    overlayStatus: { not: 'cancelled' },
+  };
+}
+
+function overlayChanged(existing, next) {
+  return next !== undefined && next !== existing.overlayStatus;
+}
+
+function pipelineChanged(existing, next) {
+  return next !== undefined && next !== existing.pipelineStatus;
 }
 
 /**
@@ -70,7 +87,6 @@ export class FibreOrderService {
       where.salesAgentId = user.id;
     }
 
-    // Sales agents see all orders allocated to them — not filtered by branch
     if (
       filters.branch &&
       ['JHB', 'CT'].includes(filters.branch) &&
@@ -79,12 +95,23 @@ export class FibreOrderService {
       where.branch = filters.branch;
     }
 
-    if (filters.status) {
-      where.status = filters.status;
-    } else if (filters.completedOnly === 'true' || filters.completedOnly === true) {
-      where.status = 'complete';
-    } else if (filters.activeOnly === 'true' || filters.activeOnly === true) {
-      where.status = { notIn: TERMINAL_STATUSES };
+    if (filters.pipelineStatus) {
+      where.pipelineStatus = filters.pipelineStatus;
+    }
+
+    if (filters.overlayStatus) {
+      where.overlayStatus = filters.overlayStatus;
+    }
+
+    if (filters.completedOnly === 'true' || filters.completedOnly === true) {
+      where.pipelineStatus = FIBRE_PIPELINE_TERMINAL;
+      delete where.overlayStatus;
+    } else if (
+      (filters.activeOnly === 'true' || filters.activeOnly === true) &&
+      !filters.pipelineStatus &&
+      !filters.overlayStatus
+    ) {
+      Object.assign(where, activeListWhere());
     }
 
     if (filters.salesAgentId && this.canManageOrders(user)) {
@@ -128,21 +155,18 @@ export class FibreOrderService {
       where.branch = branch;
     }
 
-    const activeWhere = {
-      ...where,
-      status: { notIn: TERMINAL_STATUSES },
-    };
+    const activeWhere = activeListWhere(where);
 
-    const [byStatus, overdue, total, completed, pendingUpdateRequests] = await Promise.all([
-      this.orderRepo.countByStatus(activeWhere),
+    const [byPipeline, overdue, total, completed, pendingUpdateRequests] = await Promise.all([
+      this.orderRepo.countByPipelineStatus(activeWhere),
       this.orderRepo.countOverdue(where),
       this.orderRepo.count(activeWhere),
-      this.orderRepo.count({ ...where, status: 'complete' }),
+      this.orderRepo.count({ ...where, pipelineStatus: FIBRE_PIPELINE_TERMINAL }),
       this.updateRequestRepo.countPending(where),
     ]);
 
-    const statusCounts = Object.fromEntries(
-      byStatus.map((row) => [row.status, row._count.status])
+    const pipelineCounts = Object.fromEntries(
+      byPipeline.map((row) => [row.pipelineStatus, row._count.pipelineStatus])
     );
 
     return {
@@ -150,7 +174,7 @@ export class FibreOrderService {
       overdue,
       completed,
       pendingUpdateRequests,
-      byStatus: statusCounts,
+      byPipelineStatus: pipelineCounts,
     };
   }
 
@@ -203,7 +227,7 @@ export class FibreOrderService {
       data.productId,
       data.orderPlacementDate
     );
-    const status = data.status ?? 'order_placed';
+    const pipelineStatus = data.pipelineStatus ?? 'order_placed';
     const placementDate = parseDateOnly(data.orderPlacementDate);
 
     const order = await this.orderRepo.create({
@@ -215,15 +239,18 @@ export class FibreOrderService {
       salesAgentId: data.salesAgentId,
       orderPlacementDate: placementDate,
       expectedInstallDate,
-      status,
+      pipelineStatus,
+      overlayStatus: data.overlayStatus ?? null,
       notes: data.notes ?? null,
       createdById: user.id,
     });
 
     await this.updateRepo.create({
       orderId: order.id,
-      previousStatus: null,
-      newStatus: status,
+      previousPipelineStatus: null,
+      newPipelineStatus: pipelineStatus,
+      previousOverlayStatus: null,
+      newOverlayStatus: data.overlayStatus ?? null,
       note: 'Order created',
       updatedById: user.id,
     });
@@ -241,7 +268,8 @@ export class FibreOrderService {
 
     const timelineNote = data.note?.trim() || null;
     const updateData = { ...data };
-    delete updateData.status;
+    delete updateData.pipelineStatus;
+    delete updateData.overlayStatus;
     delete updateData.note;
 
     if (data.salesAgentId) {
@@ -264,14 +292,22 @@ export class FibreOrderService {
       updateData.orderPlacementDate = parseDateOnly(data.orderPlacementDate);
     }
 
-    const statusChanged = data.status && data.status !== existing.status;
+    const pipelineWillChange = pipelineChanged(existing, data.pipelineStatus);
+    const overlayWillChange = overlayChanged(existing, data.overlayStatus);
+    const statusWillChange = pipelineWillChange || overlayWillChange;
 
-    if (statusChanged) {
-      await this.orderRepo.update(id, { ...updateData, status: data.status });
+    const statusPatch = {};
+    if (pipelineWillChange) statusPatch.pipelineStatus = data.pipelineStatus;
+    if (overlayWillChange) statusPatch.overlayStatus = data.overlayStatus;
+
+    if (statusWillChange) {
+      await this.orderRepo.update(id, { ...updateData, ...statusPatch });
       await this.updateRepo.create({
         orderId: id,
-        previousStatus: existing.status,
-        newStatus: data.status,
+        previousPipelineStatus: existing.pipelineStatus,
+        newPipelineStatus: pipelineWillChange ? data.pipelineStatus : existing.pipelineStatus,
+        previousOverlayStatus: existing.overlayStatus,
+        newOverlayStatus: overlayWillChange ? data.overlayStatus : existing.overlayStatus,
         note: timelineNote,
         updatedById: user.id,
       });
@@ -281,8 +317,10 @@ export class FibreOrderService {
       }
       await this.updateRepo.create({
         orderId: id,
-        previousStatus: existing.status,
-        newStatus: existing.status,
+        previousPipelineStatus: existing.pipelineStatus,
+        newPipelineStatus: existing.pipelineStatus,
+        previousOverlayStatus: existing.overlayStatus,
+        newOverlayStatus: existing.overlayStatus,
         note: timelineNote,
         updatedById: user.id,
       });
@@ -337,8 +375,10 @@ export class FibreOrderService {
 
     await this.updateRepo.create({
       orderId: id,
-      previousStatus: existing.status,
-      newStatus: existing.status,
+      previousPipelineStatus: existing.pipelineStatus,
+      newPipelineStatus: existing.pipelineStatus,
+      previousOverlayStatus: existing.overlayStatus,
+      newOverlayStatus: existing.overlayStatus,
       note,
       updatedById: user.id,
     });

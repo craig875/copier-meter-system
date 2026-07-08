@@ -13,7 +13,8 @@ export class FibreOrderController {
       (req.user?.branch ? String(req.user.branch) : null);
     const filters = {
       branch: branch && ['JHB', 'CT'].includes(branch) ? branch : undefined,
-      status: req.query.status,
+      pipelineStatus: req.query.pipelineStatus,
+      overlayStatus: req.query.overlayStatus,
       salesAgentId: req.query.salesAgentId,
       search: req.query.search,
       activeOnly: req.query.activeOnly,

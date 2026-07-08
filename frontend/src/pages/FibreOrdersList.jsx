@@ -5,7 +5,7 @@ import { Plus, Search } from 'lucide-react';
 import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
-import { ACTIVE_ORDER_STATUSES, formatWeeksRemaining } from '../constants/fibreOrders';
+import { ACTIVE_PIPELINE_STATUSES, formatWeeksRemaining, isActiveFibreOrder } from '../constants/fibreOrders';
 import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderProgressBar from '../components/fibre/FibreOrderProgressBar';
@@ -23,7 +23,7 @@ export default function FibreOrdersList() {
   const params = useMemo(() => {
     const extra = { activeOnly: 'true' };
     if (statusFilter) {
-      extra.status = statusFilter;
+      extra.pipelineStatus = statusFilter;
       delete extra.activeOnly;
     }
     if (search.trim()) extra.search = search.trim();
@@ -91,7 +91,7 @@ export default function FibreOrdersList() {
           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
         >
           <option value="">All active statuses</option>
-          {ACTIVE_ORDER_STATUSES.map((s) => (
+          {ACTIVE_PIPELINE_STATUSES.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
@@ -138,17 +138,25 @@ export default function FibreOrdersList() {
                         {order.isOverdue && (
                           <span className="block text-xs">({formatWeeksRemaining(order.weeksRemaining)})</span>
                         )}
-                        {!order.isOverdue && order.weeksRemaining > 0 && order.status !== 'complete' && order.status !== 'cancelled' && (
+                        {!order.isOverdue && order.weeksRemaining > 0 && isActiveFibreOrder(order) && (
                           <span className="block text-xs text-gray-500">({formatWeeksRemaining(order.weeksRemaining)})</span>
                         )}
                       </span>
                     </td>
-                    <td className="px-4 py-3"><FibreStatusBadge status={order.status} /></td>
+                    <td className="px-4 py-3">
+                      <FibreStatusBadge
+                        pipelineStatus={order.pipelineStatus}
+                        overlayStatus={order.overlayStatus}
+                      />
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-700">{order.salesAgent?.name}</td>
                   </tr>
                   <tr className="hover:bg-gray-50">
                     <td colSpan={7} className="px-4 pb-3 pt-0">
-                      <FibreOrderProgressBar status={order.status} />
+                      <FibreOrderProgressBar
+                        pipelineStatus={order.pipelineStatus}
+                        overlayStatus={order.overlayStatus}
+                      />
                     </td>
                   </tr>
                 </Fragment>

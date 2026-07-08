@@ -27,11 +27,11 @@ export class FibreOrderRepository extends BaseRepository {
     });
   }
 
-  countByStatus(where = {}) {
+  countByPipelineStatus(where = {}) {
     return this.prisma.fibreOrder.groupBy({
-      by: ['status'],
+      by: ['pipelineStatus'],
       where,
-      _count: { status: true },
+      _count: { pipelineStatus: true },
     });
   }
 
@@ -41,7 +41,8 @@ export class FibreOrderRepository extends BaseRepository {
     return this.prisma.fibreOrder.count({
       where: {
         ...where,
-        status: { notIn: ['complete', 'cancelled'] },
+        pipelineStatus: { not: 'complete' },
+        overlayStatus: { not: 'cancelled' },
         expectedInstallDate: { lt: today },
       },
     });

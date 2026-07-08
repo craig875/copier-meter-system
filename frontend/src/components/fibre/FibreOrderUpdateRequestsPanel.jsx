@@ -67,7 +67,12 @@ export default function FibreOrderUpdateRequestsPanel() {
                 )}
               </div>
               <div className="shrink-0 text-right space-y-1">
-                {req.order?.status && <FibreStatusBadge status={req.order.status} />}
+                {req.order?.pipelineStatus && (
+                  <FibreStatusBadge
+                    pipelineStatus={req.order.pipelineStatus}
+                    overlayStatus={req.order.overlayStatus}
+                  />
+                )}
                 <p className="text-xs text-red-600 font-medium">Review →</p>
               </div>
             </Link>

@@ -1,19 +1,11 @@
 import { z } from 'zod';
+import {
+  FIBRE_PIPELINE_STATUSES,
+  FIBRE_OVERLAY_STATUSES,
+} from '../constants/fibre-order-statuses.js';
 
-const orderStatusEnum = z.enum([
-  'order_placed',
-  'awaiting_cx_creation',
-  'awaiting_site_survey_scheduling',
-  'site_survey_scheduled',
-  'awaiting_planning_documents',
-  'awaiting_planning_sign_off',
-  'wayleave_pending',
-  'wayleave_approved',
-  'scheduled',
-  'complete',
-  'cancelled',
-  'on_hold',
-]);
+const pipelineStatusEnum = z.enum(FIBRE_PIPELINE_STATUSES);
+const overlayStatusEnum = z.enum(FIBRE_OVERLAY_STATUSES);
 
 const branchEnum = z.enum(['JHB', 'CT']);
 
@@ -27,7 +19,8 @@ export const createFibreOrderSchema = z.object({
   productId: z.string().min(1, 'Product is required'),
   salesAgentId: z.string().uuid('Invalid sales agent ID'),
   orderPlacementDate: dateString,
-  status: orderStatusEnum.optional(),
+  pipelineStatus: pipelineStatusEnum.optional(),
+  overlayStatus: overlayStatusEnum.optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 
@@ -39,7 +32,8 @@ export const updateFibreOrderSchema = z.object({
   productId: z.string().min(1).optional(),
   salesAgentId: z.string().uuid().optional(),
   orderPlacementDate: dateString.optional(),
-  status: orderStatusEnum.optional(),
+  pipelineStatus: pipelineStatusEnum.optional(),
+  overlayStatus: z.union([overlayStatusEnum, z.null()]).optional(),
   note: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 });
@@ -54,7 +48,8 @@ export const requestOrderUpdateSchema = z.object({
 
 export const fibreOrderListQuerySchema = z.object({
   branch: branchEnum.optional(),
-  status: orderStatusEnum.optional(),
+  pipelineStatus: pipelineStatusEnum.optional(),
+  overlayStatus: overlayStatusEnum.optional(),
   salesAgentId: z.string().uuid().optional(),
   search: z.string().optional(),
   activeOnly: z.enum(['true', 'false']).optional(),
