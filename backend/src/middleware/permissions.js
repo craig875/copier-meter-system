@@ -5,6 +5,7 @@ import {
   userHasModule,
   MODULE_COPERS,
   MODULE_CONNECTIVITY,
+  MODULE_FIBRE_ORDERS,
 } from '../utils/permissions.js';
 
 /**
@@ -72,4 +73,14 @@ export const requireConnectivityManage = (req, res, next) => {
     error:
       'Administrator or manager access with the Connectivity module is required to manage connectivity targets and settings.',
   });
+};
+
+/**
+ * Middleware to restrict access to fibre order tracker module
+ */
+export const requireFibreOrderAccess = (req, res, next) => {
+  if (!userHasModule(req.user, MODULE_FIBRE_ORDERS)) {
+    return res.status(403).json({ error: 'You do not have access to the Fibre Orders module.' });
+  }
+  next();
 };

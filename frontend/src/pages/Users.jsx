@@ -224,7 +224,7 @@ const UserModal = ({ user, onClose }) => {
     branch: user?.branch || '',
     modules:
       user?.role === 'admin'
-        ? ['copiers', 'connectivity']
+        ? ['copiers', 'connectivity', 'fibre-orders']
         : Array.isArray(user?.modules) && user.modules.length > 0
           ? [...user.modules]
           : ['copiers'],
@@ -280,7 +280,10 @@ const UserModal = ({ user, onClose }) => {
     setFormData((prev) => {
       const next = { ...prev, [name]: v };
       if (name === 'role' && v === 'admin') {
-        next.modules = ['copiers', 'connectivity'];
+        next.modules = ['copiers', 'connectivity', 'fibre-orders'];
+      }
+      if (name === 'role' && v === 'sales_agent') {
+        next.modules = ['fibre-orders'];
       }
       if (name === 'role' && v !== 'admin' && (!next.modules || next.modules.length === 0)) {
         next.modules = ['copiers'];
@@ -291,6 +294,7 @@ const UserModal = ({ user, onClose }) => {
 
   const toggleModule = (key) => {
     if (formData.role === 'admin') return;
+    if (formData.role === 'sales_agent') return;
     setFormData((prev) => {
       const set = new Set(prev.modules || []);
       if (set.has(key)) set.delete(key);
@@ -367,6 +371,7 @@ const UserModal = ({ user, onClose }) => {
             >
               <option value="meter_user">Meter User</option>
               <option value="capturer">Capturer</option>
+              <option value="sales_agent">Sales Agent</option>
               <option value="manager">Manager</option>
               <option value="admin">Administrator</option>
             </select>
@@ -388,7 +393,9 @@ const UserModal = ({ user, onClose }) => {
               <option value="CT">Cape Town (CT)</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              {(formData.role === 'meter_user' || formData.role === 'capturer')
+              {formData.role === 'sales_agent'
+                ? 'Optional — for reporting only. Sales agents see orders allocated to them in Fibre Orders.'
+                : (formData.role === 'meter_user' || formData.role === 'capturer')
                 ? 'Leave blank for all branches access, or select a specific branch'
                 : formData.role === 'admin' || formData.role === 'manager'
                 ? 'Optional: assign a branch to restrict this user to one site'
@@ -401,6 +408,11 @@ const UserModal = ({ user, onClose }) => {
             {formData.role === 'admin' ? (
               <p className="text-sm text-gray-500">
                 Administrators have access to all modules (Copiers and Connectivity).
+              </p>
+            ) : formData.role === 'sales_agent' ? (
+              <p className="text-sm text-gray-600 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                <strong>Fibre Orders</strong> — read-only access to orders assigned to this sales agent.
+                Administrators create orders and allocate them via the Sales Agent field.
               </p>
             ) : (
               <div className="space-y-2">

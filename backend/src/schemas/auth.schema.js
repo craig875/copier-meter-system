@@ -5,13 +5,13 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-const moduleKey = z.enum(['copiers', 'connectivity']);
+const moduleKey = z.enum(['copiers', 'connectivity', 'fibre-orders']);
 
 export const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   name: z.string().min(1, 'Name is required'),
-  role: z.enum(['admin', 'manager', 'meter_user', 'capturer']).default('meter_user'),
+  role: z.enum(['admin', 'manager', 'meter_user', 'capturer', 'sales_agent']).default('meter_user'),
   branch: z.union([
     z.enum(['JHB', 'CT']),
     z.literal(''),
@@ -39,7 +39,7 @@ export const updateUserSchema = z.object({
   email: z.string().email('Invalid email address').optional(),
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
   name: z.string().min(1, 'Name is required').optional(),
-  role: z.enum(['admin', 'manager', 'meter_user', 'capturer']).optional(),
+  role: z.enum(['admin', 'manager', 'meter_user', 'capturer', 'sales_agent']).optional(),
   branch: z.union([
     z.enum(['JHB', 'CT']),
     z.literal(''),

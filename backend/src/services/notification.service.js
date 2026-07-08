@@ -1,5 +1,6 @@
 import { repositories } from '../repositories/index.js';
 import prisma from '../config/database.js';
+import { MODULE_FIBRE_ORDERS } from '../utils/permissions.js';
 
 /**
  * Notification Service - Business logic for admin notifications
@@ -19,6 +20,25 @@ export class NotificationService {
       select: { id: true },
     });
     return admins.map((u) => u.id);
+  }
+
+  /**
+   * Admins and managers with Fibre Orders module (for fibre workflow alerts)
+   */
+  async getFibreOrderManagerUserIds() {
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { role: 'admin' },
+          {
+            role: 'manager',
+            modules: { has: MODULE_FIBRE_ORDERS },
+          },
+        ],
+      },
+      select: { id: true },
+    });
+    return users.map((u) => u.id);
   }
 
   /**
@@ -77,6 +97,29 @@ export class NotificationService {
       linkUrl,
       entityType: 'part_order',
       entityId: orderId,
+    });
+  }
+
+  /**
+   * Notify managers when a sales agent requests a fibre order update
+   */
+  async notifyFibreOrderUpdateRequested({ order, salesAgentName, note, requestId }) {
+    const managerIds = await this.getFibreOrderManagerUserIds();
+    if (managerIds.length === 0) return;
+
+    const linkUrl = `/fibre-orders/${order.id}`;
+    const title = `Update requested: ${order.customerName}`;
+    const message = note
+      ? `${salesAgentName} requested an update — "${note.length > 80 ? `${note.slice(0, 80)}...` : note}"`
+      : `${salesAgentName} requested a status update on this fibre order`;
+
+    await this.notificationRepo.createForUsers(managerIds, {
+      type: 'fibre_order_update_requested',
+      title,
+      message,
+      linkUrl,
+      entityType: 'fibre_order_update_request',
+      entityId: requestId,
     });
   }
 

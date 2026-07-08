@@ -111,6 +111,7 @@ export const AuthProvider = ({ children }) => {
 
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
+  const isSalesAgent = user?.role === 'sales_agent';
   /** Admin or manager (elevated UI; managers still use `modules` via hasModule) */
   const isElevated = isAdmin || isManager;
 
@@ -171,6 +172,7 @@ export const AuthProvider = ({ children }) => {
       logout,
       isAdmin,
       isManager,
+      isSalesAgent,
       isElevated,
       isMeterUser,
       isCapturer,

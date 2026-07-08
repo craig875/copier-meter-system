@@ -8,6 +8,11 @@ import { PartReplacementRepository } from './partReplacement.repository.js';
 import { CustomerRepository } from './customer.repository.js';
 import notificationRepository from './notification.repository.js';
 
+import { FibreProductRepository } from './fibre-product.repository.js';
+import { FibreOrderRepository } from './fibre-order.repository.js';
+import { OrderUpdateRepository } from './order-update.repository.js';
+import { FibreOrderUpdateRequestRepository } from './fibre-order-update-request.repository.js';
+
 /**
  * Repository Factory - Centralized repository creation
  * Dependency Injection pattern for repositories
@@ -21,6 +26,10 @@ export const repositories = {
   partReplacement: new PartReplacementRepository(prisma),
   customer: new CustomerRepository(prisma),
   notification: notificationRepository,
+  fibreProduct: new FibreProductRepository(prisma),
+  fibreOrder: new FibreOrderRepository(prisma),
+  orderUpdate: new OrderUpdateRepository(prisma),
+  fibreOrderUpdateRequest: new FibreOrderUpdateRequestRepository(prisma),
 };
 
 export {
@@ -31,4 +40,8 @@ export {
   ModelPartRepository,
   PartReplacementRepository,
   CustomerRepository,
+  FibreProductRepository,
+  FibreOrderRepository,
+  OrderUpdateRepository,
+  FibreOrderUpdateRequestRepository,
 };

@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import DeploymentConfigGate from './components/DeploymentConfigGate';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -22,6 +23,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ErrorBoundary>
+        <DeploymentConfigGate>
         <AuthProvider>
           <App />
           <Toaster
@@ -38,6 +40,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             }}
           />
         </AuthProvider>
+        </DeploymentConfigGate>
       </ErrorBoundary>
       </BrowserRouter>
     </QueryClientProvider>

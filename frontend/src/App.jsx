@@ -30,6 +30,12 @@ import ConnectivityTargetForm from './pages/ConnectivityTargetForm';
 import ConnectivityTimeWindows from './pages/ConnectivityTimeWindows';
 import ConnectivityReports from './pages/ConnectivityReports';
 import ConnectivityOutages from './pages/ConnectivityOutages';
+import FibreOrdersDashboard from './pages/FibreOrdersDashboard';
+import FibreOrdersList from './pages/FibreOrdersList';
+import FibreOrdersCompleted from './pages/FibreOrdersCompleted';
+import FibreOrderDetail from './pages/FibreOrderDetail';
+import FibreOrderForm from './pages/FibreOrderForm';
+import FibreProducts from './pages/FibreProducts';
 
 function App() {
   const { user, loading } = useAuth();
@@ -293,6 +299,15 @@ function App() {
       <Route path="/connectivity/time-windows" element={<ProtectedRoute><Layout><ConnectivityTimeWindows /></Layout></ProtectedRoute>} />
       <Route path="/connectivity/reports" element={<ProtectedRoute><Layout><ConnectivityReports /></Layout></ProtectedRoute>} />
       <Route path="/connectivity/outages" element={<ProtectedRoute><Layout><ConnectivityOutages /></Layout></ProtectedRoute>} />
+
+      {/* Fibre Orders Module */}
+      <Route path="/fibre-orders" element={<ProtectedRoute><Layout><FibreOrdersDashboard /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/list" element={<ProtectedRoute><Layout><FibreOrdersList /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/completed" element={<ProtectedRoute><Layout><FibreOrdersCompleted /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/new" element={<ProtectedRoute adminOnly><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/products" element={<ProtectedRoute adminOnly><Layout><FibreProducts /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/:id/edit" element={<ProtectedRoute adminOnly><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/:id" element={<ProtectedRoute><Layout><FibreOrderDetail /></Layout></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

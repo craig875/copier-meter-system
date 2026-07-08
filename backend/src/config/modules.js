@@ -51,6 +51,17 @@ export const modules = [
     apiRoutes: ['/api/connectivity'],
     category: 'Operations',
   },
+  {
+    id: 'fibre-orders',
+    name: 'Fibre Orders',
+    description: 'Track customer fibre orders, ETAs, and installation progress',
+    route: '/fibre-orders',
+    icon: '📡',
+    enabled: true,
+    permissions: ['admin', 'manager', 'sales_agent'],
+    apiRoutes: ['/api/fibre-orders', '/api/fibre-products'],
+    category: 'Operations',
+  },
   // Future modules can be added here:
   // {
   //   id: 'inventory',
@@ -82,6 +93,11 @@ export function getAccessibleModules(userRole) {
     // Viewers can access connectivity only
     if (userRole === 'viewer') {
       return ['connectivity-monitoring'].includes(module.id);
+    }
+
+    // Sales agents can access fibre orders only
+    if (userRole === 'sales_agent') {
+      return ['fibre-orders'].includes(module.id);
     }
 
     // Admins can access all modules

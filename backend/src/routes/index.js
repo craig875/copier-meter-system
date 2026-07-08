@@ -11,6 +11,8 @@ import makeModelRoutes from './makeModel.routes.js';
 import customerRoutes from './customer.routes.js';
 import notificationRoutes from './notification.routes.js';
 import connectivityRoutes from '../connectivity/connectivity.routes.js';
+import fibreProductRoutes from './fibre-product.routes.js';
+import fibreOrderRoutes from './fibre-order.routes.js';
 
 const router = Router();
 
@@ -49,5 +51,9 @@ router.use('/notifications', notificationRoutes);
 if (config.connectivityModuleEnabled) {
   router.use('/connectivity', connectivityRoutes);
 }
+
+// Fibre order tracker
+router.use('/fibre-products', fibreProductRoutes);
+router.use('/fibre-orders', fibreOrderRoutes);
 
 export default router;

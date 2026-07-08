@@ -17,7 +17,7 @@ async function main() {
       passwordHash: adminPassword,
       name: 'System Admin',
       role: 'admin',
-      modules: ['copiers', 'connectivity'],
+      modules: ['copiers', 'connectivity', 'fibre-orders'],
       ...seedUser2FAClear,
     },
     create: {
@@ -25,7 +25,7 @@ async function main() {
       passwordHash: adminPassword,
       name: 'System Admin',
       role: 'admin',
-      modules: ['copiers', 'connectivity'],
+      modules: ['copiers', 'connectivity', 'fibre-orders'],
       ...seedUser2FAClear,
     },
   });
@@ -108,7 +108,7 @@ async function main() {
       name: 'Sales Agent',
       role: 'sales_agent',
       branch: 'JHB',
-      modules: ['copiers'],
+      modules: ['fibre-orders'],
       ...seedUser2FAClear,
     },
     create: {
@@ -117,7 +117,7 @@ async function main() {
       name: 'Sales Agent',
       role: 'sales_agent',
       branch: 'JHB',
-      modules: ['copiers'],
+      modules: ['fibre-orders'],
       ...seedUser2FAClear,
     },
   });
@@ -276,9 +276,179 @@ async function main() {
   console.log('Created historical readings for last month');
   console.log('(Add makes/models via Admin Tools → Machine Configuration)');
 
+  // Fibre order products and demo orders
+  try {
+    const ftthResidential = await prisma.fibreProduct.upsert({
+      where: { id: 'seed-ftth-residential' },
+      update: {
+        name: 'FTTH Residential',
+        productType: 'FTTH',
+        defaultEtaWeeks: 2,
+        notes: 'Subject to wayleave approval',
+        isActive: true,
+      },
+      create: {
+        id: 'seed-ftth-residential',
+        name: 'FTTH Residential',
+        productType: 'FTTH',
+        defaultEtaWeeks: 2,
+        notes: 'Subject to wayleave approval',
+      },
+    });
+
+    const ftthBusiness = await prisma.fibreProduct.upsert({
+      where: { id: 'seed-ftth-business' },
+      update: {
+        name: 'FTTH Business',
+        productType: 'FTTH',
+        defaultEtaWeeks: 3,
+        notes: 'Business installation — extended lead time',
+        isActive: true,
+      },
+      create: {
+        id: 'seed-ftth-business',
+        name: 'FTTH Business',
+        productType: 'FTTH',
+        defaultEtaWeeks: 3,
+        notes: 'Business installation — extended lead time',
+      },
+    });
+
+    const fttb = await prisma.fibreProduct.upsert({
+      where: { id: 'seed-fttb' },
+      update: {
+        name: 'FTTB',
+        productType: 'FTTB',
+        defaultEtaWeeks: 4,
+        notes: 'Building wayleave may be required',
+        isActive: true,
+      },
+      create: {
+        id: 'seed-fttb',
+        name: 'FTTB',
+        productType: 'FTTB',
+        defaultEtaWeeks: 4,
+        notes: 'Building wayleave may be required',
+      },
+    });
+
+    console.log('Created fibre products');
+
+    const placementDate = new Date();
+    placementDate.setUTCDate(placementDate.getUTCDate() - 7);
+    const expectedDate = new Date(placementDate);
+    expectedDate.setUTCDate(expectedDate.getUTCDate() + ftthResidential.defaultEtaWeeks * 7);
+
+    const demoOrder = await prisma.fibreOrder.upsert({
+      where: { id: 'seed-fibre-order-1' },
+      update: {
+        branch: 'JHB',
+        customerName: 'Acme Corp',
+        customerReference: 'ACME-001',
+        installationAddress: '123 Main Rd, Sandton, Johannesburg',
+        productId: ftthResidential.id,
+        salesAgentId: salesAgent.id,
+        orderPlacementDate: placementDate,
+        expectedInstallDate: expectedDate,
+        status: 'wayleave_pending',
+        createdById: admin.id,
+      },
+      create: {
+        id: 'seed-fibre-order-1',
+        branch: 'JHB',
+        customerName: 'Acme Corp',
+        customerReference: 'ACME-001',
+        installationAddress: '123 Main Rd, Sandton, Johannesburg',
+        productId: ftthResidential.id,
+        salesAgentId: salesAgent.id,
+        orderPlacementDate: placementDate,
+        expectedInstallDate: expectedDate,
+        status: 'wayleave_pending',
+        createdById: admin.id,
+      },
+    });
+
+    await prisma.orderUpdate.upsert({
+      where: { id: 'seed-order-update-1' },
+      update: {
+        orderId: demoOrder.id,
+        previousStatus: null,
+        newStatus: 'order_placed',
+        note: 'Order created',
+        updatedById: admin.id,
+      },
+      create: {
+        id: 'seed-order-update-1',
+        orderId: demoOrder.id,
+        previousStatus: null,
+        newStatus: 'order_placed',
+        note: 'Order created',
+        updatedById: admin.id,
+      },
+    });
+
+    await prisma.orderUpdate.upsert({
+      where: { id: 'seed-order-update-2' },
+      update: {
+        orderId: demoOrder.id,
+        previousStatus: 'order_placed',
+        newStatus: 'wayleave_pending',
+        note: 'Wayleave submitted to municipality',
+        updatedById: admin.id,
+      },
+      create: {
+        id: 'seed-order-update-2',
+        orderId: demoOrder.id,
+        previousStatus: 'order_placed',
+        newStatus: 'wayleave_pending',
+        note: 'Wayleave submitted to municipality',
+        updatedById: admin.id,
+      },
+    });
+
+    const placementDate2 = new Date();
+    placementDate2.setUTCDate(placementDate2.getUTCDate() - 3);
+    const expectedDate2 = new Date(placementDate2);
+    expectedDate2.setUTCDate(expectedDate2.getUTCDate() + ftthBusiness.defaultEtaWeeks * 7);
+
+    await prisma.fibreOrder.upsert({
+      where: { id: 'seed-fibre-order-2' },
+      update: {
+        branch: 'CT',
+        customerName: 'Cape Retail Ltd',
+        customerReference: 'CRL-442',
+        installationAddress: '45 Long St, Cape Town CBD',
+        productId: ftthBusiness.id,
+        salesAgentId: salesAgent.id,
+        orderPlacementDate: placementDate2,
+        expectedInstallDate: expectedDate2,
+        status: 'order_placed',
+        createdById: admin.id,
+      },
+      create: {
+        id: 'seed-fibre-order-2',
+        branch: 'CT',
+        customerName: 'Cape Retail Ltd',
+        customerReference: 'CRL-442',
+        installationAddress: '45 Long St, Cape Town CBD',
+        productId: ftthBusiness.id,
+        salesAgentId: salesAgent.id,
+        orderPlacementDate: placementDate2,
+        expectedInstallDate: expectedDate2,
+        status: 'order_placed',
+        createdById: admin.id,
+      },
+    });
+
+    console.log('Created demo fibre orders');
+  } catch (e) {
+    if (!e.message?.includes('does not exist') && e.code !== 'P2021') throw e;
+  }
+
   console.log('Seeding completed!');
   console.log('\nTest credentials:');
   console.log('  Admin: admin@example.com / admin123');
+  console.log('  Sales Agent: sales@example.com / sales123');
   console.log('  Meter User: meter@example.com / meter123');
   console.log('  Capturer: capturer@example.com / capturer123');
   console.log('  Viewer: viewer@example.com / viewer123');

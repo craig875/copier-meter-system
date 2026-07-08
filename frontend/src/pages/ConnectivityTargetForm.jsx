@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { connectivityApi } from '../services/api';
@@ -11,9 +11,11 @@ const SERVICE_TYPES = ['fibre', 'wireless', 'lte', 'other'];
 export default function ConnectivityTargetForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { canManageConnectivity, effectiveBranch } = useAuth();
   const isEdit = !!id;
+  const fromFibreOrder = !isEdit ? location.state?.fromFibreOrder : null;
 
   const [form, setForm] = useState({
     customerName: '',
@@ -53,6 +55,18 @@ export default function ConnectivityTargetForm() {
     }
   }, [data?.target]);
 
+  useEffect(() => {
+    if (isEdit || !fromFibreOrder) return;
+    const { fibreOrderId, ...prefill } = fromFibreOrder;
+    setForm((current) => ({
+      ...current,
+      ...prefill,
+      customerName: prefill.customerName || current.customerName,
+      siteName: prefill.siteName || current.siteName,
+      serviceType: prefill.serviceType || 'fibre',
+    }));
+  }, [isEdit, fromFibreOrder]);
+
   const createMutation = useMutation({
     mutationFn: (body) => connectivityApi.createTarget(body, effectiveBranch),
     onSuccess: () => {
@@ -71,10 +85,11 @@ export default function ConnectivityTargetForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const { fibreOrderId, ...payload } = form;
     if (isEdit) {
-      updateMutation.mutate(form);
+      updateMutation.mutate(payload);
     } else {
-      createMutation.mutate(form);
+      createMutation.mutate(payload);
     }
   };
 
@@ -100,6 +115,20 @@ export default function ConnectivityTargetForm() {
       <h1 className="text-xl font-bold text-gray-900 mb-6">
         {isEdit ? 'Edit Target' : 'Add Monitoring Target'}
       </h1>
+
+      {fromFibreOrder?.fibreOrderId && (
+        <div className="mb-4 p-4 rounded-lg border border-blue-200 bg-blue-50 text-sm text-blue-900">
+          <p>
+            Pre-filled from completed fibre order. Enter the monitoring IP or hostname, then save.
+          </p>
+          <Link
+            to={`/fibre-orders/${fromFibreOrder.fibreOrderId}`}
+            className="inline-block mt-2 text-blue-700 hover:underline font-medium"
+          >
+            ← Back to fibre order
+          </Link>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="tile-card p-6 space-y-4">
         {error && (

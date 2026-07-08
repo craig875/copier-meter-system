@@ -20,6 +20,7 @@ import {
   Bell,
   Shield,
   Globe,
+  Radio,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -28,7 +29,7 @@ import logo from '../assets/logo.png';
 import Setup2FAPrompt from './Setup2FAPrompt';
 import ConnectivityAlertBanner from './connectivity/ConnectivityAlertBanner';
 import { notificationsApi } from '../services/api';
-import { MODULE_COPERS, MODULE_CONNECTIVITY } from '../constants/modules';
+import { MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS } from '../constants/modules';
 
 const Layout = ({ children }) => {
   const {
@@ -43,6 +44,7 @@ const Layout = ({ children }) => {
   } = useAuth();
   const showCopiers = hasModule(MODULE_COPERS);
   const showConnectivity = hasModule(MODULE_CONNECTIVITY);
+  const showFibreOrders = hasModule(MODULE_FIBRE_ORDERS);
   const navigate = useNavigate();
   const location = useLocation();
   const showBackButton = location.pathname !== '/';
@@ -68,12 +70,21 @@ const Layout = ({ children }) => {
   };
 
   const connectivityNav = { name: 'Connectivity', href: '/connectivity', icon: Globe };
+  const fibreOrdersNav = {
+    name: 'Fibre Orders',
+    href: '/fibre-orders',
+    icon: Radio,
+    activePaths: ['/fibre-orders/list', '/fibre-orders/completed', '/fibre-orders/new', '/fibre-orders/products'],
+  };
 
   const navigation = (() => {
     const home = { name: 'Home', href: '/', icon: Home };
-    const topLinks = [...(showConnectivity ? [connectivityNav] : [])];
+    const topLinks = [
+      ...(showConnectivity ? [connectivityNav] : []),
+      ...(showFibreOrders ? [fibreOrdersNav] : []),
+    ];
 
-    if (!showCopiers && showConnectivity) {
+    if (!showCopiers && topLinks.length > 0) {
       return [home, ...topLinks];
     }
 

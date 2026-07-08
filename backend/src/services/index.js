@@ -7,6 +7,9 @@ import { ConsumableService } from './consumable.service.js';
 import { CustomerService } from './customer.service.js';
 import { NotificationService } from './notification.service.js';
 
+import { FibreProductService } from './fibre-product.service.js';
+import { FibreOrderService } from './fibre-order.service.js';
+
 /**
  * Service Factory - Centralized service creation
  * Dependency Injection pattern for services
@@ -23,6 +26,8 @@ export const services = {
   consumable: new ConsumableService(),
   customer: new CustomerService(),
   notification: notificationService,
+  fibreProduct: new FibreProductService(),
+  fibreOrder: new FibreOrderService(),
 };
 
 export {

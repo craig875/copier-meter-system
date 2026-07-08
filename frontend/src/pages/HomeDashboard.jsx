@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Printer, LayoutDashboard, Globe } from 'lucide-react';
+import { Printer, LayoutDashboard, Globe, Radio } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MODULE_COPERS, MODULE_CONNECTIVITY } from '../constants/modules';
+import { MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS } from '../constants/modules';
 
 const copierModules = [
   {
@@ -37,6 +37,16 @@ const connectivityModule = {
   iconColor: 'text-blue-700',
 };
 
+const fibreOrdersModule = {
+  id: 'fibre-orders',
+  name: 'Fibre Orders',
+  description: 'Track customer fibre orders, ETAs, and installation progress',
+  href: '/fibre-orders',
+  icon: Radio,
+  color: 'bg-violet-50',
+  iconColor: 'text-violet-700',
+};
+
 const HomeDashboard = () => {
   const { user, isCapturer, hasModule } = useAuth();
   const tiles = [];
@@ -45,6 +55,9 @@ const HomeDashboard = () => {
   }
   if (hasModule(MODULE_CONNECTIVITY)) {
     tiles.push(connectivityModule);
+  }
+  if (hasModule(MODULE_FIBRE_ORDERS)) {
+    tiles.push(fibreOrdersModule);
   }
 
   return (

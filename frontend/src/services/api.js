@@ -231,4 +231,32 @@ export const consumablesApi = {
   },
 };
 
+const fibreBranchParams = (branch) => (branch ? { branch } : {});
+
+export const fibreProductsApi = {
+  list: (includeInactive = false) =>
+    api.get('/fibre-products', {
+      params: includeInactive ? { includeInactive: 'true' } : {},
+    }).then((r) => r.data),
+  get: (id) => api.get(`/fibre-products/${id}`).then((r) => r.data),
+  create: (data) => api.post('/fibre-products', data).then((r) => r.data),
+  update: (id, data) => api.put(`/fibre-products/${id}`, data).then((r) => r.data),
+  deactivate: (id) => api.delete(`/fibre-products/${id}`).then((r) => r.data),
+};
+
+export const fibreOrdersApi = {
+  list: (params = {}) => api.get('/fibre-orders', { params }).then((r) => r.data),
+  getStats: (branch) =>
+    api.get('/fibre-orders/stats', { params: fibreBranchParams(branch) }).then((r) => r.data),
+  get: (id) => api.get(`/fibre-orders/${id}`).then((r) => r.data),
+  getUpdates: (id) => api.get(`/fibre-orders/${id}/updates`).then((r) => r.data),
+  create: (data) => api.post('/fibre-orders', data).then((r) => r.data),
+  update: (id, data) => api.put(`/fibre-orders/${id}`, data).then((r) => r.data),
+  addNote: (id, note) => api.post(`/fibre-orders/${id}/notes`, { note }).then((r) => r.data),
+  requestUpdate: (id, note) =>
+    api.post(`/fibre-orders/${id}/request-update`, { note: note || null }).then((r) => r.data),
+  listUpdateRequests: (branch) =>
+    api.get('/fibre-orders/update-requests', { params: fibreBranchParams(branch) }).then((r) => r.data),
+};
+
 export default api;

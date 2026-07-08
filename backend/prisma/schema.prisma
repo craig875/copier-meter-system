@@ -49,6 +49,12 @@ model User {
   installationProjectStepsDone InstallationProjectStep[]
   installationAssignments      InstallationProjectAssignment[]
 
+  fibreOrdersAsSalesAgent FibreOrder[] @relation("FibreOrderSalesAgent")
+  fibreOrdersCreated      FibreOrder[] @relation("FibreOrderCreatedBy")
+  orderUpdates            OrderUpdate[]
+  fibreUpdateRequests     FibreOrderUpdateRequest[] @relation("FibreUpdateRequestRequestedBy")
+  fibreUpdateRequestsResolved FibreOrderUpdateRequest[] @relation("FibreUpdateRequestResolvedBy")
+
   @@map("users")
 }
 
@@ -168,6 +174,105 @@ model InstallationProjectAssignment {
   @@unique([projectId, duty])
   @@index([userId])
   @@map("installation_project_assignments")
+}
+
+enum OrderStatus {
+  order_placed
+  awaiting_cx_creation
+  awaiting_site_survey_scheduling
+  site_survey_scheduled
+  awaiting_planning_documents
+  awaiting_planning_sign_off
+  wayleave_pending
+  wayleave_approved
+  scheduled
+  complete
+  cancelled
+  on_hold
+}
+
+model FibreProduct {
+  id              String   @id @default(uuid())
+  name            String   @map("name")
+  productType     String   @map("product_type")
+  defaultEtaWeeks Int      @map("default_eta_weeks")
+  notes           String?  @map("notes")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  orders FibreOrder[]
+
+  @@map("fibre_products")
+}
+
+model FibreOrder {
+  id                   String      @id @default(uuid())
+  branch               Branch      @default(JHB) @map("branch")
+  customerName         String      @map("customer_name")
+  customerReference    String?     @map("customer_reference")
+  installationAddress  String      @map("installation_address")
+  productId            String      @map("product_id")
+  salesAgentId         String      @map("sales_agent_id")
+  orderPlacementDate   DateTime    @map("order_placement_date") @db.Date
+  expectedInstallDate  DateTime    @map("expected_install_date") @db.Date
+  status               OrderStatus @default(order_placed) @map("status")
+  notes                String?     @map("notes")
+  createdById          String      @map("created_by")
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
+
+  product     FibreProduct  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  salesAgent  User          @relation("FibreOrderSalesAgent", fields: [salesAgentId], references: [id], onDelete: Restrict)
+  createdBy   User          @relation("FibreOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updates     OrderUpdate[]
+  updateRequests FibreOrderUpdateRequest[]
+
+  @@index([branch])
+  @@index([status])
+  @@index([salesAgentId])
+  @@index([orderPlacementDate])
+  @@map("fibre_orders")
+}
+
+model OrderUpdate {
+  id             String       @id @default(uuid())
+  orderId        String       @map("order_id")
+  previousStatus OrderStatus? @map("previous_status")
+  newStatus      OrderStatus? @map("new_status")
+  note           String?      @map("note")
+  updatedById    String       @map("updated_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  order     FibreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  updatedBy User       @relation(fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@map("order_updates")
+}
+
+enum FibreUpdateRequestStatus {
+  pending
+  resolved
+}
+
+model FibreOrderUpdateRequest {
+  id            String                   @id @default(uuid())
+  orderId       String                   @map("order_id")
+  requestedById String                   @map("requested_by_id")
+  note          String?                  @map("note")
+  status        FibreUpdateRequestStatus @default(pending) @map("status")
+  resolvedAt    DateTime?                @map("resolved_at")
+  resolvedById  String?                  @map("resolved_by_id")
+  createdAt     DateTime                 @default(now()) @map("created_at")
+
+  order       FibreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  requestedBy User       @relation("FibreUpdateRequestRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  resolvedBy  User?      @relation("FibreUpdateRequestResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([orderId, status])
+  @@index([status, createdAt])
+  @@map("fibre_order_update_requests")
 }
 
 enum PartType {
