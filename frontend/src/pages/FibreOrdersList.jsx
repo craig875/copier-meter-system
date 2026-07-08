@@ -6,6 +6,7 @@ import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
 import { ACTIVE_ORDER_STATUSES, formatWeeksRemaining } from '../constants/fibreOrders';
+import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderProgressBar from '../components/fibre/FibreOrderProgressBar';
 
