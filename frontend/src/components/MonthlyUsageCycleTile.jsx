@@ -17,8 +17,8 @@ const MonthlyUsageCycleTile = ({ machineLife, readings = [], compact = false }) 
     : null;
 
   const usageData = [...readings]
-    .sort((a, b) => a.year - b.year || a.month - b.month)
-    .slice(-6)
+    .sort((a, b) => b.year - a.year || b.month - a.month)
+    .slice(0, 6)
     .map((r) => {
       const usage = (r.monoUsage ?? 0) + (r.colourUsage ?? 0);
       const overused = monthlyRecommended != null && usage > monthlyRecommended;
