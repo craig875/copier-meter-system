@@ -44,6 +44,9 @@ echo "==> Frontend (build)"
   npm run build
 )
 
+echo "==> Backend service (systemd)"
+systemctl restart copier-backend.service
+
 echo "==> PM2"
 cd "$ROOT"
 if pm2 describe copier-api >/dev/null 2>&1; then
@@ -53,4 +56,4 @@ else
 fi
 pm2 save
 
-echo "==> Deploy finished. Check: pm2 logs copier-api --lines 20"
+echo "==> Deploy finished. Check: systemctl status copier-backend.service --no-pager"
