@@ -2,6 +2,8 @@ import prisma from '../config/database.js';
 import { repositories } from '../repositories/index.js';
 import { getPreviousMonth } from '../utils/date.utils.js';
 import { calculateReadingMetrics } from '../utils/reading.utils.js';
+import { resolveUnchangedReason } from '../utils/reading-unchanged.js';
+import { validateSingleReading } from './validation.service.js';
 import { ValidationError } from '../utils/errors.js';
 
 /**
@@ -462,10 +464,25 @@ export class ImportService {
         );
 
         const readingInput = {
+          machineId: machine.id,
           monoReading: machine.monoEnabled ? monoReading : null,
           colourReading: machine.colourEnabled ? colourReading : null,
           scanReading: machine.scanEnabled ? scanReading : null,
+          monoUnchangedReason: row.monoUnchangedReason ?? row.mono_unchanged_reason ?? null,
+          colourUnchangedReason: row.colourUnchangedReason ?? row.colour_unchanged_reason ?? null,
+          scanUnchangedReason: row.scanUnchangedReason ?? row.scan_unchanged_reason ?? null,
         };
+
+        const validationErrors = validateSingleReading(readingInput, machine, prevReading);
+        if (validationErrors.length > 0) {
+          results.errors.push({
+            row: rowNumber,
+            machineSerialNumber,
+            error: validationErrors.map((e) => e.message).join('; '),
+          });
+          results.skipped++;
+          continue;
+        }
 
         const metrics = calculateReadingMetrics(readingInput, prevReading);
 
@@ -476,6 +493,21 @@ export class ImportService {
           monoReading: readingInput.monoReading,
           colourReading: readingInput.colourReading,
           scanReading: readingInput.scanReading,
+          monoUnchangedReason: resolveUnchangedReason(
+            readingInput.monoReading,
+            prevReading?.monoReading,
+            readingInput.monoUnchangedReason
+          ),
+          colourUnchangedReason: resolveUnchangedReason(
+            readingInput.colourReading,
+            prevReading?.colourReading,
+            readingInput.colourUnchangedReason
+          ),
+          scanUnchangedReason: resolveUnchangedReason(
+            readingInput.scanReading,
+            prevReading?.scanReading,
+            readingInput.scanUnchangedReason
+          ),
           monoUsage: metrics.monoUsage,
           colourUsage: metrics.colourUsage,
           scanUsage: metrics.scanUsage,

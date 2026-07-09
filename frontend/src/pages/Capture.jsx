@@ -22,6 +22,11 @@ import {
   Unlock
 } from 'lucide-react';
 import clsx from 'clsx';
+import ReadingUnchangedConfirmModal from '../components/ReadingUnchangedConfirmModal';
+import {
+  findUnchangedCountersForReadings,
+  applyUnchangedReasons,
+} from '../utils/readingUnchanged';
 
 const MeterInput = memo(function MeterInput({
   value,
@@ -121,9 +126,11 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
       className={clsx(editedFields && Object.keys(editedFields).length > 0 && 'bg-blue-50')}
     >
       <td className="px-4 py-3">
-        <p className="font-medium text-gray-900">{machine.machineSerialNumber}</p>
+        <span className="font-medium text-gray-900">{machine.machineSerialNumber}</span>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-500">{machine.customer?.name || '-'}</td>
+      <td className="px-4 py-3 text-sm text-gray-500">
+        {machine.customer?.name || '-'}
+      </td>
       <td className="px-4 py-3">
         {machine.monoEnabled ? (
           <MeterInput
@@ -204,7 +211,7 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
         )}
       </td>
       <td className="px-4 py-3 text-center">
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           {editedFields && Object.keys(editedFields).length > 0 && (
             <button
               type="button"
@@ -262,6 +269,7 @@ const Capture = () => {
   const [search, setSearch] = useState('');
   const [editedReadings, setEditedReadings] = useState({});
   const [errors, setErrors] = useState({});
+  const [unchangedModal, setUnchangedModal] = useState(null);
 
   const queryBranch = urlBranch && canSwitchBranches ? urlBranch : effectiveBranch;
 
@@ -407,6 +415,88 @@ const Capture = () => {
     });
   }, [isLocked]);
 
+  const buildReadingsToSubmit = useCallback(() => {
+    const readingsToSubmit = [];
+
+    Object.entries(editedReadings).forEach(([machineId, values]) => {
+      const entry = machines.find((m) => m.machine.id === machineId);
+      if (!entry) return;
+
+      const reading = {
+        machineId,
+        monoReading: values.monoReading !== undefined ? values.monoReading : entry.currentReading?.monoReading,
+        colourReading: values.colourReading !== undefined ? values.colourReading : entry.currentReading?.colourReading,
+        scanReading: values.scanReading !== undefined ? values.scanReading : entry.currentReading?.scanReading,
+        note: values.note !== undefined ? values.note : entry.currentReading?.note,
+      };
+
+      if (reading.monoReading != null || reading.colourReading != null || reading.scanReading != null || reading.note) {
+        readingsToSubmit.push(reading);
+      }
+    });
+
+    return readingsToSubmit;
+  }, [editedReadings, machines]);
+
+  const machinesByIdForUnchanged = useMemo(() => {
+    const map = new Map();
+    for (const entry of machines) {
+      map.set(entry.machine.id, {
+        machine: entry.machine,
+        previousReading: entry.previousReading,
+      });
+    }
+    return map;
+  }, [machines]);
+
+  const submitReadingsWithUnchangedCheck = useCallback((readingsToSubmit, onAfterSuccess) => {
+    const unchangedItems = findUnchangedCountersForReadings(readingsToSubmit, machinesByIdForUnchanged);
+    if (unchangedItems.length > 0) {
+      setUnchangedModal({ readings: readingsToSubmit, items: unchangedItems, onAfterSuccess });
+      return;
+    }
+    if (onAfterSuccess) {
+      onAfterSuccess(readingsToSubmit);
+      return;
+    }
+    submitMutation.mutate(readingsToSubmit);
+  }, [machinesByIdForUnchanged, submitMutation]);
+
+  const handleUnchangedConfirm = useCallback(async (reasonByKey) => {
+    if (!unchangedModal) return;
+    const readingsWithReasons = applyUnchangedReasons(unchangedModal.readings, reasonByKey);
+    const { onAfterSuccess } = unchangedModal;
+    setUnchangedModal(null);
+
+    if (onAfterSuccess) {
+      try {
+        await readingsApi.submit({ year, month, readings: readingsWithReasons, branch: queryBranch });
+        onAfterSuccess();
+        queryClient.invalidateQueries(['readings', year, month, queryBranch]);
+        queryClient.invalidateQueries(['toner-alerts']);
+      } catch (error) {
+        if (error.response?.data?.errors) {
+          const newErrors = {};
+          error.response.data.errors.forEach((err) => {
+            newErrors[`${err.machineId}-${err.field}`] = err.message;
+          });
+          setErrors((prev) => ({ ...prev, ...newErrors }));
+          toast.error('Validation errors - check highlighted fields');
+        } else {
+          toast.error(error.response?.data?.error || 'Failed to save readings');
+        }
+      }
+      return;
+    }
+
+    submitMutation.mutate(readingsWithReasons);
+  }, [unchangedModal, submitMutation, year, month, queryBranch, queryClient]);
+
+  const handleUnchangedCancel = useCallback(() => {
+    unchangedModal?.onCancel?.();
+    setUnchangedModal(null);
+  }, [unchangedModal]);
+
   const handleSave = () => {
     // Prevent saving if month is locked
     if (isLocked) {
@@ -414,32 +504,14 @@ const Capture = () => {
       return;
     }
 
-    const readingsToSubmit = [];
-
-    Object.entries(editedReadings).forEach(([machineId, values]) => {
-      const machine = machines.find(m => m.machine.id === machineId);
-      if (!machine) return;
-
-      const reading = {
-        machineId,
-        monoReading: values.monoReading !== undefined ? values.monoReading : machine.currentReading?.monoReading,
-        colourReading: values.colourReading !== undefined ? values.colourReading : machine.currentReading?.colourReading,
-        scanReading: values.scanReading !== undefined ? values.scanReading : machine.currentReading?.scanReading,
-        note: values.note !== undefined ? values.note : machine.currentReading?.note,
-      };
-
-      // Only include if at least one value is set (including note)
-      if (reading.monoReading != null || reading.colourReading != null || reading.scanReading != null || reading.note) {
-        readingsToSubmit.push(reading);
-      }
-    });
+    const readingsToSubmit = buildReadingsToSubmit();
 
     if (readingsToSubmit.length === 0) {
       toast.error('No readings or notes to save');
       return;
     }
 
-    submitMutation.mutate(readingsToSubmit);
+    submitReadingsWithUnchangedCheck(readingsToSubmit);
   };
 
   const handleSaveSingle = useCallback(
@@ -469,6 +541,36 @@ const Capture = () => {
     // Only include if at least one value is set (including note)
     if (reading.monoReading == null && reading.colourReading == null && reading.scanReading == null && !reading.note) {
       toast.error('Please provide at least one reading value or a note');
+      return;
+    }
+
+    const unchangedItems = findUnchangedCountersForReadings(
+      [reading],
+      new Map([[machineId, { machine: machine.machine, previousReading: machine.previousReading }]])
+    );
+
+    if (unchangedItems.length > 0) {
+      setUnchangedModal({
+        readings: [reading],
+        items: unchangedItems,
+        onAfterSuccess: () => {
+          setEditedReadings((prev) => {
+            const newEdited = { ...prev };
+            delete newEdited[machineId];
+            return newEdited;
+          });
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            Object.keys(newErrors).forEach((key) => {
+              if (key.startsWith(`${machineId}-`)) {
+                delete newErrors[key];
+              }
+            });
+            return newErrors;
+          });
+          toast.success(`Saved readings for ${machine.machine.machineSerialNumber}`);
+        },
+      });
       return;
     }
 
@@ -906,6 +1008,16 @@ const Capture = () => {
           </table>
         </div>
       </div>
+
+      {unchangedModal && (
+        <ReadingUnchangedConfirmModal
+          items={unchangedModal.items}
+          defaultReasons={unchangedModal.defaultReasons}
+          onConfirm={handleUnchangedConfirm}
+          onCancel={handleUnchangedCancel}
+          isSubmitting={submitMutation.isPending}
+        />
+      )}
     </div>
   );
 };

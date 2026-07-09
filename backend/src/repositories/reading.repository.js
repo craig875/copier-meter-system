@@ -89,12 +89,14 @@ export class ReadingRepository extends BaseRepository {
       colourReading: data.colourReading ?? null,
       scanReading: data.scanReading ?? null,
       note: data.note || null,
+      monoUnchangedReason: data.monoUnchangedReason || null,
+      colourUnchangedReason: data.colourUnchangedReason || null,
+      scanUnchangedReason: data.scanUnchangedReason || null,
       monoUsage: data.monoUsage ?? null,
       colourUsage: data.colourUsage ?? null,
       scanUsage: data.scanUsage ?? null,
     };
 
-    // Prepare create data (includes all fields)
     const createData = {
       machineId: cleanData.machineId,
       year: cleanData.year,
@@ -103,6 +105,9 @@ export class ReadingRepository extends BaseRepository {
       colourReading: cleanData.colourReading,
       scanReading: cleanData.scanReading,
       note: cleanData.note,
+      monoUnchangedReason: cleanData.monoUnchangedReason,
+      colourUnchangedReason: cleanData.colourUnchangedReason,
+      scanUnchangedReason: cleanData.scanUnchangedReason,
       monoUsage: cleanData.monoUsage,
       colourUsage: cleanData.colourUsage,
       scanUsage: cleanData.scanUsage,
@@ -110,12 +115,14 @@ export class ReadingRepository extends BaseRepository {
       branch: cleanData.branch,
     };
 
-    // Prepare update data (only updatable fields - don't update capturedBy or branch)
     const updateData = {
       monoReading: cleanData.monoReading,
       colourReading: cleanData.colourReading,
       scanReading: cleanData.scanReading,
       note: cleanData.note,
+      monoUnchangedReason: cleanData.monoUnchangedReason,
+      colourUnchangedReason: cleanData.colourUnchangedReason,
+      scanUnchangedReason: cleanData.scanUnchangedReason,
       monoUsage: cleanData.monoUsage,
       colourUsage: cleanData.colourUsage,
       scanUsage: cleanData.scanUsage,

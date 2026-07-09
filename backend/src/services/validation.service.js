@@ -4,15 +4,27 @@
  * Open/Closed Principle: Easy to extend with new validation rules
  */
 
+const UNCHANGED_REASON_FIELDS = {
+  monoReading: 'monoUnchangedReason',
+  colourReading: 'colourUnchangedReason',
+  scanReading: 'scanUnchangedReason',
+};
+
+const COUNTER_LABELS = {
+  monoReading: 'Mono',
+  colourReading: 'Colour',
+  scanReading: 'Scan',
+};
+
 /**
  * Validate a single meter reading value
  * @param {number|null} currentValue
  * @param {number|null} previousValue
  * @param {string} fieldName
- * @param {string} machineSerialNumber
+ * @param {string|null|undefined} unchangedReason
  * @returns {Object|null} Error object or null
  */
-const validateMeterReading = (currentValue, previousValue, fieldName, machineSerialNumber) => {
+const validateMeterReading = (currentValue, previousValue, fieldName, unchangedReason) => {
   if (currentValue == null || previousValue == null) {
     return null;
   }
@@ -20,18 +32,23 @@ const validateMeterReading = (currentValue, previousValue, fieldName, machineSer
   if (currentValue < previousValue) {
     return {
       field: fieldName,
-      message: `${fieldName} reading (${currentValue}) cannot be less than previous month (${previousValue})`,
+      message: `${COUNTER_LABELS[fieldName] || fieldName} reading (${currentValue}) cannot be less than previous month (${previousValue})`,
       currentValue,
       previousValue,
     };
   }
 
   if (currentValue === previousValue) {
+    const reason = typeof unchangedReason === 'string' ? unchangedReason.trim() : '';
+    if (reason.length > 0) {
+      return null;
+    }
     return {
       field: fieldName,
-      message: `${fieldName} reading (${currentValue}) cannot be the same as previous month (${previousValue}). Reading must increase.`,
+      message: `${COUNTER_LABELS[fieldName] || fieldName} reading (${currentValue}) matches previous month (${previousValue}). Provide a reason confirming zero usage for this counter.`,
       currentValue,
       previousValue,
+      requiresUnchangedReason: true,
     };
   }
 
@@ -49,7 +66,7 @@ const validateMeterEnabled = (enabled, value, fieldName) => {
   if (!enabled && value != null) {
     return {
       field: fieldName,
-      message: `${fieldName} reading not applicable for this machine`,
+      message: `${COUNTER_LABELS[fieldName] || fieldName} reading not applicable for this machine`,
     };
   }
   return null;
@@ -62,10 +79,9 @@ const validateMeterEnabled = (enabled, value, fieldName) => {
  * @param {Object|null} prevReading - Previous month's reading
  * @returns {Array} Array of errors
  */
-const validateSingleReading = (reading, machine, prevReading) => {
+export const validateSingleReading = (reading, machine, prevReading) => {
   const errors = [];
 
-  // Validate machine exists
   if (!machine) {
     return [{
       machineId: reading.machineId,
@@ -74,13 +90,12 @@ const validateSingleReading = (reading, machine, prevReading) => {
     }];
   }
 
-  // Validate mono reading
   if (machine.monoEnabled && reading.monoReading != null) {
     const error = validateMeterReading(
       reading.monoReading,
       prevReading?.monoReading,
       'monoReading',
-      machine.machineSerialNumber
+      reading.monoUnchangedReason
     );
     if (error) {
       errors.push({
@@ -91,13 +106,12 @@ const validateSingleReading = (reading, machine, prevReading) => {
     }
   }
 
-  // Validate colour reading
   if (machine.colourEnabled && reading.colourReading != null) {
     const error = validateMeterReading(
       reading.colourReading,
       prevReading?.colourReading,
       'colourReading',
-      machine.machineSerialNumber
+      reading.colourUnchangedReason
     );
     if (error) {
       errors.push({
@@ -108,13 +122,12 @@ const validateSingleReading = (reading, machine, prevReading) => {
     }
   }
 
-  // Validate scan reading
   if (machine.scanEnabled && reading.scanReading != null) {
     const error = validateMeterReading(
       reading.scanReading,
       prevReading?.scanReading,
       'scanReading',
-      machine.machineSerialNumber
+      reading.scanUnchangedReason
     );
     if (error) {
       errors.push({
@@ -125,7 +138,6 @@ const validateSingleReading = (reading, machine, prevReading) => {
     }
   }
 
-  // Validate enabled meter types
   const monoError = validateMeterEnabled(machine.monoEnabled, reading.monoReading, 'monoReading');
   if (monoError) {
     errors.push({
@@ -162,8 +174,8 @@ const validateSingleReading = (reading, machine, prevReading) => {
  * @returns {boolean}
  */
 const hasReadingValues = (reading) => {
-  return reading.monoReading != null || 
-         reading.colourReading != null || 
+  return reading.monoReading != null ||
+         reading.colourReading != null ||
          reading.scanReading != null;
 };
 
@@ -179,8 +191,7 @@ export const validateReadings = (readings, machineMap, previousReadingMap) => {
 
   for (const reading of readings) {
     const machine = machineMap.get(reading.machineId);
-    
-    // If machine doesn't exist, that's an error
+
     if (!machine) {
       errors.push({
         machineId: reading.machineId,
@@ -190,10 +201,7 @@ export const validateReadings = (readings, machineMap, previousReadingMap) => {
       continue;
     }
 
-    // If reading only has a note (no actual reading values), skip validation
-    // This allows users to save notes when unable to retrieve readings
     if (!hasReadingValues(reading)) {
-      // Only validate that we have at least a note
       if (!reading.note || (typeof reading.note === 'string' && reading.note.trim().length === 0)) {
         errors.push({
           machineId: reading.machineId,
@@ -201,10 +209,9 @@ export const validateReadings = (readings, machineMap, previousReadingMap) => {
           message: 'Either reading values or a note must be provided',
         });
       }
-      continue; // Skip reading value validation
+      continue;
     }
 
-    // Validate reading values if they exist
     const prevReading = previousReadingMap.get(reading.machineId);
     const readingErrors = validateSingleReading(reading, machine, prevReading);
     errors.push(...readingErrors);
@@ -215,3 +222,5 @@ export const validateReadings = (readings, machineMap, previousReadingMap) => {
     errors,
   };
 };
+
+export { UNCHANGED_REASON_FIELDS, COUNTER_LABELS };

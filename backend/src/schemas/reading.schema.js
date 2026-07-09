@@ -1,17 +1,21 @@
 import { z } from 'zod';
 
+const unchangedReasonSchema = z.string().min(1, 'Reason is required').max(500).nullable().optional();
+
 export const readingInputSchema = z.object({
   machineId: z.string().uuid('Invalid machine ID'),
   monoReading: z.number().int().min(0).nullable().optional(),
   colourReading: z.number().int().min(0).nullable().optional(),
   scanReading: z.number().int().min(0).nullable().optional(),
   note: z.string().max(500, 'Note must be 500 characters or less').nullable().optional(),
+  monoUnchangedReason: unchangedReasonSchema,
+  colourUnchangedReason: unchangedReasonSchema,
+  scanUnchangedReason: unchangedReasonSchema,
 }).refine(
   (data) => {
-    // At least one reading value or a note must be provided
-    return data.monoReading != null || 
-           data.colourReading != null || 
-           data.scanReading != null || 
+    return data.monoReading != null ||
+           data.colourReading != null ||
+           data.scanReading != null ||
            (data.note != null && data.note.trim().length > 0);
   },
   {
@@ -50,6 +54,9 @@ export const importReadingsSchema = z.object({
     monoReading: z.union([z.number().int().min(0), z.string(), z.null()]).optional(),
     colourReading: z.union([z.number().int().min(0), z.string(), z.null()]).optional(),
     scanReading: z.union([z.number().int().min(0), z.string(), z.null()]).optional(),
+    monoUnchangedReason: z.string().max(500).nullable().optional(),
+    colourUnchangedReason: z.string().max(500).nullable().optional(),
+    scanUnchangedReason: z.string().max(500).nullable().optional(),
   })).min(1, 'At least one reading row is required'),
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12),

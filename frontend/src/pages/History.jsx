@@ -13,6 +13,15 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 
+function UnchangedReasonNote({ reason }) {
+  if (!reason) return null;
+  return (
+    <p className="text-xs text-amber-700 italic mt-0.5" title="Zero usage reason">
+      {reason}
+    </p>
+  );
+}
+
 const History = () => {
   const { effectiveBranch } = useAuth();
   const now = new Date();
@@ -230,13 +239,13 @@ const History = () => {
                       {currentReading?.monoReading != null ? (
                         <div>
                           <p className="font-medium">{currentReading.monoReading.toLocaleString()}</p>
-                          {/* Only show usage if it's NOT a first reading */}
                           {!isFirstReading && currentReading.monoUsage != null && currentReading.monoUsage > 0 && (
                             <p className="text-xs text-gray-500">+{currentReading.monoUsage.toLocaleString()}</p>
                           )}
                           {isFirstReading && (
                             <p className="text-xs text-gray-400">First reading</p>
                           )}
+                          <UnchangedReasonNote reason={currentReading.monoUnchangedReason} />
                         </div>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -246,13 +255,13 @@ const History = () => {
                       {currentReading?.colourReading != null ? (
                         <div>
                           <p className="font-medium">{currentReading.colourReading.toLocaleString()}</p>
-                          {/* Only show usage if it's NOT a first reading */}
                           {!isFirstReading && currentReading.colourUsage != null && currentReading.colourUsage > 0 && (
                             <p className="text-xs text-gray-500">+{currentReading.colourUsage.toLocaleString()}</p>
                           )}
                           {isFirstReading && (
                             <p className="text-xs text-gray-400">First reading</p>
                           )}
+                          <UnchangedReasonNote reason={currentReading.colourUnchangedReason} />
                         </div>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -262,13 +271,13 @@ const History = () => {
                       {currentReading?.scanReading != null ? (
                         <div>
                           <p className="font-medium">{currentReading.scanReading.toLocaleString()}</p>
-                          {/* Only show usage if it's NOT a first reading */}
                           {!isFirstReading && currentReading.scanUsage != null && currentReading.scanUsage > 0 && (
                             <p className="text-xs text-gray-500">+{currentReading.scanUsage.toLocaleString()}</p>
                           )}
                           {isFirstReading && (
                             <p className="text-xs text-gray-400">First reading</p>
                           )}
+                          <UnchangedReasonNote reason={currentReading.scanUnchangedReason} />
                         </div>
                       ) : (
                         <span className="text-gray-400">-</span>
