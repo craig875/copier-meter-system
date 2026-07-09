@@ -72,6 +72,7 @@ export function findUnchangedCounters(reading, previousReading, machine) {
 export function findUnchangedCountersForReadings(readings, machinesById) {
   const items = [];
   for (const reading of readings) {
+    if (reading?.unableToRead) continue;
     const entry = machinesById.get(reading.machineId);
     if (!entry) continue;
     items.push(

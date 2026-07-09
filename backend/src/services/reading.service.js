@@ -75,7 +75,7 @@ export class ReadingService {
     const validReadings = currentReadings.filter(r => {
       if (!machineIds.has(r.machineId)) return false;
       // Only count as "captured" if there's at least one reading value
-      return r.monoReading != null || r.colourReading != null || r.scanReading != null;
+      return r.monoReading != null || r.colourReading != null || r.scanReading != null || r.unableToRead;
     });
     const capturedCount = validReadings.length;
     
@@ -179,30 +179,37 @@ export class ReadingService {
                                reading.colourReading != null || 
                                reading.scanReading != null;
       
-      const metrics = hasReadingValues 
+      const metrics = (hasReadingValues && !reading.unableToRead)
         ? calculateReadingMetrics(reading, prevReading)
         : { monoUsage: null, colourUsage: null, scanUsage: null };
+
+      const unableToRead = reading.unableToRead === true;
+      const unableToReadReason = unableToRead && reading.unableToReadReason?.trim()
+        ? reading.unableToReadReason.trim()
+        : null;
 
       // Convert undefined to null for Prisma compatibility
       const cleanReading = {
         machineId: reading.machineId,
         year: targetYear,
         month: targetMonth,
-        monoReading: reading.monoReading ?? null,
-        colourReading: reading.colourReading ?? null,
-        scanReading: reading.scanReading ?? null,
-        note: reading.note && reading.note.trim().length > 0 ? reading.note.trim() : null,
-        monoUnchangedReason: resolveUnchangedReason(
+        monoReading: unableToRead ? null : (reading.monoReading ?? null),
+        colourReading: unableToRead ? null : (reading.colourReading ?? null),
+        scanReading: unableToRead ? null : (reading.scanReading ?? null),
+        note: unableToRead ? null : (reading.note && reading.note.trim().length > 0 ? reading.note.trim() : null),
+        unableToRead,
+        unableToReadReason,
+        monoUnchangedReason: unableToRead ? null : resolveUnchangedReason(
           reading.monoReading,
           prevReading?.monoReading,
           reading.monoUnchangedReason
         ),
-        colourUnchangedReason: resolveUnchangedReason(
+        colourUnchangedReason: unableToRead ? null : resolveUnchangedReason(
           reading.colourReading,
           prevReading?.colourReading,
           reading.colourUnchangedReason
         ),
-        scanUnchangedReason: resolveUnchangedReason(
+        scanUnchangedReason: unableToRead ? null : resolveUnchangedReason(
           reading.scanReading,
           prevReading?.scanReading,
           reading.scanUnchangedReason

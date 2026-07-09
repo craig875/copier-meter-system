@@ -287,7 +287,16 @@ const History = () => {
                       {currentReading ? (isFirstReading ? '0 (First)' : (totalUsage > 0 ? totalUsage.toLocaleString() : '0')) : '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 max-w-xs">
-                      {currentReading?.note ? (
+                      {currentReading?.unableToRead ? (
+                        <div className="bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                          <p className="text-xs text-amber-900 break-words">
+                            ⚠ Unable to obtain reading
+                            {currentReading.unableToReadReason
+                              ? ` — ${currentReading.unableToReadReason}`
+                              : ''}
+                          </p>
+                        </div>
+                      ) : currentReading?.note ? (
                         <div className="bg-yellow-50 border border-yellow-200 rounded px-2 py-1">
                           <p className="text-xs text-yellow-800 break-words">{currentReading.note}</p>
                         </div>
@@ -308,16 +317,19 @@ const History = () => {
                     </td>
                     <td className="px-4 py-3 text-center">
                       {currentReading ? (
-                        // Check if reading has actual values (not just a note)
-                        (currentReading.monoReading != null || 
-                         currentReading.colourReading != null || 
-                         currentReading.scanReading != null) ? (
+                        currentReading.unableToRead ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Unable to obtain
+                          </span>
+                        ) : (currentReading.monoReading != null ||
+                          currentReading.colourReading != null ||
+                          currentReading.scanReading != null) ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             OK
                           </span>
                         ) : (
-                          // Has reading record but only note, no actual readings
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             Note Only

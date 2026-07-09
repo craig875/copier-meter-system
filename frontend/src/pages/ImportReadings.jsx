@@ -37,6 +37,20 @@ function mapReadingCsvField(header, value, row) {
     return;
   }
 
+  if (header.includes('unable') && header.includes('reason')) {
+    row.unableToReadReason = value || null;
+    return;
+  }
+  if (header.includes('unable') && header.includes('read')) {
+    row.unableToRead = value;
+    return;
+  }
+
+  if (header.includes('note')) {
+    row.note = value || null;
+    return;
+  }
+
   if (header.includes('mono')) {
     row.monoReading = value;
     return;
@@ -304,9 +318,12 @@ const ImportReadings = () => {
             <p className="text-sm text-blue-800 mb-2">Columns (in order):</p>
             <ol className="text-sm text-blue-800 list-decimal list-inside space-y-1">
               <li>Serial Number (required) - Must match existing machine serial number</li>
-              <li>Mono Reading (optional) - Leave empty if machine doesn't have mono</li>
-              <li>Colour Reading (optional) - Leave empty if machine doesn't have colour</li>
-              <li>Scan Reading (optional) - Leave empty if machine doesn't have scan</li>
+              <li>Mono Reading (optional) - Leave empty if machine doesn&apos;t have mono</li>
+              <li>Colour Reading (optional) - Leave empty if machine doesn&apos;t have colour</li>
+              <li>Scan Reading (optional) - Leave empty if machine doesn&apos;t have scan</li>
+              <li>Unable to Read (optional) - Yes/True/1 when counters could not be obtained</li>
+              <li>Unable to Read Reason (required with Unable to Read) - Explanation text</li>
+              <li>Note (optional) - Additional note when counters are provided</li>
             </ol>
             <p className="text-sm text-blue-800 mt-3">
               <strong>Note:</strong> Machines must already exist in the system. Readings will be created or updated for the selected month/year.
@@ -314,7 +331,7 @@ const ImportReadings = () => {
           </div>
           <button
             onClick={() => {
-              const csv = 'Serial Number,Mono Reading,Colour Reading,Scan Reading\nCPR-001,50000,20000,5000';
+              const csv = 'Serial Number,Mono Reading,Colour Reading,Scan Reading,Unable to Read,Unable to Read Reason,Note\nCPR-001,50000,20000,5000,,,\nCPR-002,,,,Yes,Machine off-site,';
               const blob = new Blob([csv], { type: 'text/csv' });
               const url = window.URL.createObjectURL(blob);
               const link = document.createElement('a');

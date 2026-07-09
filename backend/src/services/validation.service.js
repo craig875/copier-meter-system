@@ -4,6 +4,13 @@
  * Open/Closed Principle: Easy to extend with new validation rules
  */
 
+import {
+  isUnableToRead,
+  hasReadingValues,
+  validateEnabledCountersComplete,
+  validateUnableToReadReading,
+} from '../utils/reading-completeness.js';
+
 const UNCHANGED_REASON_FIELDS = {
   monoReading: 'monoUnchangedReason',
   colourReading: 'colourUnchangedReason',
@@ -90,6 +97,27 @@ export const validateSingleReading = (reading, machine, prevReading) => {
     }];
   }
 
+  if (isUnableToRead(reading)) {
+    const unableErrors = validateUnableToReadReading(reading);
+    return unableErrors.map((error) => ({
+      machineId: reading.machineId,
+      machineSerialNumber: machine.machineSerialNumber,
+      ...error,
+    }));
+  }
+
+  const completenessErrors = validateEnabledCountersComplete(reading, machine);
+  for (const error of completenessErrors) {
+    errors.push({
+      machineId: reading.machineId,
+      machineSerialNumber: machine.machineSerialNumber,
+      ...error,
+    });
+  }
+  if (completenessErrors.length > 0) {
+    return errors;
+  }
+
   if (machine.monoEnabled && reading.monoReading != null) {
     const error = validateMeterReading(
       reading.monoReading,
@@ -169,17 +197,6 @@ export const validateSingleReading = (reading, machine, prevReading) => {
 };
 
 /**
- * Check if a reading has any actual reading values (not just a note)
- * @param {Object} reading - Reading input
- * @returns {boolean}
- */
-const hasReadingValues = (reading) => {
-  return reading.monoReading != null ||
-         reading.colourReading != null ||
-         reading.scanReading != null;
-};
-
-/**
  * Validates meter readings against business rules
  * @param {Array} readings - Array of reading inputs
  * @param {Map} machineMap - Map of machineId -> machine
@@ -201,14 +218,19 @@ export const validateReadings = (readings, machineMap, previousReadingMap) => {
       continue;
     }
 
+    if (isUnableToRead(reading)) {
+      const readingErrors = validateSingleReading(reading, machine, null);
+      errors.push(...readingErrors);
+      continue;
+    }
+
     if (!hasReadingValues(reading)) {
-      if (!reading.note || (typeof reading.note === 'string' && reading.note.trim().length === 0)) {
-        errors.push({
-          machineId: reading.machineId,
-          field: 'note',
-          message: 'Either reading values or a note must be provided',
-        });
-      }
+      const completenessErrors = validateEnabledCountersComplete(reading, machine);
+      errors.push(...completenessErrors.map((error) => ({
+        machineId: reading.machineId,
+        machineSerialNumber: machine.machineSerialNumber,
+        ...error,
+      })));
       continue;
     }
 

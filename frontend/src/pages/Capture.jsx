@@ -23,12 +23,19 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import ReadingUnchangedConfirmModal from '../components/ReadingUnchangedConfirmModal';
+import UnableToObtainModal from '../components/UnableToObtainModal';
 import {
   findUnchangedCountersForReadings,
   applyUnchangedReasons,
   buildMinBillFieldUpdates,
   MIN_BILL_REASON,
 } from '../utils/readingUnchanged';
+import {
+  buildReadingPayload,
+  validateReadingForSubmit,
+  isUnableToReadReading,
+  hasReadingValues,
+} from '../utils/readingCompleteness';
 
 const MeterInput = memo(function MeterInput({
   value,
@@ -117,9 +124,11 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
   isElevated,
   savePending,
   onReadingChange,
+  onUnableToObtain,
   onSaveSingle,
   onMinBill,
   canMinBill,
+  canUnableToObtain,
   onCancelMachine,
   onDeleteReading,
 }) {
@@ -127,7 +136,10 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
   return (
     <tr
       data-machine-id={mid}
-      className={clsx(editedFields && Object.keys(editedFields).length > 0 && 'bg-blue-50')}
+      className={clsx(
+        currentReading?.unableToRead && 'bg-amber-50/60',
+        !currentReading?.unableToRead && editedFields && Object.keys(editedFields).length > 0 && 'bg-blue-50'
+      )}
     >
       <td className="px-4 py-3">
         <Link
@@ -192,36 +204,38 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
         )}
       </td>
       <td className="px-4 py-3">
-        <textarea
-          value={readingFieldValue('note', currentReading, editedFields) || ''}
-          onChange={(e) => onReadingChange(mid, 'note', trimLeading(e.target.value))}
-          disabled={isLocked}
-          placeholder="Add note..."
-          maxLength={500}
-          rows={2}
-          className={clsx(
-            'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none',
-            noteError ? 'border-red-500 bg-red-50' : 'border-gray-300',
-            isLocked ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
-          )}
-        />
-        {noteError && <p className="text-xs text-red-600 mt-1">{noteError}</p>}
+        <div className="space-y-2">
+          <textarea
+            value={readingFieldValue('note', currentReading, editedFields) || ''}
+            onChange={(e) => onReadingChange(mid, 'note', trimLeading(e.target.value))}
+            disabled={isLocked}
+            placeholder="Add note..."
+            maxLength={500}
+            rows={2}
+            className={clsx(
+              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none',
+              noteError ? 'border-red-500 bg-red-50' : 'border-gray-300',
+              isLocked ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+            )}
+          />
+          {noteError && <p className="text-xs text-red-600 mt-1">{noteError}</p>}
+        </div>
       </td>
       <td className="px-4 py-3 text-center">
         {currentReading ? (
-          (currentReading.monoReading != null ||
+          currentReading.unableToRead ? (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Unable to obtain
+            </span>
+          ) : (currentReading.monoReading != null ||
             currentReading.colourReading != null ||
             currentReading.scanReading != null) ? (
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
               <CheckCircle className="h-3 w-3 mr-1" />
               Done
             </span>
-          ) : (
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              Note Only
-            </span>
-          )
+          ) : null
         ) : (
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
             Pending
@@ -229,18 +243,34 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
         )}
       </td>
       <td className="px-4 py-3 text-center">
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {canMinBill && (
-            <button
-              type="button"
-              onClick={() => onMinBill(mid)}
-              disabled={savePending || isLocked}
-              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-amber-800 bg-amber-100 rounded-lg hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title={isLocked ? 'This month is locked' : 'Fill counters with previous month (minimum bill)'}
-            >
-              Min Bill
-            </button>
+        <div className="flex flex-col items-center gap-2">
+          {(canMinBill || canUnableToObtain) && (
+            <div className="flex flex-col items-stretch gap-1.5 w-full max-w-[10rem] mx-auto">
+              {canMinBill && (
+                <button
+                  type="button"
+                  onClick={() => onMinBill(mid)}
+                  disabled={savePending || isLocked}
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-amber-800 bg-amber-100 rounded-lg hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title={isLocked ? 'This month is locked' : 'Fill counters with previous month (minimum bill)'}
+                >
+                  Min Bill
+                </button>
+              )}
+              {canUnableToObtain && (
+                <button
+                  type="button"
+                  onClick={() => onUnableToObtain(mid)}
+                  disabled={savePending || isLocked}
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-rose-700 bg-rose-100 rounded-lg hover:bg-rose-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title={isLocked ? 'This month is locked' : 'Mark as unable to obtain readings'}
+                >
+                  Unable to obtain
+                </button>
+              )}
+            </div>
           )}
+          <div className="flex flex-wrap items-center justify-center gap-2">
           {editedFields && Object.keys(editedFields).length > 0 && (
             <button
               type="button"
@@ -278,6 +308,7 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
               Delete
             </button>
           )}
+          </div>
         </div>
       </td>
     </tr>
@@ -299,6 +330,8 @@ const Capture = () => {
   const [editedReadings, setEditedReadings] = useState({});
   const [errors, setErrors] = useState({});
   const [unchangedModal, setUnchangedModal] = useState(null);
+  const [unableToObtainModal, setUnableToObtainModal] = useState(null);
+  const [unableToObtainSubmitting, setUnableToObtainSubmitting] = useState(false);
 
   const queryBranch = urlBranch && canSwitchBranches ? urlBranch : effectiveBranch;
 
@@ -423,6 +456,11 @@ const Capture = () => {
           [field]: value === '' ? null : value,
         },
       }));
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[`${machineId}-${field}`];
+        return next;
+      });
       return;
     }
 
@@ -444,6 +482,104 @@ const Capture = () => {
     });
   }, [isLocked]);
 
+  const handleUnableToObtainClick = useCallback((machineId) => {
+    if (!isElevated) return;
+
+    if (isLocked) {
+      toast.error('This month has been submitted and is locked for editing');
+      return;
+    }
+
+    const entry = machinesRef.current.find((m) => m.machine.id === machineId);
+    if (!entry || entry.currentReading) return;
+
+    setUnableToObtainModal({ entry });
+  }, [isElevated, isLocked]);
+
+  const handleUnableToObtainCancel = useCallback(() => {
+    if (unableToObtainSubmitting) return;
+    setUnableToObtainModal(null);
+  }, [unableToObtainSubmitting]);
+
+  const handleUnableToObtainConfirm = useCallback(async (reason) => {
+    if (!unableToObtainModal || unableToObtainSubmitting) return;
+
+    const { entry } = unableToObtainModal;
+    const machineId = entry.machine.id;
+    const reading = {
+      machineId,
+      monoReading: null,
+      colourReading: null,
+      scanReading: null,
+      note: null,
+      unableToRead: true,
+      unableToReadReason: reason,
+    };
+
+    const validationErrors = validateReadingForSubmit(reading, entry.machine, {
+      canUseUnableToObtain: true,
+    });
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0].message);
+      return;
+    }
+
+    setUnableToObtainSubmitting(true);
+    try {
+      await readingsApi.submit({ year, month, readings: [reading], branch: queryBranch });
+      toast.success(`Saved Unable to obtain for ${entry.machine.machineSerialNumber}`);
+      setUnableToObtainModal(null);
+      setEditedReadings((prev) => {
+        const next = { ...prev };
+        delete next[machineId];
+        return next;
+      });
+      setErrors((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((key) => {
+          if (key.startsWith(`${machineId}-`)) delete next[key];
+        });
+        return next;
+      });
+      queryClient.invalidateQueries(['readings', year, month, queryBranch]);
+      queryClient.invalidateQueries(['toner-alerts']);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to save readings');
+    } finally {
+      setUnableToObtainSubmitting(false);
+    }
+  }, [unableToObtainModal, unableToObtainSubmitting, year, month, queryBranch, queryClient]);
+
+  const applyValidationErrors = useCallback((validationErrors, machineId) => {
+    if (validationErrors.length === 0) return true;
+    setErrors((prev) => {
+      const next = { ...prev };
+      validationErrors.forEach((err) => {
+        next[`${machineId}-${err.field}`] = err.message;
+      });
+      return next;
+    });
+    return false;
+  }, []);
+
+  const validateReadingsBatch = useCallback((readingsToSubmit) => {
+    let ok = true;
+    for (const reading of readingsToSubmit) {
+      const entry = machinesRef.current.find((m) => m.machine.id === reading.machineId);
+      if (!entry) continue;
+      if (!applyValidationErrors(
+        validateReadingForSubmit(reading, entry.machine, { canUseUnableToObtain: isElevated }),
+        reading.machineId,
+      )) {
+        ok = false;
+      }
+    }
+    if (!ok) {
+      toast.error('Validation errors - check highlighted fields');
+    }
+    return ok;
+  }, [applyValidationErrors, isElevated]);
+
   const buildReadingsToSubmit = useCallback(() => {
     const readingsToSubmit = [];
 
@@ -451,15 +587,9 @@ const Capture = () => {
       const entry = machines.find((m) => m.machine.id === machineId);
       if (!entry) return;
 
-      const reading = {
-        machineId,
-        monoReading: values.monoReading !== undefined ? values.monoReading : entry.currentReading?.monoReading,
-        colourReading: values.colourReading !== undefined ? values.colourReading : entry.currentReading?.colourReading,
-        scanReading: values.scanReading !== undefined ? values.scanReading : entry.currentReading?.scanReading,
-        note: values.note !== undefined ? values.note : entry.currentReading?.note,
-      };
+      const reading = buildReadingPayload(machineId, entry, values);
 
-      if (reading.monoReading != null || reading.colourReading != null || reading.scanReading != null || reading.note) {
+      if (isUnableToReadReading(reading) || hasReadingValues(reading) || reading.note) {
         readingsToSubmit.push(reading);
       }
     });
@@ -479,7 +609,10 @@ const Capture = () => {
   }, [machines]);
 
   const submitReadingsWithUnchangedCheck = useCallback((readingsToSubmit, onAfterSuccess) => {
-    const unchangedItems = findUnchangedCountersForReadings(readingsToSubmit, machinesByIdForUnchanged);
+    if (!validateReadingsBatch(readingsToSubmit)) return;
+
+    const readingsForUnchanged = readingsToSubmit.filter((reading) => !isUnableToReadReading(reading));
+    const unchangedItems = findUnchangedCountersForReadings(readingsForUnchanged, machinesByIdForUnchanged);
     if (unchangedItems.length > 0) {
       setUnchangedModal({ readings: readingsToSubmit, items: unchangedItems, onAfterSuccess });
       return;
@@ -489,11 +622,12 @@ const Capture = () => {
       return;
     }
     submitMutation.mutate(readingsToSubmit);
-  }, [machinesByIdForUnchanged, submitMutation]);
+  }, [machinesByIdForUnchanged, submitMutation, validateReadingsBatch]);
 
   const handleUnchangedConfirm = useCallback(async (reasonByKey) => {
     if (!unchangedModal) return;
     const readingsWithReasons = applyUnchangedReasons(unchangedModal.readings, reasonByKey);
+    if (!validateReadingsBatch(readingsWithReasons)) return;
     const { onAfterSuccess } = unchangedModal;
     setUnchangedModal(null);
 
@@ -647,7 +781,7 @@ const Capture = () => {
     const readingsToSubmit = buildReadingsToSubmit();
 
     if (readingsToSubmit.length === 0) {
-      toast.error('No readings or notes to save');
+      toast.error('No readings to save');
       return;
     }
 
@@ -661,97 +795,100 @@ const Capture = () => {
         return;
       }
 
-      const machine = machinesRef.current.find((m) => m.machine.id === machineId);
-      if (!machine) return;
+      const entry = machinesRef.current.find((m) => m.machine.id === machineId);
+      if (!entry) return;
 
       const editedValues = editedReadingsRef.current[machineId];
-    if (!editedValues) {
-      toast.error('No changes to save for this machine');
-      return;
-    }
-
-    const reading = {
-      machineId,
-      monoReading: editedValues.monoReading !== undefined ? editedValues.monoReading : machine.currentReading?.monoReading,
-      colourReading: editedValues.colourReading !== undefined ? editedValues.colourReading : machine.currentReading?.colourReading,
-      scanReading: editedValues.scanReading !== undefined ? editedValues.scanReading : machine.currentReading?.scanReading,
-      note: editedValues.note !== undefined ? editedValues.note : machine.currentReading?.note,
-    };
-
-    // Only include if at least one value is set (including note)
-    if (reading.monoReading == null && reading.colourReading == null && reading.scanReading == null && !reading.note) {
-      toast.error('Please provide at least one reading value or a note');
-      return;
-    }
-
-    const unchangedItems = findUnchangedCountersForReadings(
-      [reading],
-      new Map([[machineId, { machine: machine.machine, previousReading: machine.previousReading }]])
-    );
-
-    if (unchangedItems.length > 0) {
-      setUnchangedModal({
-        readings: [reading],
-        items: unchangedItems,
-        onAfterSuccess: () => {
-          setEditedReadings((prev) => {
-            const newEdited = { ...prev };
-            delete newEdited[machineId];
-            return newEdited;
-          });
-          setErrors((prev) => {
-            const newErrors = { ...prev };
-            Object.keys(newErrors).forEach((key) => {
-              if (key.startsWith(`${machineId}-`)) {
-                delete newErrors[key];
-              }
-            });
-            return newErrors;
-          });
-          toast.success(`Saved readings for ${machine.machine.machineSerialNumber}`);
-        },
-      });
-      return;
-    }
-
-    try {
-      await readingsApi.submit({ year, month, readings: [reading], branch: queryBranch });
-      toast.success(`Saved readings for ${machine.machine.machineSerialNumber}`);
-      
-      // Remove this machine from editedReadings
-      setEditedReadings(prev => {
-        const newEdited = { ...prev };
-        delete newEdited[machineId];
-        return newEdited;
-      });
-      
-      // Clear any errors for this machine
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        Object.keys(newErrors).forEach(key => {
-          if (key.startsWith(`${machineId}-`)) {
-            delete newErrors[key];
-          }
-        });
-        return newErrors;
-      });
-      
-      queryClient.invalidateQueries(['readings', year, month, queryBranch]);
-      queryClient.invalidateQueries(['toner-alerts']);
-    } catch (error) {
-      if (error.response?.data?.errors) {
-        const newErrors = {};
-        error.response.data.errors.forEach(err => {
-          newErrors[`${err.machineId}-${err.field}`] = err.message;
-        });
-        setErrors(prev => ({ ...prev, ...newErrors }));
-        toast.error('Validation errors - check highlighted fields');
-      } else {
-        toast.error(error.response?.data?.error || 'Failed to save readings');
+      if (!editedValues) {
+        toast.error('No changes to save for this machine');
+        return;
       }
-    }
-  },
-  [isLocked, year, month, queryBranch, queryClient]
+
+      const reading = buildReadingPayload(machineId, entry, editedValues);
+      const submitOptions = { canUseUnableToObtain: isElevated };
+
+      if (!isUnableToReadReading(reading) && !hasReadingValues(reading) && !reading.note) {
+        toast.error(
+          isElevated
+            ? 'Provide all enabled counter readings, or mark Unable to obtain'
+            : 'Provide all enabled counter readings',
+        );
+        return;
+      }
+
+      if (!applyValidationErrors(
+        validateReadingForSubmit(reading, entry.machine, submitOptions),
+        machineId,
+      )) {
+        return;
+      }
+
+      const unchangedItems = findUnchangedCountersForReadings(
+        [reading],
+        new Map([[machineId, { machine: entry.machine, previousReading: entry.previousReading }]])
+      );
+
+      if (unchangedItems.length > 0) {
+        setUnchangedModal({
+          readings: [reading],
+          items: unchangedItems,
+          onAfterSuccess: () => {
+            setEditedReadings((prev) => {
+              const newEdited = { ...prev };
+              delete newEdited[machineId];
+              return newEdited;
+            });
+            setErrors((prev) => {
+              const newErrors = { ...prev };
+              Object.keys(newErrors).forEach((key) => {
+                if (key.startsWith(`${machineId}-`)) {
+                  delete newErrors[key];
+                }
+              });
+              return newErrors;
+            });
+            toast.success(`Saved readings for ${entry.machine.machineSerialNumber}`);
+          },
+        });
+        return;
+      }
+
+      try {
+        await readingsApi.submit({ year, month, readings: [reading], branch: queryBranch });
+        toast.success(`Saved readings for ${entry.machine.machineSerialNumber}`);
+
+        setEditedReadings((prev) => {
+          const newEdited = { ...prev };
+          delete newEdited[machineId];
+          return newEdited;
+        });
+
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          Object.keys(newErrors).forEach((key) => {
+            if (key.startsWith(`${machineId}-`)) {
+              delete newErrors[key];
+            }
+          });
+          return newErrors;
+        });
+
+        queryClient.invalidateQueries(['readings', year, month, queryBranch]);
+        queryClient.invalidateQueries(['toner-alerts']);
+      } catch (error) {
+        if (error.response?.data?.errors) {
+          const newErrors = {};
+          error.response.data.errors.forEach((err) => {
+            newErrors[`${err.machineId}-${err.field}`] = err.message;
+          });
+          setErrors((prev) => ({ ...prev, ...newErrors }));
+          toast.error('Validation errors - check highlighted fields');
+        } else {
+          toast.error(error.response?.data?.error || 'Failed to save readings');
+        }
+      }
+    },
+  [isLocked, isElevated, year, month, queryBranch, queryClient, applyValidationErrors]
 );
 
   const handleCancelMachine = useCallback((machineId) => {
@@ -818,34 +955,29 @@ const Capture = () => {
   );
 
   const handleSubmitAndExport = async (format = 'xlsx') => {
-    // First, save any pending changes
     if (Object.keys(editedReadings).length > 0) {
-      const readingsToSubmit = [];
-
-      Object.entries(editedReadings).forEach(([machineId, values]) => {
-        const machine = machines.find(m => m.machine.id === machineId);
-        if (!machine) return;
-
-        const reading = {
-          machineId,
-          monoReading: values.monoReading !== undefined ? values.monoReading : machine.currentReading?.monoReading,
-          colourReading: values.colourReading !== undefined ? values.colourReading : machine.currentReading?.colourReading,
-          scanReading: values.scanReading !== undefined ? values.scanReading : machine.currentReading?.scanReading,
-          note: values.note !== undefined ? values.note : machine.currentReading?.note,
-        };
-
-        if (reading.monoReading != null || reading.colourReading != null || reading.scanReading != null || reading.note) {
-          readingsToSubmit.push(reading);
-        }
-      });
-
+      const readingsToSubmit = buildReadingsToSubmit();
       if (readingsToSubmit.length > 0) {
+        if (!validateReadingsBatch(readingsToSubmit)) {
+          toast.error('Fix validation errors before exporting');
+          return;
+        }
         try {
           await readingsApi.submit({ year, month, readings: readingsToSubmit, branch: queryBranch });
           setEditedReadings({});
+          setErrors({});
           queryClient.invalidateQueries(['readings', year, month, queryBranch]);
           queryClient.invalidateQueries(['toner-alerts']);
         } catch (error) {
+          if (error.response?.data?.errors) {
+            const newErrors = {};
+            error.response.data.errors.forEach((err) => {
+              if (err.machineId && err.field) {
+                newErrors[`${err.machineId}-${err.field}`] = err.message;
+              }
+            });
+            setErrors(newErrors);
+          }
           toast.error('Failed to save readings before export');
           return;
         }
@@ -1137,8 +1269,9 @@ const Capture = () => {
                   noteError={errors[`${machine.id}-note`]}
                   isLocked={isLocked}
                   isElevated={isElevated}
-                  savePending={submitMutation.isPending}
+                  savePending={submitMutation.isPending || unableToObtainSubmitting}
                   onReadingChange={handleReadingChange}
+                  onUnableToObtain={handleUnableToObtainClick}
                   onSaveSingle={handleSaveSingle}
                   onMinBill={handleMinBill}
                   canMinBill={
@@ -1146,6 +1279,7 @@ const Capture = () => {
                     && !currentReading
                     && !!buildMinBillFieldUpdates(machine, previousReading)
                   }
+                  canUnableToObtain={isElevated && !currentReading}
                   onCancelMachine={handleCancelMachine}
                   onDeleteReading={handleDeleteReading}
                 />
@@ -1162,6 +1296,15 @@ const Capture = () => {
           onConfirm={handleUnchangedConfirm}
           onCancel={handleUnchangedCancel}
           isSubmitting={submitMutation.isPending}
+        />
+      )}
+
+      {unableToObtainModal && (
+        <UnableToObtainModal
+          machine={unableToObtainModal.entry.machine}
+          isSubmitting={unableToObtainSubmitting}
+          onConfirm={handleUnableToObtainConfirm}
+          onCancel={handleUnableToObtainCancel}
         />
       )}
     </div>

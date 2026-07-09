@@ -3,6 +3,7 @@ import { repositories } from '../repositories/index.js';
 import { getPreviousMonth } from '../utils/date.utils.js';
 import { calculateReadingMetrics } from '../utils/reading.utils.js';
 import { resolveUnchangedReason } from '../utils/reading-unchanged.js';
+import { parseUnableToReadFlag } from '../utils/reading-completeness.js';
 import { validateSingleReading } from './validation.service.js';
 import { ValidationError } from '../utils/errors.js';
 
@@ -405,28 +406,34 @@ export class ImportService {
 
         // Parse readings (allow null/empty for disabled meters)
         const monoReading = row.monoReading != null && row.monoReading !== '' 
-          ? parseInt(row.monoReading) 
+          ? parseInt(row.monoReading, 10) 
           : null;
         const colourReading = row.colourReading != null && row.colourReading !== '' 
-          ? parseInt(row.colourReading) 
+          ? parseInt(row.colourReading, 10) 
           : null;
         const scanReading = row.scanReading != null && row.scanReading !== '' 
-          ? parseInt(row.scanReading) 
+          ? parseInt(row.scanReading, 10) 
           : null;
+        const unableToRead = parseUnableToReadFlag(
+          row.unableToRead ?? row.unable_to_read ?? row['Unable to Read']
+        );
+        const unableToReadReason = row.unableToReadReason
+          ?? row.unable_to_read_reason
+          ?? row['Unable to Read Reason']
+          ?? null;
 
-        // Validate at least one reading is provided
-        if (monoReading === null && colourReading === null && scanReading === null) {
+        if (!unableToRead && monoReading === null && colourReading === null && scanReading === null) {
           results.errors.push({
             row: rowNumber,
             machineSerialNumber,
-            error: 'At least one reading (mono, colour, or scan) is required',
+            error: 'All enabled counter readings are required, or set Unable to Read to Yes with a reason',
           });
           results.skipped++;
           continue;
         }
 
         // Validate readings are within meter capabilities
-        if (monoReading !== null && !machine.monoEnabled) {
+        if (!unableToRead && monoReading !== null && !machine.monoEnabled) {
           results.errors.push({
             row: rowNumber,
             machineSerialNumber,
@@ -436,7 +443,7 @@ export class ImportService {
           continue;
         }
 
-        if (colourReading !== null && !machine.colourEnabled) {
+        if (!unableToRead && colourReading !== null && !machine.colourEnabled) {
           results.errors.push({
             row: rowNumber,
             machineSerialNumber,
@@ -446,7 +453,7 @@ export class ImportService {
           continue;
         }
 
-        if (scanReading !== null && !machine.scanEnabled) {
+        if (!unableToRead && scanReading !== null && !machine.scanEnabled) {
           results.errors.push({
             row: rowNumber,
             machineSerialNumber,
@@ -465,9 +472,14 @@ export class ImportService {
 
         const readingInput = {
           machineId: machine.id,
-          monoReading: machine.monoEnabled ? monoReading : null,
-          colourReading: machine.colourEnabled ? colourReading : null,
-          scanReading: machine.scanEnabled ? scanReading : null,
+          monoReading: unableToRead ? null : (machine.monoEnabled ? monoReading : null),
+          colourReading: unableToRead ? null : (machine.colourEnabled ? colourReading : null),
+          scanReading: unableToRead ? null : (machine.scanEnabled ? scanReading : null),
+          unableToRead,
+          unableToReadReason: unableToRead && unableToReadReason?.trim()
+            ? unableToReadReason.trim()
+            : null,
+          note: unableToRead ? null : (row.note?.trim() || null),
           monoUnchangedReason: row.monoUnchangedReason ?? row.mono_unchanged_reason ?? null,
           colourUnchangedReason: row.colourUnchangedReason ?? row.colour_unchanged_reason ?? null,
           scanUnchangedReason: row.scanUnchangedReason ?? row.scan_unchanged_reason ?? null,
@@ -484,7 +496,9 @@ export class ImportService {
           continue;
         }
 
-        const metrics = calculateReadingMetrics(readingInput, prevReading);
+        const metrics = unableToRead
+          ? { monoUsage: null, colourUsage: null, scanUsage: null }
+          : calculateReadingMetrics(readingInput, prevReading);
 
         const readingData = {
           machineId: machine.id,
@@ -493,17 +507,20 @@ export class ImportService {
           monoReading: readingInput.monoReading,
           colourReading: readingInput.colourReading,
           scanReading: readingInput.scanReading,
-          monoUnchangedReason: resolveUnchangedReason(
+          note: readingInput.note,
+          unableToRead: readingInput.unableToRead,
+          unableToReadReason: readingInput.unableToReadReason,
+          monoUnchangedReason: unableToRead ? null : resolveUnchangedReason(
             readingInput.monoReading,
             prevReading?.monoReading,
             readingInput.monoUnchangedReason
           ),
-          colourUnchangedReason: resolveUnchangedReason(
+          colourUnchangedReason: unableToRead ? null : resolveUnchangedReason(
             readingInput.colourReading,
             prevReading?.colourReading,
             readingInput.colourUnchangedReason
           ),
-          scanUnchangedReason: resolveUnchangedReason(
+          scanUnchangedReason: unableToRead ? null : resolveUnchangedReason(
             readingInput.scanReading,
             prevReading?.scanReading,
             readingInput.scanUnchangedReason

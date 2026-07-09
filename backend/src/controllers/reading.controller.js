@@ -1,6 +1,7 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { hasAdminAccess } from '../utils/permissions.js';
+import { ValidationError } from '../utils/errors.js';
 
 /**
  * Reading Controller - HTTP request/response handling for readings
@@ -50,6 +51,11 @@ export class ReadingController {
     }
 
     const userId = req.user.id;
+
+    if (!hasAdminAccess(req.user.role) && readings.some((r) => r.unableToRead === true)) {
+      throw new ValidationError('Only administrators and managers can mark readings as Unable to obtain');
+    }
+
     const result = await this.readingService.submitReadings(year, month, branch, readings, userId);
     this.auditService.log(userId, 'reading_submit', 'reading', null, { year, month, branch, savedCount: result.savedCount });
 
