@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useMatch } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard,
@@ -28,7 +28,7 @@ import clsx from 'clsx';
 import logo from '../assets/logo.png';
 import Setup2FAPrompt from './Setup2FAPrompt';
 import ConnectivityAlertBanner from './connectivity/ConnectivityAlertBanner';
-import { notificationsApi } from '../services/api';
+import { notificationsApi, machinesApi } from '../services/api';
 import { MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS } from '../constants/modules';
 
 const Layout = ({ children }) => {
@@ -47,6 +47,8 @@ const Layout = ({ children }) => {
   const showFibreOrders = hasModule(MODULE_FIBRE_ORDERS);
   const navigate = useNavigate();
   const location = useLocation();
+  const consumablesMachineMatch = useMatch('/consumables/machines/:machineId/*');
+  const consumablesMachineId = consumablesMachineMatch?.params?.machineId;
   const showBackButton = location.pathname !== '/';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState(new Set());
@@ -166,6 +168,22 @@ const Layout = ({ children }) => {
   };
 
   const isItemActive = (item) => isActive(item.href) || hasActiveChild(item);
+
+  const { data: consumablesMachineData } = useQuery({
+    queryKey: ['machine', consumablesMachineId],
+    queryFn: () => machinesApi.getOne(consumablesMachineId).then((r) => r.data),
+    enabled: Boolean(user && consumablesMachineId),
+  });
+
+  const headerTitle = (() => {
+    if (location.pathname.startsWith('/admin/machine-configuration')) {
+      return 'Machine Configuration';
+    }
+    if (consumablesMachineId) {
+      return consumablesMachineData?.machine?.machineSerialNumber || 'Machine Consumables';
+    }
+    return navigation.find((n) => isItemActive(n))?.name || 'Dashboard';
+  })();
 
   return (
     <div
@@ -361,9 +379,7 @@ const Layout = ({ children }) => {
               <Menu className="h-6 w-6" />
             </button>
             <h2 className="text-lg font-semibold text-gray-800">
-              {location.pathname.startsWith('/consumables/machines/') ? 'Machine Consumables' 
-                : location.pathname.startsWith('/admin/machine-configuration') ? 'Machine Configuration'
-                : navigation.find(n => isItemActive(n))?.name || 'Dashboard'}
+              {headerTitle}
             </h2>
           </div>
           <button

@@ -3,6 +3,7 @@ import { validateReadings } from './validation.service.js';
 import { generateExcelExport, generateTextExport, generateExcelExportSplitByBranch } from './export.service.js';
 import { getPreviousMonth } from '../utils/date.utils.js';
 import { calculateReadingMetrics } from '../utils/reading.utils.js';
+import { resolveUnchangedReason } from '../utils/reading-unchanged.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 
 /**
@@ -191,6 +192,21 @@ export class ReadingService {
         colourReading: reading.colourReading ?? null,
         scanReading: reading.scanReading ?? null,
         note: reading.note && reading.note.trim().length > 0 ? reading.note.trim() : null,
+        monoUnchangedReason: resolveUnchangedReason(
+          reading.monoReading,
+          prevReading?.monoReading,
+          reading.monoUnchangedReason
+        ),
+        colourUnchangedReason: resolveUnchangedReason(
+          reading.colourReading,
+          prevReading?.colourReading,
+          reading.colourUnchangedReason
+        ),
+        scanUnchangedReason: resolveUnchangedReason(
+          reading.scanReading,
+          prevReading?.scanReading,
+          reading.scanUnchangedReason
+        ),
         monoUsage: metrics.monoUsage ?? null,
         colourUsage: metrics.colourUsage ?? null,
         scanUsage: metrics.scanUsage ?? null,

@@ -13,6 +13,43 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+function mapReadingCsvField(header, value, row) {
+  row[header] = value;
+
+  if (header.includes('serial') || (header.includes('machine') && !header.includes('reading'))) {
+    row.machineSerialNumber = value;
+    return;
+  }
+
+  if (header.includes('mono') && (header.includes('unchanged') || header.includes('reason'))) {
+    row.monoUnchangedReason = value || null;
+    return;
+  }
+  if (
+    (header.includes('colour') || header.includes('color'))
+    && (header.includes('unchanged') || header.includes('reason'))
+  ) {
+    row.colourUnchangedReason = value || null;
+    return;
+  }
+  if (header.includes('scan') && (header.includes('unchanged') || header.includes('reason'))) {
+    row.scanUnchangedReason = value || null;
+    return;
+  }
+
+  if (header.includes('mono')) {
+    row.monoReading = value;
+    return;
+  }
+  if (header.includes('colour') || header.includes('color')) {
+    row.colourReading = value;
+    return;
+  }
+  if (header.includes('scan')) {
+    row.scanReading = value;
+  }
+}
+
 const ImportReadings = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -91,19 +128,7 @@ const ImportReadings = () => {
             // Store both the mapped values and the original header-value pairs for preview
             headers.forEach((header, index) => {
               const value = values[index] || '';
-              // Store original header-value pair for preview display
-              row[header] = value;
-              
-              // Also store mapped values for import - be flexible with header matching
-              if (header.includes('serial') || header.includes('machine')) {
-                row.machineSerialNumber = value;
-              } else if (header.includes('mono')) {
-                row.monoReading = value;
-              } else if (header.includes('colour') || header.includes('color')) {
-                row.colourReading = value;
-              } else if (header.includes('scan')) {
-                row.scanReading = value;
-              }
+              mapReadingCsvField(header, value, row);
             });
             
             // Check if we have a serial number (using any variation)
@@ -217,23 +242,11 @@ const ImportReadings = () => {
             const row = {};
             headers.forEach((header, index) => {
               const value = values[index] || '';
-              switch (header) {
-                case 'serial number':
-                case 'machine serial number':
-                  row.machineSerialNumber = value;
-                  break;
-                case 'mono reading':
-                  row.monoReading = value === '' ? null : value;
-                  break;
-                case 'colour reading':
-                case 'color reading':
-                  row.colourReading = value === '' ? null : value;
-                  break;
-                case 'scan reading':
-                  row.scanReading = value === '' ? null : value;
-                  break;
-              }
+              mapReadingCsvField(header, value, row);
             });
+            if (row.monoReading === '') row.monoReading = null;
+            if (row.colourReading === '') row.colourReading = null;
+            if (row.scanReading === '') row.scanReading = null;
             if (row.machineSerialNumber) {
               data.push(row);
             }

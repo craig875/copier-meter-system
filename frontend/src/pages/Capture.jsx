@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { readingsApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { trimLeading } from '../utils/string';
@@ -22,6 +22,13 @@ import {
   Unlock
 } from 'lucide-react';
 import clsx from 'clsx';
+import ReadingUnchangedConfirmModal from '../components/ReadingUnchangedConfirmModal';
+import {
+  findUnchangedCountersForReadings,
+  applyUnchangedReasons,
+  buildMinBillFieldUpdates,
+  MIN_BILL_REASON,
+} from '../utils/readingUnchanged';
 
 const MeterInput = memo(function MeterInput({
   value,
@@ -111,6 +118,8 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
   savePending,
   onReadingChange,
   onSaveSingle,
+  onMinBill,
+  canMinBill,
   onCancelMachine,
   onDeleteReading,
 }) {
@@ -121,9 +130,25 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
       className={clsx(editedFields && Object.keys(editedFields).length > 0 && 'bg-blue-50')}
     >
       <td className="px-4 py-3">
-        <p className="font-medium text-gray-900">{machine.machineSerialNumber}</p>
+        <Link
+          to={`/consumables/machines/${mid}`}
+          className="font-medium text-red-600 hover:text-red-700 hover:underline"
+        >
+          {machine.machineSerialNumber}
+        </Link>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-500">{machine.customer?.name || '-'}</td>
+      <td className="px-4 py-3 text-sm">
+        {machine.customer?.id ? (
+          <Link
+            to={`/customers/${machine.customer.id}`}
+            className="text-gray-500 hover:text-red-700 hover:underline"
+          >
+            {machine.customer.name}
+          </Link>
+        ) : (
+          <span className="text-gray-500">{machine.customer?.name || '-'}</span>
+        )}
+      </td>
       <td className="px-4 py-3">
         {machine.monoEnabled ? (
           <MeterInput
@@ -204,7 +229,18 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
         )}
       </td>
       <td className="px-4 py-3 text-center">
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {canMinBill && (
+            <button
+              type="button"
+              onClick={() => onMinBill(mid)}
+              disabled={savePending || isLocked}
+              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-amber-800 bg-amber-100 rounded-lg hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title={isLocked ? 'This month is locked' : 'Fill counters with previous month (minimum bill)'}
+            >
+              Min Bill
+            </button>
+          )}
           {editedFields && Object.keys(editedFields).length > 0 && (
             <button
               type="button"
@@ -262,6 +298,7 @@ const Capture = () => {
   const [search, setSearch] = useState('');
   const [editedReadings, setEditedReadings] = useState({});
   const [errors, setErrors] = useState({});
+  const [unchangedModal, setUnchangedModal] = useState(null);
 
   const queryBranch = urlBranch && canSwitchBranches ? urlBranch : effectiveBranch;
 
@@ -407,6 +444,199 @@ const Capture = () => {
     });
   }, [isLocked]);
 
+  const buildReadingsToSubmit = useCallback(() => {
+    const readingsToSubmit = [];
+
+    Object.entries(editedReadings).forEach(([machineId, values]) => {
+      const entry = machines.find((m) => m.machine.id === machineId);
+      if (!entry) return;
+
+      const reading = {
+        machineId,
+        monoReading: values.monoReading !== undefined ? values.monoReading : entry.currentReading?.monoReading,
+        colourReading: values.colourReading !== undefined ? values.colourReading : entry.currentReading?.colourReading,
+        scanReading: values.scanReading !== undefined ? values.scanReading : entry.currentReading?.scanReading,
+        note: values.note !== undefined ? values.note : entry.currentReading?.note,
+      };
+
+      if (reading.monoReading != null || reading.colourReading != null || reading.scanReading != null || reading.note) {
+        readingsToSubmit.push(reading);
+      }
+    });
+
+    return readingsToSubmit;
+  }, [editedReadings, machines]);
+
+  const machinesByIdForUnchanged = useMemo(() => {
+    const map = new Map();
+    for (const entry of machines) {
+      map.set(entry.machine.id, {
+        machine: entry.machine,
+        previousReading: entry.previousReading,
+      });
+    }
+    return map;
+  }, [machines]);
+
+  const submitReadingsWithUnchangedCheck = useCallback((readingsToSubmit, onAfterSuccess) => {
+    const unchangedItems = findUnchangedCountersForReadings(readingsToSubmit, machinesByIdForUnchanged);
+    if (unchangedItems.length > 0) {
+      setUnchangedModal({ readings: readingsToSubmit, items: unchangedItems, onAfterSuccess });
+      return;
+    }
+    if (onAfterSuccess) {
+      onAfterSuccess(readingsToSubmit);
+      return;
+    }
+    submitMutation.mutate(readingsToSubmit);
+  }, [machinesByIdForUnchanged, submitMutation]);
+
+  const handleUnchangedConfirm = useCallback(async (reasonByKey) => {
+    if (!unchangedModal) return;
+    const readingsWithReasons = applyUnchangedReasons(unchangedModal.readings, reasonByKey);
+    const { onAfterSuccess } = unchangedModal;
+    setUnchangedModal(null);
+
+    if (onAfterSuccess) {
+      try {
+        await readingsApi.submit({ year, month, readings: readingsWithReasons, branch: queryBranch });
+        onAfterSuccess();
+        queryClient.invalidateQueries(['readings', year, month, queryBranch]);
+        queryClient.invalidateQueries(['toner-alerts']);
+      } catch (error) {
+        if (error.response?.data?.errors) {
+          const newErrors = {};
+          error.response.data.errors.forEach((err) => {
+            newErrors[`${err.machineId}-${err.field}`] = err.message;
+          });
+          setErrors((prev) => ({ ...prev, ...newErrors }));
+          toast.error('Validation errors - check highlighted fields');
+        } else {
+          toast.error(error.response?.data?.error || 'Failed to save readings');
+        }
+      }
+      return;
+    }
+
+    submitMutation.mutate(readingsWithReasons);
+  }, [unchangedModal, submitMutation, year, month, queryBranch, queryClient]);
+
+  const handleUnchangedCancel = useCallback(() => {
+    unchangedModal?.onCancel?.();
+    setUnchangedModal(null);
+  }, [unchangedModal]);
+
+  const handleMinBill = useCallback((machineId) => {
+    if (!isElevated) return;
+
+    if (isLocked) {
+      toast.error('This month has been submitted and is locked for editing');
+      return;
+    }
+
+    const entry = machinesRef.current.find((m) => m.machine.id === machineId);
+    if (!entry) return;
+
+    const { machine, previousReading, currentReading } = entry;
+    const fieldUpdates = buildMinBillFieldUpdates(machine, previousReading);
+    if (!fieldUpdates) {
+      toast.error('No previous month readings available for Min Bill');
+      return;
+    }
+
+    const priorEdit = editedReadingsRef.current[machineId];
+    const priorEditSnapshot = priorEdit ? { ...priorEdit } : undefined;
+
+    setEditedReadings((prev) => ({
+      ...prev,
+      [machineId]: {
+        ...prev[machineId],
+        ...fieldUpdates,
+      },
+    }));
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      Object.keys(fieldUpdates).forEach((field) => {
+        delete next[`${machineId}-${field}`];
+      });
+      return next;
+    });
+
+    const reading = {
+      machineId,
+      monoReading: fieldUpdates.monoReading !== undefined
+        ? fieldUpdates.monoReading
+        : currentReading?.monoReading,
+      colourReading: fieldUpdates.colourReading !== undefined
+        ? fieldUpdates.colourReading
+        : currentReading?.colourReading,
+      scanReading: fieldUpdates.scanReading !== undefined
+        ? fieldUpdates.scanReading
+        : currentReading?.scanReading,
+      note: priorEditSnapshot?.note !== undefined
+        ? priorEditSnapshot.note
+        : currentReading?.note,
+    };
+
+    const unchangedItems = findUnchangedCountersForReadings(
+      [reading],
+      new Map([[machineId, { machine, previousReading }]])
+    );
+
+    if (unchangedItems.length === 0) {
+      setEditedReadings((prev) => {
+        const next = { ...prev };
+        if (priorEditSnapshot) {
+          next[machineId] = priorEditSnapshot;
+        } else {
+          delete next[machineId];
+        }
+        return next;
+      });
+      toast.error('Min Bill requires counters to match the previous month');
+      return;
+    }
+
+    const defaultReasons = Object.fromEntries(
+      unchangedItems.map((item) => [item.key, MIN_BILL_REASON])
+    );
+
+    setUnchangedModal({
+      readings: [reading],
+      items: unchangedItems,
+      defaultReasons,
+      onAfterSuccess: () => {
+        setEditedReadings((prev) => {
+          const next = { ...prev };
+          delete next[machineId];
+          return next;
+        });
+        setErrors((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((key) => {
+            if (key.startsWith(`${machineId}-`)) {
+              delete next[key];
+            }
+          });
+          return next;
+        });
+        toast.success(`Saved Min Bill for ${machine.machineSerialNumber}`);
+      },
+      onCancel: () => {
+        setEditedReadings((prev) => {
+          const next = { ...prev };
+          if (priorEditSnapshot) {
+            next[machineId] = priorEditSnapshot;
+          } else {
+            delete next[machineId];
+          }
+          return next;
+        });
+      },
+    });
+  }, [isElevated, isLocked]);
+
   const handleSave = () => {
     // Prevent saving if month is locked
     if (isLocked) {
@@ -414,32 +644,14 @@ const Capture = () => {
       return;
     }
 
-    const readingsToSubmit = [];
-
-    Object.entries(editedReadings).forEach(([machineId, values]) => {
-      const machine = machines.find(m => m.machine.id === machineId);
-      if (!machine) return;
-
-      const reading = {
-        machineId,
-        monoReading: values.monoReading !== undefined ? values.monoReading : machine.currentReading?.monoReading,
-        colourReading: values.colourReading !== undefined ? values.colourReading : machine.currentReading?.colourReading,
-        scanReading: values.scanReading !== undefined ? values.scanReading : machine.currentReading?.scanReading,
-        note: values.note !== undefined ? values.note : machine.currentReading?.note,
-      };
-
-      // Only include if at least one value is set (including note)
-      if (reading.monoReading != null || reading.colourReading != null || reading.scanReading != null || reading.note) {
-        readingsToSubmit.push(reading);
-      }
-    });
+    const readingsToSubmit = buildReadingsToSubmit();
 
     if (readingsToSubmit.length === 0) {
       toast.error('No readings or notes to save');
       return;
     }
 
-    submitMutation.mutate(readingsToSubmit);
+    submitReadingsWithUnchangedCheck(readingsToSubmit);
   };
 
   const handleSaveSingle = useCallback(
@@ -469,6 +681,36 @@ const Capture = () => {
     // Only include if at least one value is set (including note)
     if (reading.monoReading == null && reading.colourReading == null && reading.scanReading == null && !reading.note) {
       toast.error('Please provide at least one reading value or a note');
+      return;
+    }
+
+    const unchangedItems = findUnchangedCountersForReadings(
+      [reading],
+      new Map([[machineId, { machine: machine.machine, previousReading: machine.previousReading }]])
+    );
+
+    if (unchangedItems.length > 0) {
+      setUnchangedModal({
+        readings: [reading],
+        items: unchangedItems,
+        onAfterSuccess: () => {
+          setEditedReadings((prev) => {
+            const newEdited = { ...prev };
+            delete newEdited[machineId];
+            return newEdited;
+          });
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            Object.keys(newErrors).forEach((key) => {
+              if (key.startsWith(`${machineId}-`)) {
+                delete newErrors[key];
+              }
+            });
+            return newErrors;
+          });
+          toast.success(`Saved readings for ${machine.machine.machineSerialNumber}`);
+        },
+      });
       return;
     }
 
@@ -898,6 +1140,12 @@ const Capture = () => {
                   savePending={submitMutation.isPending}
                   onReadingChange={handleReadingChange}
                   onSaveSingle={handleSaveSingle}
+                  onMinBill={handleMinBill}
+                  canMinBill={
+                    isElevated
+                    && !currentReading
+                    && !!buildMinBillFieldUpdates(machine, previousReading)
+                  }
                   onCancelMachine={handleCancelMachine}
                   onDeleteReading={handleDeleteReading}
                 />
@@ -906,6 +1154,16 @@ const Capture = () => {
           </table>
         </div>
       </div>
+
+      {unchangedModal && (
+        <ReadingUnchangedConfirmModal
+          items={unchangedModal.items}
+          defaultReasons={unchangedModal.defaultReasons}
+          onConfirm={handleUnchangedConfirm}
+          onCancel={handleUnchangedCancel}
+          isSubmitting={submitMutation.isPending}
+        />
+      )}
     </div>
   );
 };
