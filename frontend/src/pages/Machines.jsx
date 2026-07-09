@@ -43,7 +43,7 @@ function machineMatchesSearch(machine, queryLower) {
 const Machines = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isElevated, selectedBranch, effectiveBranch, user, loading: authLoading } = useAuth();
+  const { isElevated, isMeterUser, selectedBranch, effectiveBranch, user, loading: authLoading } = useAuth();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -454,7 +454,7 @@ const Machines = () => {
                       <span>Edit</span>
                     </button>
                     {machine.isDecommissioned ? (
-                      isElevated ? (
+                      (isElevated || isMeterUser) ? (
                         <button
                           onClick={() => handleRecommission(machine)}
                           className="p-1 text-gray-500 hover:text-green-600 transition-colors ml-2"

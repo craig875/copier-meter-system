@@ -17,3 +17,8 @@ export const updateCustomerSchema = z.object({
   address: z.string().optional().nullable(),
   branch: z.enum(['JHB', 'CT']).optional().nullable(),
 });
+
+export const customerListQuerySchema = z.object({
+  branch: z.enum(['JHB', 'CT']).optional(),
+  archived: z.enum(['true', 'false']).optional(),
+});

@@ -1,4 +1,5 @@
 import prisma from '../config/database.js';
+import { machineOnActiveCustomerOrUnassigned } from '../utils/customer-archive.js';
 import { repositories } from '../repositories/index.js';
 import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { calcGeneralPart, calcTonerPart } from '../utils/consumableCalc.js';
@@ -248,6 +249,7 @@ export class ConsumableService {
         }),
         isActive: true,
         isDecommissioned: false,
+        ...machineOnActiveCustomerOrUnassigned,
       },
       { take: 500, include: { model: { include: { make: true } }, customer: true } }
     );
@@ -429,6 +431,7 @@ export class ConsumableService {
         isDecommissioned: false,
         customerId: { not: null },
         modelId: { not: null },
+        customer: { isArchived: false },
         ...(branchFilter && { branch: branchFilter }),
       },
       include: {

@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { customersApi, consumablesApi } from '../services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { customersApi, consumablesApi, machinesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, ArrowLeft, Building2, Plus, FileDown } from 'lucide-react';
+import { Loader2, ArrowLeft, Building2, Plus, FileDown, Archive, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import MachineModal from '../components/MachineModal';
 import CustomerMachineOverviewRow from '../components/CustomerMachineOverviewRow';
@@ -15,10 +15,13 @@ function pdfBaseName(name) {
 
 const CustomerDetail = () => {
   const { customerId } = useParams();
-  const { effectiveBranch } = useAuth();
+  const queryClient = useQueryClient();
+  const { effectiveBranch, isElevated, isMeterUser } = useAuth();
+  const canManageMachines = isElevated || isMeterUser;
   const pdfCaptureRef = useRef(null);
   const [showAddMachine, setShowAddMachine] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [machineTab, setMachineTab] = useState('active');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['customer', customerId],
@@ -29,10 +32,34 @@ const CustomerDetail = () => {
   const { data: tonerAlertsData } = useQuery({
     queryKey: ['toner-alerts', effectiveBranch],
     queryFn: () => consumablesApi.getTonerAlerts(effectiveBranch),
+    enabled: !data?.customer?.isArchived,
+  });
+
+  const decommissionMutation = useMutation({
+    mutationFn: (id) => machinesApi.decommission(id),
+    onSuccess: () => {
+      toast.success('Machine decommissioned');
+      queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['machines'] });
+    },
+    onError: (err) => toast.error(err?.response?.data?.error || 'Failed to decommission machine'),
+  });
+
+  const recommissionMutation = useMutation({
+    mutationFn: (id) => machinesApi.recommission(id),
+    onSuccess: () => {
+      toast.success('Machine recommissioned');
+      queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['machines'] });
+    },
+    onError: (err) => toast.error(err?.response?.data?.error || 'Failed to recommission machine'),
   });
 
   const customer = data?.customer;
   const machines = customer?.machines || [];
+  const activeMachines = machines.filter((m) => !m.isDecommissioned);
+  const decommissionedMachines = machines.filter((m) => m.isDecommissioned);
+  const visibleMachines = machineTab === 'active' ? activeMachines : decommissionedMachines;
 
   const partsDueByMachine = (tonerAlertsData?.customerAlerts || [])
     .filter((a) => a.customerId === customerId)
@@ -62,6 +89,16 @@ const CustomerDetail = () => {
     } finally {
       setExportingPdf(false);
     }
+  };
+
+  const handleDecommission = (machine) => {
+    if (!window.confirm(`Decommission machine ${machine.machineSerialNumber}?`)) return;
+    decommissionMutation.mutate(machine.id);
+  };
+
+  const handleRecommission = (machine) => {
+    if (!window.confirm(`Restore machine ${machine.machineSerialNumber} to active service?`)) return;
+    recommissionMutation.mutate(machine.id);
   };
 
   if (isLoading) {
@@ -94,6 +131,13 @@ const CustomerDetail = () => {
           Back to Customers
         </Link>
       </div>
+
+      {customer.isArchived && (
+        <div className="tile-card p-4 border-l-4 border-gray-400 bg-gray-50 text-sm text-gray-700">
+          This customer is archived and is hidden from capture, consumables, and toner alerts.
+          Unarchive from the Archived tab on the customers list to add machines or return them to active workflows.
+        </div>
+      )}
 
       <div ref={pdfCaptureRef} className="space-y-6 bg-white" data-pdf-capture-root>
         <div className="tile-card p-6" data-pdf-row>
@@ -134,36 +178,98 @@ const CustomerDetail = () => {
                 )}
                 Export PDF
               </button>
-              <button
-                type="button"
-                onClick={() => setShowAddMachine(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                Add machine
-              </button>
+              {canManageMachines && !customer.isArchived && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddMachine(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add machine
+                </button>
+              )}
             </div>
           </div>
-          {machines.length === 0 ? (
+
+          <div className="flex gap-2 border-b border-gray-200 mb-4" data-pdf-exclude>
+            <button
+              type="button"
+              onClick={() => setMachineTab('active')}
+              className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
+                machineTab === 'active'
+                  ? 'border-red-600 text-red-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              Active ({activeMachines.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setMachineTab('decommissioned')}
+              className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
+                machineTab === 'decommissioned'
+                  ? 'border-red-600 text-red-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              Decommissioned ({decommissionedMachines.length})
+            </button>
+          </div>
+
+          {customer.isArchived && canManageMachines && (
+            <p className="text-sm text-gray-500 mb-4" data-pdf-exclude>
+              Unarchive this customer before adding new machines.
+            </p>
+          )}
+
+          {visibleMachines.length === 0 ? (
             <p className="text-gray-500 py-4">
-              No machines linked to this customer. Add machines from the Machines page and link them to this customer.
+              {machineTab === 'active'
+                ? 'No active machines linked to this customer.'
+                : 'No decommissioned machines for this customer.'}
             </p>
           ) : (
             <div>
-              {machines.map((machine) => (
-                <CustomerMachineOverviewRow
-                  key={machine.id}
-                  machine={machine}
-                  partsDue={partsDueByMachine[machine.id] || []}
-                  effectiveBranch={effectiveBranch}
-                />
+              {visibleMachines.map((machine) => (
+                <div key={machine.id}>
+                  <CustomerMachineOverviewRow
+                    machine={machine}
+                    partsDue={partsDueByMachine[machine.id] || []}
+                    effectiveBranch={effectiveBranch}
+                  />
+                  {canManageMachines && (
+                    <div className="flex justify-end pb-4 -mt-2" data-pdf-exclude>
+                      {machine.isDecommissioned ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRecommission(machine)}
+                          disabled={recommissionMutation.isPending}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-green-700 border border-green-200 rounded-lg hover:bg-green-50 disabled:opacity-50"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Recommission
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleDecommission(machine)}
+                          disabled={decommissionMutation.isPending}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-50 disabled:opacity-50"
+                        >
+                          <Archive className="h-4 w-4" />
+                          Decommission
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}
         </div>
       </div>
 
-      {showAddMachine && (
+      {showAddMachine && !customer.isArchived && (
         <MachineModal
           machine={null}
           onClose={() => setShowAddMachine(false)}

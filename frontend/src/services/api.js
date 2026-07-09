@@ -135,8 +135,11 @@ export const notificationsApi = {
 
 // Customers API
 export const customersApi = {
-  getAll: (branch = null) => {
-    const params = branch ? { branch } : {};
+  getAll: (branch = null, options = {}) => {
+    const params = {};
+    if (branch) params.branch = branch;
+    if (options.archived === true) params.archived = 'true';
+    else if (options.archived === false) params.archived = 'false';
     return api.get('/customers', { params }).then((r) => r.data);
   },
   getOne: (id) => api.get(`/customers/${id}`).then((r) => r.data),

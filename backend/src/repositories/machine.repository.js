@@ -1,4 +1,5 @@
 import { BaseRepository } from './base.repository.js';
+import { machineOnActiveCustomerOrUnassigned } from '../utils/customer-archive.js';
 
 /**
  * Machine Repository - Handles all data access operations for machines
@@ -34,6 +35,7 @@ export class MachineRepository extends BaseRepository {
     if (!includeDecommissioned) {
       where.isActive = true;
       where.isDecommissioned = false;
+      Object.assign(where, machineOnActiveCustomerOrUnassigned);
     }
     return this.findMany(where, {
       orderBy: [

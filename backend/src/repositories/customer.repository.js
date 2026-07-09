@@ -12,7 +12,11 @@ export class CustomerRepository extends BaseRepository {
     return this.prisma.customer.findMany({
       where,
       include: {
-        _count: { select: { machines: true } },
+        _count: {
+          select: {
+            machines: { where: { isDecommissioned: false } },
+          },
+        },
       },
       orderBy: { name: 'asc' },
       ...options,

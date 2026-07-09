@@ -1,6 +1,6 @@
 import prisma from '../config/database.js';
 import { repositories } from '../repositories/index.js';
-import { NotFoundError, ConflictError } from '../utils/errors.js';
+import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
 
 /**
  * Compute life status from machine (with model.machineLife) and latest reading.
@@ -28,11 +28,20 @@ export class CustomerService {
     this.prisma = prisma;
   }
 
-  async getCustomers(branch = null) {
-    const where = {};
+  buildListWhere(branch = null, archived = false) {
+    const where = { isArchived: archived };
+
     if (branch && ['JHB', 'CT'].includes(branch)) {
-      where.OR = [{ branch }, { branch: null }];
+      where.AND = [
+        { OR: [{ branch }, { branch: null }] },
+      ];
     }
+
+    return where;
+  }
+
+  async getCustomers(branch = null, archived = false) {
+    const where = this.buildListWhere(branch, archived === true || archived === 'true');
     const customers = await this.customerRepo.findManyWithMachines(where);
     return { customers };
   }
@@ -86,6 +95,33 @@ export class CustomerService {
   async archiveCustomer(id, isArchived) {
     const existing = await this.customerRepo.findById(id);
     if (!existing) throw new NotFoundError('Customer');
+
+    if (isArchived) {
+      const activeMachines = await this.prisma.machine.findMany({
+        where: {
+          customerId: id,
+          isDecommissioned: false,
+        },
+        select: {
+          id: true,
+          machineSerialNumber: true,
+        },
+        orderBy: { machineSerialNumber: 'asc' },
+      });
+
+      if (activeMachines.length > 0) {
+        throw new ValidationError(
+          `Cannot archive customer: ${activeMachines.length} machine(s) must be decommissioned first.`,
+          activeMachines.map((m) => ({
+            field: 'machine',
+            message: m.machineSerialNumber,
+            machineId: m.id,
+            machineSerialNumber: m.machineSerialNumber,
+          }))
+        );
+      }
+    }
+
     const customer = await this.customerRepo.update(id, { isArchived: !!isArchived });
     return { customer };
   }

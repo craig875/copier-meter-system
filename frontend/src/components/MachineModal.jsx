@@ -37,8 +37,8 @@ const MachineModal = ({ machine, onClose, initialCustomerId, lockCustomer = fals
     queryFn: () => makesApi.getAll(),
   });
   const { data: customersData } = useQuery({
-    queryKey: ['customers', effectiveBranch],
-    queryFn: () => customersApi.getAll(effectiveBranch),
+    queryKey: ['customers', effectiveBranch, 'active'],
+    queryFn: () => customersApi.getAll(effectiveBranch, { archived: false }),
   });
   const { data: modelsData } = useQuery({
     queryKey: ['models', formData.makeId],

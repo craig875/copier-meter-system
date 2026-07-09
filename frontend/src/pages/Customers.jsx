@@ -327,6 +327,7 @@ const Customers = ({ title = 'Customers' }) => {
   const queryClient = useQueryClient();
   const { effectiveBranch, isElevated, isMeterUser } = useAuth();
   const canArchive = isElevated || isMeterUser;
+  const [listTab, setListTab] = useState('active');
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -344,13 +345,14 @@ const Customers = ({ title = 'Customers' }) => {
   }, [openMenuId]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', effectiveBranch],
-    queryFn: () => customersApi.getAll(effectiveBranch),
+    queryKey: ['customers', effectiveBranch, listTab],
+    queryFn: () => customersApi.getAll(effectiveBranch, { archived: listTab === 'archived' }),
   });
 
   const { data: tonerAlertsData } = useQuery({
     queryKey: ['toner-alerts', effectiveBranch],
     queryFn: () => consumablesApi.getTonerAlerts(effectiveBranch),
+    enabled: listTab === 'active',
   });
 
   const tonerAlertsByCustomer = (tonerAlertsData?.customerAlerts || []).reduce((acc, a) => {
@@ -376,7 +378,15 @@ const Customers = ({ title = 'Customers' }) => {
       queryClient.invalidateQueries(['customers']);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Failed to update customer');
+      const details = error.response?.data?.errors;
+      const machineList = Array.isArray(details)
+        ? details
+            .map((e) => e.machineSerialNumber || e.message)
+            .filter(Boolean)
+            .join(', ')
+        : null;
+      const message = error.response?.data?.error || 'Failed to update customer';
+      toast.error(machineList ? `${message} ${machineList}` : message, { duration: 6000 });
     },
   });
 
@@ -388,7 +398,7 @@ const Customers = ({ title = 'Customers' }) => {
   };
 
   const handleArchive = (customer) => {
-    const willArchive = !customer.isArchived;
+    const willArchive = listTab === 'active';
     archiveMutation.mutate({ id: customer.id, isArchived: willArchive });
   };
 
@@ -422,12 +432,14 @@ const Customers = ({ title = 'Customers' }) => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
           <p className="text-gray-500">
-            Select a customer to view machines and record consumable orders
+            {listTab === 'active'
+              ? 'Select a customer to view machines and record consumable orders'
+              : 'Archived customers are hidden from capture, consumables, and toner alerts'}
             <span className="ml-2 text-gray-400 font-medium">· {customers.length} customer{customers.length !== 1 ? 's' : ''}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {isElevated && (
+          {isElevated && listTab === 'active' && (
             <>
               <button
                 type="button"
@@ -450,12 +462,37 @@ const Customers = ({ title = 'Customers' }) => {
         </div>
       </div>
 
+      <div className="flex gap-2 border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => setListTab('active')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            listTab === 'active'
+              ? 'border-red-600 text-red-700'
+              : 'border-transparent text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          Active
+        </button>
+        <button
+          type="button"
+          onClick={() => setListTab('archived')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            listTab === 'archived'
+              ? 'border-red-600 text-red-700'
+              : 'border-transparent text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          Archived
+        </button>
+      </div>
+
       <div data-tour="customers-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {customers.map((customer) => (
           <div
             key={customer.id}
             className={`tile-card p-4 relative group ${
-              customer.isArchived ? '!bg-gray-50 opacity-75' : ''
+              listTab === 'archived' ? '!bg-gray-50 opacity-90' : ''
             }`}
           >
             <Link
@@ -463,9 +500,9 @@ const Customers = ({ title = 'Customers' }) => {
               className="block flex"
             >
               {/* Left: status badges only (no icon) */}
-              {(customer.isArchived || tonerAlertsByCustomer[customer.id]) && (
+              {(listTab === 'archived' || tonerAlertsByCustomer[customer.id]) && (
                 <div className="flex flex-col items-center justify-center w-14 flex-shrink-0 pr-4 border-r border-gray-200 gap-1">
-                  {customer.isArchived && (
+                  {listTab === 'archived' && (
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-600">
                       Archived
                     </span>
@@ -484,7 +521,7 @@ const Customers = ({ title = 'Customers' }) => {
                 </div>
               )}
               {/* Right: content - pr-10 reserves space for ellipsis button */}
-              <div className={`flex-1 min-w-0 flex flex-col pr-10 ${(customer.isArchived || tonerAlertsByCustomer[customer.id]) ? 'pl-4' : ''}`}>
+              <div className={`flex-1 min-w-0 flex flex-col pr-10 ${(listTab === 'archived' || tonerAlertsByCustomer[customer.id]) ? 'pl-4' : ''}`}>
                 <p className="font-medium text-gray-900 truncate">{customer.name}</p>
                 {customer.contactName && (
                   <p className="text-sm text-gray-500 truncate mt-0.5">{customer.contactName}</p>
@@ -548,7 +585,7 @@ const Customers = ({ title = 'Customers' }) => {
                         ) : (
                           <Archive className="h-4 w-4" />
                         )}
-                        {customer.isArchived ? 'Unarchive' : 'Archive'}
+                        {listTab === 'archived' ? 'Unarchive' : 'Archive'}
                       </button>
                     )}
                     {isElevated && (

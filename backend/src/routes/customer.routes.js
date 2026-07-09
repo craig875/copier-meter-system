@@ -3,8 +3,8 @@ import { getCustomers, getCustomer, createCustomer, updateCustomer, deleteCustom
 import { importCustomers } from '../controllers/import.controller.js';
 import { authenticate, requireAdmin, requireMeterOrAdmin } from '../middleware/auth.js';
 import { requireCustomerAccess } from '../middleware/permissions.js';
-import { validate } from '../middleware/validate.js';
-import { createCustomerSchema, updateCustomerSchema } from '../schemas/customer.schema.js';
+import { validate, validateQuery } from '../middleware/validate.js';
+import { createCustomerSchema, updateCustomerSchema, customerListQuerySchema } from '../schemas/customer.schema.js';
 
 const router = Router();
 
@@ -15,7 +15,7 @@ router.use(requireCustomerAccess);
 router.post('/import', requireAdmin, importCustomers);
 
 // List and view - any user with meter/consumables access
-router.get('/', getCustomers);
+router.get('/', validateQuery(customerListQuerySchema), getCustomers);
 router.get('/:id', getCustomer);
 router.post('/', requireAdmin, validate(createCustomerSchema), createCustomer);
 router.put('/:id', requireAdmin, validate(updateCustomerSchema), updateCustomer);

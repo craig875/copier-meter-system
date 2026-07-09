@@ -30,6 +30,7 @@ export class MachineService {
   constructor(repos = repositories) {
     this.machineRepo = repos.machine;
     this.readingRepo = repos.reading;
+    this.customerRepo = repos.customer;
   }
 
   /**
@@ -129,6 +130,18 @@ export class MachineService {
       throw new ConflictError('Machine serial number already exists');
     }
 
+    if (data.customerId) {
+      const customer = await this.customerRepo.findById(data.customerId);
+      if (!customer) {
+        throw new NotFoundError('Customer');
+      }
+      if (customer.isArchived) {
+        throw new ConflictError(
+          'Cannot add machines to an archived customer. Unarchive the customer first.'
+        );
+      }
+    }
+
     const machine = await this.machineRepo.create(data);
     return { machine };
   }
@@ -150,6 +163,18 @@ export class MachineService {
       const conflicting = await this.machineRepo.findBySerialNumber(data.machineSerialNumber);
       if (conflicting) {
         throw new ConflictError('Machine serial number already exists');
+      }
+    }
+
+    if (data.customerId) {
+      const customer = await this.customerRepo.findById(data.customerId);
+      if (!customer) {
+        throw new NotFoundError('Customer');
+      }
+      if (customer.isArchived) {
+        throw new ConflictError(
+          'Cannot assign machines to an archived customer. Unarchive the customer first.'
+        );
       }
     }
 

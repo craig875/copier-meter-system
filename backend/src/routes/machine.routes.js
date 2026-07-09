@@ -30,7 +30,7 @@ router.post('/:id/decommission', requireMeterUserOrAdmin, decommissionMachine);
 
 // Admin only routes
 router.post('/import', requireAdmin, importMachines);
-router.post('/:id/recommission', requireAdmin, recommissionMachine);
+router.post('/:id/recommission', requireMeterUserOrAdmin, recommissionMachine);
 router.delete('/:id', requireAdmin, deleteMachine);
 
 export default router;

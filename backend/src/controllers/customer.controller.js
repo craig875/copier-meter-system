@@ -11,7 +11,8 @@ export class CustomerController {
 
   getCustomers = asyncHandler(async (req, res) => {
     const branch = req.query.branch || req.user?.branch || null;
-    const result = await this.customerService.getCustomers(branch);
+    const archived = req.query.archived === 'true';
+    const result = await this.customerService.getCustomers(branch, archived);
     res.json(result);
   });
 
