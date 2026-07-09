@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customersApi, consumablesApi } from '../services/api';
@@ -392,6 +392,11 @@ const Customers = ({ title = 'Customers' }) => {
 
   const customers = data?.customers || [];
 
+  const totalMachines = useMemo(
+    () => customers.reduce((sum, c) => sum + (c._count?.machines ?? 0), 0),
+    [customers]
+  );
+
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
     setShowModal(true);
@@ -435,7 +440,9 @@ const Customers = ({ title = 'Customers' }) => {
             {listTab === 'active'
               ? 'Select a customer to view machines and record consumable orders'
               : 'Archived customers are hidden from capture, consumables, and toner alerts'}
-            <span className="ml-2 text-gray-400 font-medium">· {customers.length} customer{customers.length !== 1 ? 's' : ''}</span>
+            <span className="ml-2 text-gray-400 font-medium">
+              · {customers.length} customer{customers.length !== 1 ? 's' : ''} · {totalMachines} machine{totalMachines !== 1 ? 's' : ''}
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-2">
