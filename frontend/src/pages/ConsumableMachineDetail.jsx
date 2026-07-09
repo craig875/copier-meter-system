@@ -7,7 +7,6 @@ import { copyTextToClipboard } from '../utils/clipboard';
 import toast from 'react-hot-toast';
 import {
   Loader2,
-  ArrowLeft,
   CheckCircle,
   AlertTriangle,
   Plus,
@@ -242,15 +241,7 @@ const ConsumableMachineDetail = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Link
-          to={(machine?.customer?.id || machine?.customerId) ? `/customers/${machine.customer?.id || machine.customerId}` : '/customers'}
-          className="flex items-center text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          {(machine?.customer?.id || machine?.customerId) ? `Back to ${machine.customer?.name ?? machine.customer ?? 'Customer'}` : 'Back to Customers'}
-        </Link>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2">
           {canEditMachine && (
             <button
               onClick={() => setShowEditMachine(true)}
@@ -268,7 +259,6 @@ const ConsumableMachineDetail = () => {
             <Plus className="h-5 w-5 mr-2" />
             Order consumable
           </button>
-        </div>
       </div>
 
       <div className="tile-card p-6">

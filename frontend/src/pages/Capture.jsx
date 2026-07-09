@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { readingsApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { trimLeading } from '../utils/string';
@@ -130,10 +130,24 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
       className={clsx(editedFields && Object.keys(editedFields).length > 0 && 'bg-blue-50')}
     >
       <td className="px-4 py-3">
-        <span className="font-medium text-gray-900">{machine.machineSerialNumber}</span>
+        <Link
+          to={`/consumables/machines/${mid}`}
+          className="font-medium text-red-600 hover:text-red-700 hover:underline"
+        >
+          {machine.machineSerialNumber}
+        </Link>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-500">
-        {machine.customer?.name || '-'}
+      <td className="px-4 py-3 text-sm">
+        {machine.customer?.id ? (
+          <Link
+            to={`/customers/${machine.customer.id}`}
+            className="text-gray-500 hover:text-red-700 hover:underline"
+          >
+            {machine.customer.name}
+          </Link>
+        ) : (
+          <span className="text-gray-500">{machine.customer?.name || '-'}</span>
+        )}
       </td>
       <td className="px-4 py-3">
         {machine.monoEnabled ? (
