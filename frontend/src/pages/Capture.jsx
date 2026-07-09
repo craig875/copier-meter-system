@@ -26,6 +26,8 @@ import ReadingUnchangedConfirmModal from '../components/ReadingUnchangedConfirmM
 import {
   findUnchangedCountersForReadings,
   applyUnchangedReasons,
+  buildMinBillFieldUpdates,
+  MIN_BILL_REASON,
 } from '../utils/readingUnchanged';
 
 const MeterInput = memo(function MeterInput({
@@ -116,6 +118,8 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
   savePending,
   onReadingChange,
   onSaveSingle,
+  onMinBill,
+  canMinBill,
   onCancelMachine,
   onDeleteReading,
 }) {
@@ -212,6 +216,17 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
       </td>
       <td className="px-4 py-3 text-center">
         <div className="flex flex-wrap items-center justify-center gap-2">
+          {canMinBill && (
+            <button
+              type="button"
+              onClick={() => onMinBill(mid)}
+              disabled={savePending || isLocked}
+              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-amber-800 bg-amber-100 rounded-lg hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title={isLocked ? 'This month is locked' : 'Fill counters with previous month (minimum bill)'}
+            >
+              Min Bill
+            </button>
+          )}
           {editedFields && Object.keys(editedFields).length > 0 && (
             <button
               type="button"
@@ -496,6 +511,117 @@ const Capture = () => {
     unchangedModal?.onCancel?.();
     setUnchangedModal(null);
   }, [unchangedModal]);
+
+  const handleMinBill = useCallback((machineId) => {
+    if (!isElevated) return;
+
+    if (isLocked) {
+      toast.error('This month has been submitted and is locked for editing');
+      return;
+    }
+
+    const entry = machinesRef.current.find((m) => m.machine.id === machineId);
+    if (!entry) return;
+
+    const { machine, previousReading, currentReading } = entry;
+    const fieldUpdates = buildMinBillFieldUpdates(machine, previousReading);
+    if (!fieldUpdates) {
+      toast.error('No previous month readings available for Min Bill');
+      return;
+    }
+
+    const priorEdit = editedReadingsRef.current[machineId];
+    const priorEditSnapshot = priorEdit ? { ...priorEdit } : undefined;
+
+    setEditedReadings((prev) => ({
+      ...prev,
+      [machineId]: {
+        ...prev[machineId],
+        ...fieldUpdates,
+      },
+    }));
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      Object.keys(fieldUpdates).forEach((field) => {
+        delete next[`${machineId}-${field}`];
+      });
+      return next;
+    });
+
+    const reading = {
+      machineId,
+      monoReading: fieldUpdates.monoReading !== undefined
+        ? fieldUpdates.monoReading
+        : currentReading?.monoReading,
+      colourReading: fieldUpdates.colourReading !== undefined
+        ? fieldUpdates.colourReading
+        : currentReading?.colourReading,
+      scanReading: fieldUpdates.scanReading !== undefined
+        ? fieldUpdates.scanReading
+        : currentReading?.scanReading,
+      note: priorEditSnapshot?.note !== undefined
+        ? priorEditSnapshot.note
+        : currentReading?.note,
+    };
+
+    const unchangedItems = findUnchangedCountersForReadings(
+      [reading],
+      new Map([[machineId, { machine, previousReading }]])
+    );
+
+    if (unchangedItems.length === 0) {
+      setEditedReadings((prev) => {
+        const next = { ...prev };
+        if (priorEditSnapshot) {
+          next[machineId] = priorEditSnapshot;
+        } else {
+          delete next[machineId];
+        }
+        return next;
+      });
+      toast.error('Min Bill requires counters to match the previous month');
+      return;
+    }
+
+    const defaultReasons = Object.fromEntries(
+      unchangedItems.map((item) => [item.key, MIN_BILL_REASON])
+    );
+
+    setUnchangedModal({
+      readings: [reading],
+      items: unchangedItems,
+      defaultReasons,
+      onAfterSuccess: () => {
+        setEditedReadings((prev) => {
+          const next = { ...prev };
+          delete next[machineId];
+          return next;
+        });
+        setErrors((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((key) => {
+            if (key.startsWith(`${machineId}-`)) {
+              delete next[key];
+            }
+          });
+          return next;
+        });
+        toast.success(`Saved Min Bill for ${machine.machineSerialNumber}`);
+      },
+      onCancel: () => {
+        setEditedReadings((prev) => {
+          const next = { ...prev };
+          if (priorEditSnapshot) {
+            next[machineId] = priorEditSnapshot;
+          } else {
+            delete next[machineId];
+          }
+          return next;
+        });
+      },
+    });
+  }, [isElevated, isLocked]);
 
   const handleSave = () => {
     // Prevent saving if month is locked
@@ -1000,6 +1126,12 @@ const Capture = () => {
                   savePending={submitMutation.isPending}
                   onReadingChange={handleReadingChange}
                   onSaveSingle={handleSaveSingle}
+                  onMinBill={handleMinBill}
+                  canMinBill={
+                    isElevated
+                    && !currentReading
+                    && !!buildMinBillFieldUpdates(machine, previousReading)
+                  }
                   onCancelMachine={handleCancelMachine}
                   onDeleteReading={handleDeleteReading}
                 />

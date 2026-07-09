@@ -19,6 +19,26 @@ const COUNTERS = [
   },
 ];
 
+export const MIN_BILL_REASON = 'Min Bill';
+
+/**
+ * Previous-month values for all enabled counters (Min Bill auto-fill).
+ */
+export function buildMinBillFieldUpdates(machine, previousReading) {
+  if (!machine || !previousReading) return null;
+
+  const updates = {};
+  for (const counter of COUNTERS) {
+    if (!machine[counter.enabledKey]) continue;
+    const previous = previousReading[counter.field];
+    if (previous != null) {
+      updates[counter.field] = previous;
+    }
+  }
+
+  return Object.keys(updates).length > 0 ? updates : null;
+}
+
 /**
  * Find counters on a reading that match the previous month (need unchanged reason).
  */
