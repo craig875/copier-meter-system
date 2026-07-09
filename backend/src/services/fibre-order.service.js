@@ -52,7 +52,10 @@ function activeListWhere(base = {}) {
   return {
     ...base,
     pipelineStatus: { not: FIBRE_PIPELINE_TERMINAL },
-    overlayStatus: { not: 'cancelled' },
+    OR: [
+      { overlayStatus: null },
+      { overlayStatus: { not: 'cancelled' } },
+    ],
   };
 }
 
