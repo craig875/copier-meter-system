@@ -272,7 +272,7 @@ export class UserService {
       passwordHash,
       name,
       role: resolvedRole,
-      branch: branch === '' ? null : (branch || null),
+      branch: branch,
       modules: resolvedModules,
     });
 
@@ -299,7 +299,7 @@ export class UserService {
       updateData.passwordHash = await bcrypt.hash(data.password, 12);
     }
     if (data.branch !== undefined) {
-      updateData.branch = data.branch === '' ? null : data.branch;
+      updateData.branch = data.branch;
     }
     if (data.modules !== undefined) {
       const r = data.role ?? existing.role;

@@ -125,14 +125,23 @@ export class ImportService {
         let customerId = null;
         const customerName = row.customer?.trim();
         const machineBranch = row.branch ? row.branch.toUpperCase() : branch;
+        if (!machineBranch || !['JHB', 'CT'].includes(machineBranch)) {
+          results.errors.push({
+            row: rowNumber,
+            machineSerialNumber,
+            error: 'Branch is required (JHB or CT)',
+          });
+          results.skipped++;
+          continue;
+        }
         if (customerName) {
           let customer = await prisma.customer.findFirst({
-            where: { name: customerName, OR: [{ branch: machineBranch }, { branch: null }] },
+            where: { name: customerName, branch: machineBranch },
           });
           if (!customer) {
             const createData = {
               name: customerName,
-              branch: machineBranch || null,
+              branch: machineBranch,
             };
             const contact =
               (typeof row.contactName === 'string' && row.contactName.trim()) ||
@@ -280,10 +289,20 @@ export class ImportService {
 
         const machineBranch = row.branch ? String(row.branch).toUpperCase() : branch;
 
+        if (!machineBranch || !['JHB', 'CT'].includes(machineBranch)) {
+          results.errors.push({
+            row: rowNumber,
+            customer: customerName,
+            error: 'Branch is required (JHB or CT)',
+          });
+          results.skipped++;
+          continue;
+        }
+
         const existing = await prisma.customer.findFirst({
           where: {
             name: customerName,
-            OR: [{ branch: machineBranch }, { branch: null }],
+            branch: machineBranch,
           },
         });
 
@@ -294,7 +313,7 @@ export class ImportService {
 
         const createData = {
           name: customerName,
-          branch: machineBranch || null,
+          branch: machineBranch,
         };
 
         const contact =

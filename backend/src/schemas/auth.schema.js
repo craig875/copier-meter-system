@@ -6,19 +6,18 @@ export const loginSchema = z.object({
 });
 
 const moduleKey = z.enum(['copiers', 'connectivity', 'fibre-orders']);
+const branchEnum = z.enum(['JHB', 'CT'], {
+  required_error: 'Branch is required',
+  invalid_type_error: 'Branch must be JHB or CT',
+});
 
 export const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   name: z.string().min(1, 'Name is required'),
   role: z.enum(['admin', 'manager', 'meter_user', 'capturer', 'sales_agent']).default('meter_user'),
-  branch: z.union([
-    z.enum(['JHB', 'CT']),
-    z.literal(''),
-    z.null(),
-  ]).optional().transform(val => val === '' ? null : val),
+  branch: branchEnum,
   modules: z.array(moduleKey).optional(),
-  // Meter users can have no branch assigned, which means they can access all branches
 });
 
 export const verify2FASchema = z.object({
@@ -40,11 +39,6 @@ export const updateUserSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
   name: z.string().min(1, 'Name is required').optional(),
   role: z.enum(['admin', 'manager', 'meter_user', 'capturer', 'sales_agent']).optional(),
-  branch: z.union([
-    z.enum(['JHB', 'CT']),
-    z.literal(''),
-    z.null(),
-  ]).optional().transform(val => val === '' ? null : val),
+  branch: branchEnum.optional(),
   modules: z.array(moduleKey).optional(),
-  // Meter users can have no branch assigned, which means they can access all branches
 });

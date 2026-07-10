@@ -221,7 +221,7 @@ const UserModal = ({ user, onClose }) => {
     email: user?.email || '',
     password: '',
     role: user?.role || 'meter_user',
-    branch: user?.branch || '',
+    branch: user?.branch || 'JHB',
     modules:
       user?.role === 'admin'
         ? ['copiers', 'connectivity', 'fibre-orders']
@@ -231,6 +231,10 @@ const UserModal = ({ user, onClose }) => {
   });
 
   const validateForm = () => {
+    if (!formData.branch || (formData.branch !== 'JHB' && formData.branch !== 'CT')) {
+      toast.error('Branch is required');
+      return false;
+    }
     return true;
   };
 
@@ -238,9 +242,6 @@ const UserModal = ({ user, onClose }) => {
     mutationFn: (data) => {
       const payload = { ...data };
       if (!payload.password) delete payload.password;
-      if (payload.branch === '') {
-        payload.branch = null;
-      }
       if (payload.role === 'admin') {
         delete payload.modules;
       }
@@ -379,27 +380,20 @@ const UserModal = ({ user, onClose }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Branch{' '}
-              {formData.role === 'meter_user' || formData.role === 'capturer' ? '*' : '(optional)'}
+              Branch *
             </label>
             <select
               name="branch"
               value={formData.branch}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">No Branch Assigned (All Branches)</option>
               <option value="JHB">Johannesburg (JHB)</option>
               <option value="CT">Cape Town (CT)</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              {formData.role === 'sales_agent'
-                ? 'Optional — for reporting only. Sales agents see orders allocated to them in Fibre Orders.'
-                : (formData.role === 'meter_user' || formData.role === 'capturer')
-                ? 'Leave blank for all branches access, or select a specific branch'
-                : formData.role === 'admin' || formData.role === 'manager'
-                ? 'Optional: assign a branch to restrict this user to one site'
-                : 'Assign a branch to restrict user access to specific branch data'}
+              Every user must belong to exactly one branch.
             </p>
           </div>
 

@@ -32,9 +32,7 @@ export class CustomerService {
     const where = { isArchived: archived };
 
     if (branch && ['JHB', 'CT'].includes(branch)) {
-      where.AND = [
-        { OR: [{ branch }, { branch: null }] },
-      ];
+      where.branch = branch;
     }
 
     return where;

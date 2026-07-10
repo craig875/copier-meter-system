@@ -32,7 +32,7 @@ model User {
   passwordHash String    @map("password_hash")
   name         String
   role         Role      @default(meter_user)
-  branch       Branch?
+  branch       Branch
   /// Feature modules this user may access: copiers, connectivity (extensible)
   modules      String[]  @default([])
   twoFactorSecret   String?   @map("two_factor_secret")
@@ -318,7 +318,7 @@ model Customer {
   email        String?   @map("email")
   phone        String?   @map("phone")
   address      String?   @map("address")
-  branch       Branch?   @map("branch")
+  branch       Branch    @map("branch")
   isArchived   Boolean   @default(false) @map("is_archived")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")

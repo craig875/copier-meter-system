@@ -654,9 +654,15 @@ const CustomerModal = ({ customer, onClose }) => {
     mutationFn: (data) => {
       const payload = { ...data };
       if (isEditing) {
-        payload.branch = customer.branch ?? null;
+        if (!customer.branch || (customer.branch !== 'JHB' && customer.branch !== 'CT')) {
+          throw new Error('Customer is missing a valid branch');
+        }
+        payload.branch = customer.branch;
       } else {
-        payload.branch = effectiveBranch || null;
+        if (!effectiveBranch || (effectiveBranch !== 'JHB' && effectiveBranch !== 'CT')) {
+          throw new Error('Select a branch before adding a customer');
+        }
+        payload.branch = effectiveBranch;
       }
       return isEditing
         ? customersApi.update(customer.id, payload)
@@ -669,12 +675,16 @@ const CustomerModal = ({ customer, onClose }) => {
       onClose();
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Operation failed');
+      toast.error(error.response?.data?.error || error.message || 'Operation failed');
     },
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!isEditing && (!effectiveBranch || (effectiveBranch !== 'JHB' && effectiveBranch !== 'CT'))) {
+      toast.error('Select a branch before adding a customer');
+      return;
+    }
     mutation.mutate(formData);
   };
 
@@ -777,7 +787,10 @@ const CustomerModal = ({ customer, onClose }) => {
             </button>
             <button
               type="submit"
-              disabled={mutation.isPending}
+              disabled={
+                mutation.isPending
+                || (!isEditing && (!effectiveBranch || (effectiveBranch !== 'JHB' && effectiveBranch !== 'CT')))
+              }
               className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
               <Check className="h-4 w-4 mr-2" />
