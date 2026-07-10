@@ -1,6 +1,7 @@
 import prisma from '../config/database.js';
 import { repositories } from '../repositories/index.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
+import { assertRecordInTenant } from '../middleware/tenant.js';
 
 /**
  * Compute life status from machine (with model.machineLife) and latest reading.
@@ -28,29 +29,29 @@ export class CustomerService {
     this.prisma = prisma;
   }
 
-  buildListWhere(branch = null, archived = false) {
-    const where = { isArchived: archived };
-
-    if (branch && ['JHB', 'CT'].includes(branch)) {
-      where.branch = branch;
-    }
-
-    return where;
+  buildListWhere(branch, archived = false) {
+    return {
+      isArchived: archived,
+      branch,
+    };
   }
 
-  async getCustomers(branch = null, archived = false) {
+  async getCustomers(branch, archived = false) {
     const where = this.buildListWhere(branch, archived === true || archived === 'true');
     const customers = await this.customerRepo.findManyWithMachines(where);
     return { customers };
   }
 
-  async getCustomer(id) {
+  async getCustomer(id, tenantBranch) {
     const existing = await this.customerRepo.findById(id);
-    if (!existing) throw new NotFoundError('Customer');
+    assertRecordInTenant(existing, tenantBranch, 'Customer');
+
     const customer = await this.prisma.customer.findUnique({
       where: { id },
       include: { machines: { include: { model: { include: { make: true } } } } },
     });
+    assertRecordInTenant(customer, tenantBranch, 'Customer');
+
     if (customer?.machines?.length > 0) {
       const latestByMachine = await this.readingRepo.findLatestByMachineIds(customer.machines.map((m) => m.id));
       for (const m of customer.machines) {
@@ -69,16 +70,16 @@ export class CustomerService {
     return { customer };
   }
 
-  async updateCustomer(id, data) {
+  async updateCustomer(id, data, tenantBranch) {
     const existing = await this.customerRepo.findById(id);
-    if (!existing) throw new NotFoundError('Customer');
+    assertRecordInTenant(existing, tenantBranch, 'Customer');
     const customer = await this.customerRepo.update(id, data);
     return { customer };
   }
 
-  async deleteCustomer(id) {
+  async deleteCustomer(id, tenantBranch) {
     const existing = await this.customerRepo.findById(id);
-    if (!existing) throw new NotFoundError('Customer');
+    assertRecordInTenant(existing, tenantBranch, 'Customer');
     const withCount = await this.prisma.customer.findUnique({
       where: { id },
       include: { _count: { select: { machines: true } } },
@@ -90,9 +91,9 @@ export class CustomerService {
     return { message: 'Customer deleted' };
   }
 
-  async archiveCustomer(id, isArchived) {
+  async archiveCustomer(id, isArchived, tenantBranch) {
     const existing = await this.customerRepo.findById(id);
-    if (!existing) throw new NotFoundError('Customer');
+    assertRecordInTenant(existing, tenantBranch, 'Customer');
 
     if (isArchived) {
       const activeMachines = await this.prisma.machine.findMany({

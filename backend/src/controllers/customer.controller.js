@@ -10,35 +10,38 @@ export class CustomerController {
   }
 
   getCustomers = asyncHandler(async (req, res) => {
-    const branch = req.query.branch || req.user?.branch || null;
     const archived = req.query.archived === 'true';
-    const result = await this.customerService.getCustomers(branch, archived);
+    const result = await this.customerService.getCustomers(req.tenantBranch, archived);
     res.json(result);
   });
 
   getCustomer = asyncHandler(async (req, res) => {
-    const result = await this.customerService.getCustomer(req.params.id);
+    const result = await this.customerService.getCustomer(req.params.id, req.tenantBranch);
     res.json(result);
   });
 
   createCustomer = asyncHandler(async (req, res) => {
-    const result = await this.customerService.createCustomer(req.body);
+    const result = await this.customerService.createCustomer({
+      ...req.body,
+      branch: req.tenantBranch,
+    });
     res.status(201).json(result);
   });
 
   updateCustomer = asyncHandler(async (req, res) => {
-    const result = await this.customerService.updateCustomer(req.params.id, req.body);
+    const { branch: _ignored, ...rest } = req.body;
+    const result = await this.customerService.updateCustomer(req.params.id, rest, req.tenantBranch);
     res.json(result);
   });
 
   deleteCustomer = asyncHandler(async (req, res) => {
-    const result = await this.customerService.deleteCustomer(req.params.id);
+    const result = await this.customerService.deleteCustomer(req.params.id, req.tenantBranch);
     res.json(result);
   });
 
   archiveCustomer = asyncHandler(async (req, res) => {
     const isArchived = req.body.isArchived !== false;
-    const result = await this.customerService.archiveCustomer(req.params.id, isArchived);
+    const result = await this.customerService.archiveCustomer(req.params.id, isArchived, req.tenantBranch);
     res.json(result);
   });
 }

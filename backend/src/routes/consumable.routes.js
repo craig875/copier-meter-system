@@ -15,6 +15,7 @@ import {
   importPartOrders,
 } from '../controllers/consumable.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireMeterReadingAccess, requireConsumableAccess } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import {
@@ -29,6 +30,7 @@ import {
 const router = Router();
 
 router.use(authenticate);
+router.use(requireTenantBranch);
 
 // Toner alerts are used in the meter-reading capture flow (capturers included),
 // but should not grant access to the full consumables module.

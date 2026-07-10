@@ -7,12 +7,8 @@ export class FibreOrderController {
   }
 
   listOrders = asyncHandler(async (req, res) => {
-    const branch =
-      req.query.branch ||
-      req.user?.selectedBranch ||
-      (req.user?.branch ? String(req.user.branch) : null);
     const filters = {
-      branch: branch && ['JHB', 'CT'].includes(branch) ? branch : undefined,
+      branch: req.tenantBranch,
       pipelineStatus: req.query.pipelineStatus,
       overlayStatus: req.query.overlayStatus,
       salesAgentId: req.query.salesAgentId,
@@ -25,34 +21,44 @@ export class FibreOrderController {
   });
 
   getStats = asyncHandler(async (req, res) => {
-    const branch =
-      req.query.branch ||
-      req.user?.selectedBranch ||
-      (req.user?.branch ? String(req.user.branch) : null);
-    const stats = await this.fibreOrderService.getStats(
-      req.user,
-      branch && ['JHB', 'CT'].includes(branch) ? branch : null
-    );
+    const stats = await this.fibreOrderService.getStats(req.user, req.tenantBranch);
     res.json(stats);
   });
 
   getOrder = asyncHandler(async (req, res) => {
-    const order = await this.fibreOrderService.getOrderById(req.user, req.params.id);
+    const order = await this.fibreOrderService.getOrderById(
+      req.user,
+      req.params.id,
+      req.tenantBranch,
+    );
     res.json({ order });
   });
 
   getOrderUpdates = asyncHandler(async (req, res) => {
-    const updates = await this.fibreOrderService.getOrderUpdates(req.user, req.params.id);
+    const updates = await this.fibreOrderService.getOrderUpdates(
+      req.user,
+      req.params.id,
+      req.tenantBranch,
+    );
     res.json({ updates });
   });
 
   createOrder = asyncHandler(async (req, res) => {
-    const order = await this.fibreOrderService.createOrder(req.user, req.body);
+    const order = await this.fibreOrderService.createOrder(
+      req.user,
+      req.body,
+      req.tenantBranch,
+    );
     res.status(201).json({ order });
   });
 
   updateOrder = asyncHandler(async (req, res) => {
-    const order = await this.fibreOrderService.updateOrder(req.user, req.params.id, req.body);
+    const order = await this.fibreOrderService.updateOrder(
+      req.user,
+      req.params.id,
+      req.body,
+      req.tenantBranch,
+    );
     res.json({ order });
   });
 
@@ -60,7 +66,8 @@ export class FibreOrderController {
     const updates = await this.fibreOrderService.addNote(
       req.user,
       req.params.id,
-      req.body.note
+      req.body.note,
+      req.tenantBranch,
     );
     res.status(201).json({ updates });
   });
@@ -69,7 +76,8 @@ export class FibreOrderController {
     const request = await this.fibreOrderService.requestOrderUpdate(
       req.user,
       req.params.id,
-      req.body.note
+      req.body.note,
+      req.tenantBranch,
     );
     await services.notification.notifyFibreOrderUpdateRequested({
       order: request.order,
@@ -81,13 +89,9 @@ export class FibreOrderController {
   });
 
   listUpdateRequests = asyncHandler(async (req, res) => {
-    const branch =
-      req.query.branch ||
-      req.user?.selectedBranch ||
-      (req.user?.branch ? String(req.user.branch) : null);
     const requests = await this.fibreOrderService.listPendingUpdateRequests(
       req.user,
-      branch && ['JHB', 'CT'].includes(branch) ? branch : null
+      req.tenantBranch,
     );
     res.json({ requests });
   });

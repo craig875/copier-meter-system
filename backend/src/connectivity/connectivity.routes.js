@@ -17,6 +17,7 @@ import {
   getOutages,
 } from './connectivity.controller.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireConnectivityAccess, requireConnectivityManage } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import {
@@ -32,6 +33,7 @@ import {
 const router = Router();
 
 router.use(authenticate);
+router.use(requireTenantBranch);
 router.use(requireConnectivityAccess);
 
 // Dashboard - all connectivity users
