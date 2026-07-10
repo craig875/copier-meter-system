@@ -5,6 +5,7 @@ import { getPreviousMonth } from '../utils/date.utils.js';
 import { calculateReadingMetrics } from '../utils/reading.utils.js';
 import { resolveUnchangedReason } from '../utils/reading-unchanged.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
+import { assertRecordInTenant } from '../middleware/tenant.js';
 
 /**
  * Reading Service - Business logic for meter readings
@@ -293,35 +294,30 @@ export class ReadingService {
   }
 
   /**
-   * Get reading history for a machine
+   * Get reading history for a machine (tenant-scoped).
    * @param {string} machineId
    * @param {number} limit
-   * @param {string} branch - Optional branch filter
-   * @returns {Promise<Array>}
+   * @param {string} tenantBranch
+   * @returns {Promise<Object>}
    */
-  async getReadingHistory(machineId, limit = 12, branch = null) {
+  async getReadingHistory(machineId, limit = 12, tenantBranch) {
+    const machine = await this.machineRepo.findById(machineId);
+    assertRecordInTenant(machine, tenantBranch, 'Machine');
+
     const take = Math.min(Math.max(parseInt(limit, 10) || 12, 1), 500);
-    const options = {
-      take,
-      /** Reading period (year/month), not capture timestamp */
-      orderBy: [{ year: 'desc' }, { month: 'desc' }],
-      include: {
-        user: {
-          select: { name: true },
+    const readings = await this.readingRepo.findMany(
+      { machineId, branch: tenantBranch },
+      {
+        take,
+        /** Reading period (year/month), not capture timestamp */
+        orderBy: [{ year: 'desc' }, { month: 'desc' }],
+        include: {
+          user: {
+            select: { name: true },
+          },
         },
       },
-    };
-
-    // If branch filter is provided, use findMany with where clause
-    if (branch) {
-      const readings = await this.readingRepo.findMany(
-        { machineId, branch },
-        options
-      );
-      return { readings };
-    }
-
-    const readings = await this.readingRepo.findByMachineId(machineId, options);
+    );
     return { readings };
   }
 
@@ -460,23 +456,25 @@ export class ReadingService {
   }
 
   /**
-   * Delete a reading for a specific machine, year, and month (admin only)
+   * Delete a reading for a specific machine, year, and month (admin only, tenant-scoped)
    * @param {string} machineId
    * @param {number} year
    * @param {number} month
+   * @param {string} tenantBranch
    * @returns {Promise<Object>}
    */
-  async deleteReading(machineId, year, month) {
+  async deleteReading(machineId, year, month, tenantBranch) {
+    const machine = await this.machineRepo.findById(machineId);
+    assertRecordInTenant(machine, tenantBranch, 'Machine');
+
     const targetYear = parseInt(year);
     const targetMonth = parseInt(month);
 
-    // Check if reading exists
     const reading = await this.readingRepo.findByMachineIdAndYearMonth(machineId, targetYear, targetMonth);
-    if (!reading) {
+    if (!reading || reading.branch !== tenantBranch) {
       throw new NotFoundError('Reading not found');
     }
 
-    // Delete the reading
     await this.readingRepo.deleteByMachineIdAndYearMonth(machineId, targetYear, targetMonth);
 
     return {

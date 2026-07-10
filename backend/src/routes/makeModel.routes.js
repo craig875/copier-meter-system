@@ -11,12 +11,14 @@ import {
 } from '../controllers/makeModel.controller.js';
 import { importMakeModelParts } from '../controllers/import.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { requireTenantBranch } from '../middleware/tenant.js';
 import { validate } from '../middleware/validate.js';
 import { createMakeSchema, updateMakeSchema, createModelSchema, updateModelSchema } from '../schemas/makeModel.schema.js';
 
 const router = Router();
 
 router.use(authenticate);
+router.use(requireTenantBranch);
 
 // Read - all authenticated users (for machine form)
 router.get('/makes', getMakes);

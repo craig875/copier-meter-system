@@ -10,6 +10,7 @@ import {
 } from '../controllers/machine.controller.js';
 import { importMachines } from '../controllers/import.controller.js';
 import { authenticate, requireAdmin, requireMeterUserOrAdmin } from '../middleware/auth.js';
+import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireMeterReadingAccess } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import { createMachineSchema, updateMachineSchema, machineQuerySchema } from '../schemas/machine.schema.js';
@@ -18,6 +19,7 @@ const router = Router();
 
 // All machine routes require authentication and meter reading access
 router.use(authenticate);
+router.use(requireTenantBranch);
 router.use(requireMeterReadingAccess);
 
 router.get('/', validateQuery(machineQuerySchema), getMachines);

@@ -11,6 +11,7 @@ import {
   listUpdateRequests,
 } from '../controllers/fibre-order.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireFibreOrderAccess } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import {
@@ -25,6 +26,7 @@ import {
 const router = Router();
 
 router.use(authenticate);
+router.use(requireTenantBranch);
 router.use(requireFibreOrderAccess);
 
 router.get('/stats', validateQuery(fibreOrderStatsQuerySchema), getStats);

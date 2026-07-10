@@ -3,6 +3,7 @@ import { machineOnActiveCustomerOrUnassigned } from '../utils/customer-archive.j
 import { repositories } from '../repositories/index.js';
 import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { calcGeneralPart, calcTonerPart } from '../utils/consumableCalc.js';
+import { assertRecordInTenant } from '../middleware/tenant.js';
 
 /**
  * Consumable Service - Part tracking, yield validation, charge calculation
@@ -46,7 +47,7 @@ export class ConsumableService {
   /**
    * Record a part order/replacement and calculate yield/charges
    */
-  async recordPartOrder(data) {
+  async recordPartOrder(data, tenantBranch) {
     const {
       machineId,
       modelPartId,
@@ -56,10 +57,10 @@ export class ConsumableService {
     } = data;
 
     const machine = await this.machineRepo.findById(machineId);
-    if (!machine) throw new NotFoundError('Machine');
+    assertRecordInTenant(machine, tenantBranch, 'Machine');
 
     const modelPart = await this.modelPartRepo.findById(modelPartId);
-    if (!modelPart) throw new NotFoundError('Model part');
+    assertRecordInTenant(modelPart, tenantBranch, 'Model part');
 
     const machineModelId = machine.modelId || machine.model?.id;
     if (!machineModelId || machineModelId !== modelPart.modelId) {
@@ -118,10 +119,9 @@ export class ConsumableService {
   /**
    * Get consumable history for a machine
    */
-  async getMachineConsumableHistory(machineId, branch = null) {
+  async getMachineConsumableHistory(machineId, tenantBranch) {
     const machine = await this.machineRepo.findById(machineId);
-    if (!machine) throw new NotFoundError('Machine');
-    if (branch && machine.branch !== branch) throw new ValidationError('Machine belongs to different branch');
+    assertRecordInTenant(machine, tenantBranch, 'Machine');
 
     const replacements = await this.partReplacementRepo.findByMachineIdWithParts(machineId, 100);
     const modelDisplay = machine.model ? `${machine.model.make?.name || ''} ${machine.model.name || ''}`.trim() : null;
@@ -174,29 +174,29 @@ export class ConsumableService {
     });
   }
 
-  async getModelPartById(id) {
+  async getModelPartById(id, tenantBranch) {
     const part = await this.modelPartRepo.findById(id);
-    if (!part) throw new NotFoundError('Model part');
+    assertRecordInTenant(part, tenantBranch, 'Model part');
     return part;
   }
 
   async createModelPart(data) {
-    const branch = data.branch || 'JHB';
+    const branch = data.branch;
     const { modelId, ...rest } = data;
     const part = await this.modelPartRepo.create({ ...rest, modelId, branch });
     return { part };
   }
 
-  async updateModelPart(id, data) {
+  async updateModelPart(id, data, tenantBranch) {
     const existing = await this.modelPartRepo.findById(id);
-    if (!existing) throw new NotFoundError('Model part');
+    assertRecordInTenant(existing, tenantBranch, 'Model part');
     const part = await this.modelPartRepo.update(id, data);
     return { part };
   }
 
-  async deleteModelPart(id) {
+  async deleteModelPart(id, tenantBranch) {
     const existing = await this.modelPartRepo.findById(id);
-    if (!existing) throw new NotFoundError('Model part');
+    assertRecordInTenant(existing, tenantBranch, 'Model part');
     await this.modelPartRepo.delete(id);
     return { message: 'Model part deleted' };
   }
@@ -312,9 +312,8 @@ export class ConsumableService {
    * @param {string} userId - User performing the import
    * @returns {{ succeeded: number, failed: Array<{ row: number, error: string }> }}
    */
-  async importPartOrders(data, userId) {
+  async importPartOrders(data, userId, tenantBranch) {
     const results = { succeeded: 0, failed: [] };
-    const branch = null;
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
@@ -323,7 +322,7 @@ export class ConsumableService {
         const machine = await this.machineRepo.findBySerialNumber(
           String(row.machine_serial_number || '').trim()
         );
-        if (!machine) {
+        if (!machine || machine.branch !== tenantBranch) {
           results.failed.push({ row: rowNum, error: `Machine not found: ${row.machine_serial_number}` });
           continue;
         }
@@ -338,10 +337,10 @@ export class ConsumableService {
         const itemCode = (row.item_code || '').trim();
         const partName = (row.part_name || '').trim();
         if (itemCode) {
-          modelPart = await this.modelPartRepo.findByModelIdAndItemCode(modelId, itemCode, machine.branch);
+          modelPart = await this.modelPartRepo.findByModelIdAndItemCode(modelId, itemCode, tenantBranch);
         }
         if (!modelPart && partName) {
-          modelPart = await this.modelPartRepo.findByModelIdAndPartName(modelId, partName, machine.branch);
+          modelPart = await this.modelPartRepo.findByModelIdAndPartName(modelId, partName, tenantBranch);
         }
         if (!modelPart) {
           results.failed.push({
@@ -389,7 +388,7 @@ export class ConsumableService {
           displayChargeRand: calcResult.displayChargeRand,
           expectedYieldSnapshot: expectedYield,
           costRandSnapshot: costRand,
-          branch: machine.branch,
+          branch: tenantBranch,
           capturedBy: userId,
         });
 
@@ -408,9 +407,9 @@ export class ConsumableService {
   /**
    * Delete a part order/replacement record (admin only)
    */
-  async deletePartOrder(id) {
+  async deletePartOrder(id, tenantBranch) {
     const existing = await this.partReplacementRepo.findById(id);
-    if (!existing) throw new NotFoundError('Part order');
+    assertRecordInTenant(existing, tenantBranch, 'Part order');
     await this.partReplacementRepo.delete(id);
     return { message: 'Part order deleted' };
   }

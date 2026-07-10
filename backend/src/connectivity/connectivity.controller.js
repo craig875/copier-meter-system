@@ -4,7 +4,6 @@ import { ConnectivityRepository } from './connectivity.repository.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { services } from '../services/index.js';
 import { getMonitoringEngine } from './monitoring/engine.js';
-import { resolveConnectivityBranch } from './connectivity-branch.util.js';
 
 const repo = new ConnectivityRepository();
 const auditService = services.audit;
@@ -13,19 +12,19 @@ const reportService = new ReportService(repo);
 
 export class ConnectivityController {
   getDashboard = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const result = await connectivityService.getDashboard(branch);
     res.json(result);
   });
 
   getSummary = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const result = await connectivityService.getSummary(branch);
     res.json(result);
   });
 
   getTargets = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const filters = {
       branch,
       status: req.query.status,
@@ -38,7 +37,7 @@ export class ConnectivityController {
   });
 
   getTarget = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const checkLimit = req.query.checkLimit ? parseInt(req.query.checkLimit, 10) : undefined;
     const { startDate, endDate } = req.query;
     const options = { branch };
@@ -50,7 +49,7 @@ export class ConnectivityController {
   });
 
   checkTarget = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const { target } = await connectivityService.getTarget(req.params.id, { branch });
     const engine = getMonitoringEngine();
     await engine.runCheck(target);
@@ -59,40 +58,40 @@ export class ConnectivityController {
   });
 
   createTarget = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const result = await connectivityService.createTarget(req.body, branch);
     auditService.log(req.user.id, 'connectivity_target_create', 'monitoring_target', result.target?.id, { customerName: result.target?.customerName });
     res.status(201).json(result);
   });
 
   updateTarget = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const result = await connectivityService.updateTarget(req.params.id, req.body, branch);
     auditService.log(req.user.id, 'connectivity_target_update', 'monitoring_target', req.params.id, {});
     res.json(result);
   });
 
   deleteTarget = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const result = await connectivityService.deleteTarget(req.params.id, branch);
     auditService.log(req.user.id, 'connectivity_target_delete', 'monitoring_target', req.params.id, {});
     res.json(result);
   });
 
   setTargetStatus = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const result = await connectivityService.setTargetStatus(req.params.id, req.body.status, branch);
     res.json(result);
   });
 
   getTimeWindows = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const result = await connectivityService.getTimeWindows(branch);
     res.json(result);
   });
 
   createOrUpdateTimeWindow = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const result = await connectivityService.createOrUpdateTimeWindow(req.body, branch);
     res.json(result);
   });
@@ -106,7 +105,7 @@ export class ConnectivityController {
       startDate = startDate || start.toISOString().slice(0, 10);
       endDate = endDate || end.toISOString().slice(0, 10);
     }
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const result = await reportService.getUptimeReport(
       startDate,
       endDate,
@@ -127,7 +126,7 @@ export class ConnectivityController {
       startDate = startDate || start.toISOString().slice(0, 10);
       endDate = endDate || end.toISOString().slice(0, 10);
     }
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const result = await reportService.getSlaReport(
       startDate,
       endDate,
@@ -150,7 +149,7 @@ export class ConnectivityController {
       startDate = startDate || start.toISOString().slice(0, 10);
       endDate = endDate || end.toISOString().slice(0, 10);
     }
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const csv = await reportService.exportCsv(startDate, endDate, branch);
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="uptime-report-${startDate}-${endDate}.csv"`);
@@ -158,7 +157,7 @@ export class ConnectivityController {
   });
 
   getOutages = asyncHandler(async (req, res) => {
-    const branch = resolveConnectivityBranch(req);
+    const branch = req.tenantBranch;
     const filters = {
       branch,
       targetId: req.query.targetId,

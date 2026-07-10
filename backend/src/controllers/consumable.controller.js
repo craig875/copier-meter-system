@@ -1,6 +1,5 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { hasAdminAccess } from '../utils/permissions.js';
 
 /**
  * Consumable Controller - Part tracking, yield validation, charge calculation
@@ -12,15 +11,13 @@ export class ConsumableController {
 
   getModelParts = asyncHandler(async (req, res) => {
     const { modelId } = req.query;
-    const branch = req.query.branch || (req.user?.branch ? String(req.user.branch) : null);
-    const parts = await this.consumableService.getModelParts(modelId, branch);
+    const parts = await this.consumableService.getModelParts(modelId, req.tenantBranch);
     res.json({ parts });
   });
 
   recordPartOrder = asyncHandler(async (req, res) => {
     const data = { ...req.body, capturedBy: req.user.id };
-    const result = await this.consumableService.recordPartOrder(data);
-    // Notify admins (fire-and-forget)
+    const result = await this.consumableService.recordPartOrder(data, req.tenantBranch);
     const { replacement } = result;
     if (replacement?.machineId && replacement?.modelPart?.partName) {
       services.notification.notifyPartOrderCaptured({
@@ -37,15 +34,16 @@ export class ConsumableController {
 
   getMachineHistory = asyncHandler(async (req, res) => {
     const { machineId } = req.params;
-    const branch = req.query.branch || (req.user?.branch ? String(req.user.branch) : null);
-    const result = await this.consumableService.getMachineConsumableHistory(machineId, branch);
+    const result = await this.consumableService.getMachineConsumableHistory(
+      machineId,
+      req.tenantBranch,
+    );
     res.json(result);
   });
 
   getSummary = asyncHandler(async (req, res) => {
-    const branch = req.query.branch || req.user?.selectedBranch || (req.user?.branch ? String(req.user.branch) : null);
     const filters = {
-      branch: branch && ['JHB', 'CT'].includes(branch) ? branch : null,
+      branch: req.tenantBranch,
       model: req.query.model,
       partType: req.query.partType,
       complianceStatus: req.query.complianceStatus,
@@ -55,54 +53,70 @@ export class ConsumableController {
   });
 
   getModelPartsAll = asyncHandler(async (req, res) => {
-    const branch = req.query.branch || (req.user?.branch ? String(req.user.branch) : null);
-    const parts = await this.consumableService.listModelParts(branch);
+    const parts = await this.consumableService.listModelParts(req.tenantBranch);
     res.json({ parts });
   });
 
   getModelPartById = asyncHandler(async (req, res) => {
-    const part = await this.consumableService.getModelPartById(req.params.id);
+    const part = await this.consumableService.getModelPartById(req.params.id, req.tenantBranch);
     res.json({ part });
   });
 
   createModelPart = asyncHandler(async (req, res) => {
-    const result = await this.consumableService.createModelPart(req.body);
+    const result = await this.consumableService.createModelPart({
+      ...req.body,
+      branch: req.tenantBranch,
+    });
     res.status(201).json(result);
   });
 
   updateModelPart = asyncHandler(async (req, res) => {
-    const result = await this.consumableService.updateModelPart(req.params.id, req.body);
+    const { branch: _ignored, ...rest } = req.body;
+    const result = await this.consumableService.updateModelPart(
+      req.params.id,
+      rest,
+      req.tenantBranch,
+    );
     res.json(result);
   });
 
   deleteModelPart = asyncHandler(async (req, res) => {
-    const result = await this.consumableService.deleteModelPart(req.params.id);
+    const result = await this.consumableService.deleteModelPart(
+      req.params.id,
+      req.tenantBranch,
+    );
     res.json(result);
   });
 
   increaseCosts = asyncHandler(async (req, res) => {
-    const { percentIncrease, branch, makeId } = req.body;
+    const { percentIncrease, makeId } = req.body;
     const result = await this.consumableService.increaseCostsByPercent(
       percentIncrease,
-      branch || null,
-      makeId || null
+      req.tenantBranch,
+      makeId || null,
     );
     res.json(result);
   });
 
   deletePartOrder = asyncHandler(async (req, res) => {
-    const result = await this.consumableService.deletePartOrder(req.params.id);
+    const result = await this.consumableService.deletePartOrder(
+      req.params.id,
+      req.tenantBranch,
+    );
     res.json(result);
   });
 
   getTonerAlerts = asyncHandler(async (req, res) => {
-    const branch = req.query.branch || req.user?.selectedBranch || (req.user?.branch ? String(req.user.branch) : null);
-    const result = await this.consumableService.getTonerAlertsByCustomer(branch);
+    const result = await this.consumableService.getTonerAlertsByCustomer(req.tenantBranch);
     res.json(result);
   });
 
   importPartOrders = asyncHandler(async (req, res) => {
-    const result = await this.consumableService.importPartOrders(req.body.data, req.user.id);
+    const result = await this.consumableService.importPartOrders(
+      req.body.data,
+      req.user.id,
+      req.tenantBranch,
+    );
     res.json(result);
   });
 }

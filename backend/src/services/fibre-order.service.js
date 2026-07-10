@@ -1,6 +1,7 @@
 import { repositories } from '../repositories/index.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { hasAdminAccess } from '../utils/permissions.js';
+import { assertRecordInTenant } from '../middleware/tenant.js';
 import {
   FIBRE_PIPELINE_TERMINAL,
   isActiveFibreOrderRecord,
@@ -84,18 +85,12 @@ export class FibreOrderService {
   }
 
   buildListWhere(user, filters = {}) {
-    const where = {};
+    const where = {
+      branch: filters.branch,
+    };
 
     if (user.role === 'sales_agent') {
       where.salesAgentId = user.id;
-    }
-
-    if (
-      filters.branch &&
-      ['JHB', 'CT'].includes(filters.branch) &&
-      user.role !== 'sales_agent'
-    ) {
-      where.branch = filters.branch;
     }
 
     if (filters.pipelineStatus) {
@@ -141,21 +136,13 @@ export class FibreOrderService {
     return orders.map(enrichOrder);
   }
 
-  async getStats(user, branch = null) {
-    const where = {};
+  async getStats(user, branch) {
+    const where = { branch };
 
     if (user.role === 'sales_agent') {
       where.salesAgentId = user.id;
     } else if (!this.canManageOrders(user)) {
       throw new ForbiddenError('Statistics are only available to administrators and managers');
-    }
-
-    if (
-      branch &&
-      ['JHB', 'CT'].includes(branch) &&
-      user.role !== 'sales_agent'
-    ) {
-      where.branch = branch;
     }
 
     const activeWhere = activeListWhere(where);
@@ -181,12 +168,12 @@ export class FibreOrderService {
     };
   }
 
-  async getOrderById(user, id) {
+  async getOrderById(user, id, tenantBranch) {
     const order = await this.orderRepo.findByIdWithRelations(id);
-    if (!order) throw new NotFoundError('Fibre order');
+    assertRecordInTenant(order, tenantBranch, 'Fibre order');
 
     if (user.role === 'sales_agent' && order.salesAgentId !== user.id) {
-      throw new ForbiddenError('You can only view orders assigned to you');
+      throw new NotFoundError('Fibre order');
     }
 
     const pendingUpdateRequest = await this.updateRequestRepo.findPendingByOrderId(id);
@@ -197,8 +184,8 @@ export class FibreOrderService {
     };
   }
 
-  async getOrderUpdates(user, orderId) {
-    await this.getOrderById(user, orderId);
+  async getOrderUpdates(user, orderId, tenantBranch) {
+    await this.getOrderById(user, orderId, tenantBranch);
     return this.updateRepo.findByOrderId(orderId);
   }
 
@@ -220,7 +207,7 @@ export class FibreOrderService {
     return addWeeks(placement, product.defaultEtaWeeks);
   }
 
-  async createOrder(user, data) {
+  async createOrder(user, data, tenantBranch) {
     if (!this.canManageOrders(user)) {
       throw new ForbiddenError('Only administrators and managers can create orders');
     }
@@ -234,7 +221,7 @@ export class FibreOrderService {
     const placementDate = parseDateOnly(data.orderPlacementDate);
 
     const order = await this.orderRepo.create({
-      branch: data.branch,
+      branch: tenantBranch,
       customerName: data.customerName,
       customerReference: data.customerReference ?? null,
       installationAddress: data.installationAddress,
@@ -258,22 +245,23 @@ export class FibreOrderService {
       updatedById: user.id,
     });
 
-    return this.getOrderById(user, order.id);
+    return this.getOrderById(user, order.id, tenantBranch);
   }
 
-  async updateOrder(user, id, data) {
+  async updateOrder(user, id, data, tenantBranch) {
     if (!this.canManageOrders(user)) {
       throw new ForbiddenError('Only administrators and managers can update orders');
     }
 
     const existing = await this.orderRepo.findByIdWithRelations(id);
-    if (!existing) throw new NotFoundError('Fibre order');
+    assertRecordInTenant(existing, tenantBranch, 'Fibre order');
 
     const timelineNote = data.note?.trim() || null;
     const updateData = { ...data };
     delete updateData.pipelineStatus;
     delete updateData.overlayStatus;
     delete updateData.note;
+    delete updateData.branch;
 
     if (data.salesAgentId) {
       await this.validateSalesAgent(data.salesAgentId);
@@ -333,15 +321,15 @@ export class FibreOrderService {
 
     await this.updateRequestRepo.resolvePendingForOrder(id, user.id);
 
-    return this.getOrderById(user, id);
+    return this.getOrderById(user, id, tenantBranch);
   }
 
-  async requestOrderUpdate(user, orderId, note) {
+  async requestOrderUpdate(user, orderId, note, tenantBranch) {
     if (user.role !== 'sales_agent') {
       throw new ForbiddenError('Only sales agents can request order updates');
     }
 
-    const order = await this.getOrderById(user, orderId);
+    const order = await this.getOrderById(user, orderId, tenantBranch);
     if (order.pendingUpdateRequest) {
       throw new ValidationError('An update has already been requested for this order');
     }
@@ -355,26 +343,21 @@ export class FibreOrderService {
     return request;
   }
 
-  async listPendingUpdateRequests(user, branch = null) {
+  async listPendingUpdateRequests(user, branch) {
     if (!this.canManageOrders(user)) {
       throw new ForbiddenError('Only administrators and managers can view update requests');
     }
 
-    const where = {};
-    if (branch && ['JHB', 'CT'].includes(branch)) {
-      where.order = { branch };
-    }
-
-    return this.updateRequestRepo.findManyPending(where);
+    return this.updateRequestRepo.findManyPending({ order: { branch } });
   }
 
-  async addNote(user, id, note) {
+  async addNote(user, id, note, tenantBranch) {
     if (!this.canManageOrders(user)) {
       throw new ForbiddenError('Only administrators and managers can add notes');
     }
 
     const existing = await this.orderRepo.findById(id);
-    if (!existing) throw new NotFoundError('Fibre order');
+    assertRecordInTenant(existing, tenantBranch, 'Fibre order');
 
     await this.updateRepo.create({
       orderId: id,
@@ -388,6 +371,6 @@ export class FibreOrderService {
 
     await this.updateRequestRepo.resolvePendingForOrder(id, user.id);
 
-    return this.getOrderUpdates(user, id);
+    return this.getOrderUpdates(user, id, tenantBranch);
   }
 }
