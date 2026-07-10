@@ -4,7 +4,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import CapturerRestrict from './components/CapturerRestrict';
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import BranchSelect from './pages/BranchSelect';
 import HomeDashboard from './pages/HomeDashboard';
 import Dashboard from './pages/Dashboard';
 import Capture from './pages/Capture';
@@ -51,15 +50,6 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-
-      <Route
-        path="/branch-select"
-        element={
-          <ProtectedRoute>
-            <BranchSelect />
-          </ProtectedRoute>
-        }
-      />
 
       {/* Main Dashboard - Shows available modules */}
       <Route

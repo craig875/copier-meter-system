@@ -9,7 +9,6 @@ import { Loader2, Pencil, Check, X, Search, Percent } from 'lucide-react';
 const PartsPricing = () => {
   const queryClient = useQueryClient();
   const { effectiveBranch } = useAuth();
-  const [branchFilter, setBranchFilter] = useState(effectiveBranch || '');
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editCost, setEditCost] = useState('');
@@ -18,8 +17,9 @@ const PartsPricing = () => {
   const [increaseMakeId, setIncreaseMakeId] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['model-parts-all', branchFilter || null],
-    queryFn: () => consumablesApi.getModelPartsAll(branchFilter || null),
+    queryKey: ['model-parts-all', effectiveBranch],
+    queryFn: () => consumablesApi.getModelPartsAll(effectiveBranch),
+    enabled: effectiveBranch != null,
   });
 
   const updateMutation = useMutation({
@@ -101,7 +101,7 @@ const PartsPricing = () => {
     }
     increaseMutation.mutate({
       percentIncrease: pct,
-      branch: branchFilter || null,
+      branch: effectiveBranch || null,
       makeId: increaseMakeId || null,
     });
   };
@@ -146,18 +146,6 @@ const PartsPricing = () => {
               />
             </div>
           </div>
-          <div data-tour="parts-pricing-branch">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-            >
-              <option value="">All branches</option>
-              <option value="JHB">JHB</option>
-              <option value="CT">CT</option>
-            </select>
-          </div>
           <button
             data-tour="parts-pricing-increase"
             onClick={() => setShowIncreaseModal(true)}
@@ -175,7 +163,7 @@ const PartsPricing = () => {
           <div className="popup-panel p-6 max-w-sm w-full">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Increase costs by percentage</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Increase part costs{branchFilter ? ` (${branchFilter})` : ' (all branches)'}
+              Increase part costs for your site
               {increaseMakeId ? ` for the selected make only` : ''} by a percentage. Use when suppliers raise prices.
             </p>
             <div className="mb-4">

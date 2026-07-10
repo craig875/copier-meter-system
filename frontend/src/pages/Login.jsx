@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
 import toast from 'react-hot-toast';
 import logo from '../assets/logo.png';
-import { shouldPromptForBranch } from '../utils/branchSelection';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -30,13 +29,9 @@ const Login = () => {
 
     try {
       if (show2FAStep) {
-        const user = await loginWith2FA(tempToken, code);
+        await loginWith2FA(tempToken, code);
         toast.success('Login successful');
-        if (shouldPromptForBranch(user)) {
-          navigate('/branch-select', { replace: true, state: { from: location.state?.from } });
-        } else {
-          navigate(getRedirectPath(), { replace: true });
-        }
+        navigate(getRedirectPath(), { replace: true });
       } else {
         const result = await login(email, password);
         if (result?.requires2FA && result?.tempToken) {
@@ -45,11 +40,7 @@ const Login = () => {
           toast.success('Enter your 6-digit code');
         } else {
           toast.success('Login successful');
-          if (shouldPromptForBranch(result)) {
-            navigate('/branch-select', { replace: true, state: { from: location.state?.from } });
-          } else {
-            navigate(getRedirectPath(), { replace: true });
-          }
+          navigate(getRedirectPath(), { replace: true });
         }
       }
     } catch (error) {

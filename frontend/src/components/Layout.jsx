@@ -39,12 +39,12 @@ const Layout = ({ children }) => {
     isCapturer,
     hasModule,
     effectiveBranch,
-    requestBranchSwitch,
-    canSwitchBranches,
   } = useAuth();
   const showCopiers = hasModule(MODULE_COPERS);
   const showConnectivity = hasModule(MODULE_CONNECTIVITY);
   const showFibreOrders = hasModule(MODULE_FIBRE_ORDERS);
+  const branchCityLabel =
+    effectiveBranch === 'CT' ? 'Cape Town' : effectiveBranch === 'JHB' ? 'Johannesburg' : null;
   const navigate = useNavigate();
   const location = useLocation();
   const consumablesMachineMatch = useMatch('/consumables/machines/:machineId/*');
@@ -318,30 +318,18 @@ const Layout = ({ children }) => {
             <Shield className="h-5 w-5 mr-3" />
             Security
           </Link>
-          {canSwitchBranches && (
-            <button
-              type="button"
-              data-tour="branch-selector"
-              onClick={() => requestBranchSwitch()}
-              className="w-full mb-1 px-3 py-2.5 text-sm font-medium text-center text-white bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-              title="Choose Johannesburg or Cape Town (same as after login)"
-            >
-              Switch branch
-            </button>
-          )}
-
           {/* User Info */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-white">{user?.name}</p>
               <div className="flex items-center gap-2">
                 <p className="text-xs text-gray-400">{user?.role}</p>
-                {effectiveBranch && (
+                {branchCityLabel && (
                   <>
                     <span className="text-xs text-gray-500">•</span>
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                    <span className="text-xs text-gray-400 flex items-center gap-1" title={effectiveBranch}>
                       <Building2 className="h-3 w-3" />
-                      {effectiveBranch}
+                      {branchCityLabel}
                     </span>
                   </>
                 )}

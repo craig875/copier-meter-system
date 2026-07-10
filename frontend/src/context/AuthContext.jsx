@@ -16,30 +16,18 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedBranch, setSelectedBranch] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const initAuth = async () => {
       const token = sessionStorage.getItem('token');
       const storedUser = sessionStorage.getItem('user');
-      
+
       if (token && storedUser) {
         try {
           const response = await authApi.getMe();
           const userData = response.data.user;
           setUser({ ...userData, twoFactorEnabled: userData.twoFactorEnabled ?? false });
-          // Initialize selectedBranch for admins or meter users with no branch assigned
-          // (both can switch between branches)
-          if (
-            userData.role === 'admin' ||
-            userData.role === 'manager' ||
-            ((userData.role === 'meter_user' || userData.role === 'capturer') && !userData.branch)
-          ) {
-            const storedBranch = localStorage.getItem('selectedBranch');
-            // Restore from localStorage only; no default until BranchSelect or header switch
-            setSelectedBranch(storedBranch || userData.branch || null);
-          }
         } catch (error) {
           sessionStorage.removeItem('token');
           sessionStorage.removeItem('user');
@@ -56,14 +44,8 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.setItem('token', token);
     sessionStorage.setItem('user', JSON.stringify(userWith2FA));
     setUser(userWith2FA);
-    if (
-      userWith2FA.role === 'admin' ||
-      userWith2FA.role === 'manager' ||
-      ((userWith2FA.role === 'meter_user' || userWith2FA.role === 'capturer') && !userWith2FA.branch)
-    ) {
-      const storedBranch = localStorage.getItem('selectedBranch');
-      setSelectedBranch(storedBranch || userWith2FA.branch || null);
-    }
+    // Clear legacy soft-tenancy key if present
+    localStorage.removeItem('selectedBranch');
     return userWith2FA;
   };
 
@@ -105,7 +87,6 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.removeItem('user');
     localStorage.removeItem('selectedBranch');
     setUser(null);
-    setSelectedBranch(null);
     navigate('/login');
   };
 
@@ -115,14 +96,10 @@ export const AuthProvider = ({ children }) => {
   /** Admin or manager (elevated UI; managers still use `modules` via hasModule) */
   const isElevated = isAdmin || isManager;
 
-  // Check if user is a meter user
   const isMeterUser = user?.role === 'meter_user';
-  // Check if user is a capturer (capture-only)
   const isCapturer = user?.role === 'capturer';
-  // Check if user is a viewer (connectivity read-only)
   const isViewer = user?.role === 'viewer';
 
-  /** Feature modules (only admins bypass the list) */
   const hasModule = (moduleKey) => {
     if (user?.role === 'admin') return true;
     const list = user?.modules ?? [];
@@ -133,60 +110,31 @@ export const AuthProvider = ({ children }) => {
   const canManageConnectivity =
     isAdmin || (isManager && hasModule(MODULE_CONNECTIVITY));
 
-  // Get the effective branch:
-  // - admins/managers: use selectedBranch (can switch)
-  // - meter users with no branch assigned: use selectedBranch (can switch)
-  // - meter users with branch assigned: use their assigned branch (cannot switch)
-  const canSwitchBranches =
-    isAdmin || isManager || ((isMeterUser || isCapturer) && !user?.branch);
-  const effectiveBranch = canSwitchBranches ? (selectedBranch ?? null) : (user?.branch || null);
-  
-  // Helper to update selectedBranch and persist to localStorage
-  const updateSelectedBranch = (branch) => {
-    if (canSwitchBranches) {
-      setSelectedBranch(branch);
-      localStorage.setItem('selectedBranch', branch);
-    }
-  };
-
-  /** Clear branch choice and go to the same site picker as after login (full navigation). */
-  const requestBranchSwitch = () => {
-    if (!canSwitchBranches) return;
-    localStorage.removeItem('selectedBranch');
-    try {
-      const path = window.location.pathname + window.location.search + window.location.hash;
-      sessionStorage.setItem('branchSelectReturn', path);
-    } catch {
-      // ignore
-    }
-    window.location.assign('/branch-select');
-  };
+  /** Always the logged-in user's home branch (hard tenancy). */
+  const effectiveBranch = user?.branch || null;
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      login, 
-      loginWith2FA,
-      refreshUser,
-      logout,
-      isAdmin,
-      isManager,
-      isSalesAgent,
-      isElevated,
-      isMeterUser,
-      isCapturer,
-      isViewer,
-      canAccessConnectivity,
-      canManageConnectivity,
-      hasModule,
-      canSwitchBranches,
-      selectedBranch,
-      setSelectedBranch,
-      effectiveBranch,
-      updateSelectedBranch,
-      requestBranchSwitch
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        loginWith2FA,
+        refreshUser,
+        logout,
+        isAdmin,
+        isManager,
+        isSalesAgent,
+        isElevated,
+        isMeterUser,
+        isCapturer,
+        isViewer,
+        canAccessConnectivity,
+        canManageConnectivity,
+        hasModule,
+        effectiveBranch,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

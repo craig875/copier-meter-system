@@ -29,6 +29,13 @@ export default function FibreOrderForm() {
     notes: '',
   });
 
+  const branchCityLabel =
+    (isEditing ? form.branch : effectiveBranch) === 'CT'
+      ? 'Cape Town'
+      : (isEditing ? form.branch : effectiveBranch) === 'JHB'
+        ? 'Johannesburg'
+        : '—';
+
   const { data: productsData } = useQuery({
     queryKey: ['fibre-products'],
     queryFn: () => fibreProductsApi.list(false),
@@ -123,6 +130,7 @@ export default function FibreOrderForm() {
     }
     mutation.mutate({
       ...form,
+      branch: isEditing ? form.branch : (effectiveBranch || form.branch),
       customerReference: form.customerReference || null,
       notes: form.notes || null,
     });
@@ -142,17 +150,10 @@ export default function FibreOrderForm() {
       <form onSubmit={handleSubmit} className="tile-card p-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
-            <select
-              name="branch"
-              value={form.branch}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-            >
-              <option value="JHB">Johannesburg (JHB)</option>
-              <option value="CT">Cape Town (CT)</option>
-            </select>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+            <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800">
+              {branchCityLabel}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Order Placement Date *</label>

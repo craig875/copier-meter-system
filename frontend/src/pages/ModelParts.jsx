@@ -21,8 +21,15 @@ const ModelParts = () => {
     expectedYield: '',
     costRand: '',
     meterType: 'mono',
-    branch: 'JHB',
+    branch: effectiveBranch || 'JHB',
   });
+
+  const branchCityLabel =
+    (form.branch || effectiveBranch) === 'CT'
+      ? 'Cape Town'
+      : (form.branch || effectiveBranch) === 'JHB'
+        ? 'Johannesburg'
+        : '—';
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['model-parts-all', effectiveBranch],
@@ -113,7 +120,7 @@ const ModelParts = () => {
       expectedYield: parseInt(form.expectedYield, 10),
       costRand: parseFloat(form.costRand) || 0,
       meterType: form.meterType,
-      branch: form.branch,
+      branch: editing ? (form.branch || effectiveBranch) : (effectiveBranch || form.branch),
     };
     if (editing) {
       updateMutation.mutate({ id: editing.id, data: payload });
@@ -334,14 +341,9 @@ const ModelParts = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Branch</label>
-                <select
-                  value={form.branch}
-                  onChange={(e) => setForm((f) => ({ ...f, branch: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="JHB">JHB</option>
-                  <option value="CT">CT</option>
-                </select>
+                <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800">
+                  {branchCityLabel}
+                </div>
               </div>
               <div className="flex gap-2 pt-4">
                 <button

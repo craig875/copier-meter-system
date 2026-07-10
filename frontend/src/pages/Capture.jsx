@@ -318,11 +318,10 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
 const Capture = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isElevated, effectiveBranch, updateSelectedBranch, canSwitchBranches } = useAuth();
+  const { isElevated, effectiveBranch } = useAuth();
   const now = new Date();
   const urlYear = searchParams.get('year');
   const urlMonth = searchParams.get('month');
-  const urlBranch = searchParams.get('branch');
   const highlightMachineId = searchParams.get('machineId');
   const [year, setYear] = useState(urlYear ? parseInt(urlYear, 10) : now.getFullYear());
   const [month, setMonth] = useState(urlMonth ? parseInt(urlMonth, 10) : now.getMonth() + 1);
@@ -333,7 +332,7 @@ const Capture = () => {
   const [unableToObtainModal, setUnableToObtainModal] = useState(null);
   const [unableToObtainSubmitting, setUnableToObtainSubmitting] = useState(false);
 
-  const queryBranch = urlBranch && canSwitchBranches ? urlBranch : effectiveBranch;
+  const queryBranch = effectiveBranch;
 
   const { data, isLoading, error, isError } = useQuery({
     queryKey: ['readings', year, month, queryBranch],
@@ -400,7 +399,7 @@ const Capture = () => {
     : 0;
   const isComplete = summary.totalMachines > 0 && summary.capturedCount === summary.totalMachines;
 
-  // Sync year/month/branch from URL when they change (e.g. from notification link)
+  // Sync year/month from URL when they change (e.g. from notification link)
   useEffect(() => {
     if (urlYear && urlMonth) {
       const y = parseInt(urlYear, 10);
@@ -408,10 +407,7 @@ const Capture = () => {
       if (!isNaN(y) && y >= 2000 && y <= 2100) setYear(y);
       if (!isNaN(m) && m >= 1 && m <= 12) setMonth(m);
     }
-    if (urlBranch && canSwitchBranches && (urlBranch === 'JHB' || urlBranch === 'CT')) {
-      updateSelectedBranch(urlBranch);
-    }
-  }, [urlYear, urlMonth, urlBranch, canSwitchBranches, updateSelectedBranch]);
+  }, [urlYear, urlMonth]);
 
   // Scroll to machine row when arriving from notification link
   useEffect(() => {

@@ -632,8 +632,8 @@ const Customers = ({ title = 'Customers' }) => {
 };
 
 const branchLabel = (b) => {
-  if (b === 'CT') return 'Cape Town (CT)';
-  if (b === 'JHB') return 'Johannesburg (JHB)';
+  if (b === 'CT') return 'Cape Town';
+  if (b === 'JHB') return 'Johannesburg';
   return b || '—';
 };
 
@@ -660,7 +660,7 @@ const CustomerModal = ({ customer, onClose }) => {
         payload.branch = customer.branch;
       } else {
         if (!effectiveBranch || (effectiveBranch !== 'JHB' && effectiveBranch !== 'CT')) {
-          throw new Error('Select a branch before adding a customer');
+          throw new Error('Your account has no branch assigned');
         }
         payload.branch = effectiveBranch;
       }
@@ -682,7 +682,7 @@ const CustomerModal = ({ customer, onClose }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!isEditing && (!effectiveBranch || (effectiveBranch !== 'JHB' && effectiveBranch !== 'CT'))) {
-      toast.error('Select a branch before adding a customer');
+      toast.error('Your account has no branch assigned');
       return;
     }
     mutation.mutate(formData);
@@ -772,7 +772,7 @@ const CustomerModal = ({ customer, onClose }) => {
             ) : (
               <>
                 <span className="font-medium text-gray-800">New customers are added to: </span>
-                {effectiveBranch ? branchLabel(effectiveBranch) : 'Select a branch in the header first.'}
+                {effectiveBranch ? branchLabel(effectiveBranch) : '—'}
               </>
             )}
           </div>

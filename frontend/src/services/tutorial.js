@@ -38,15 +38,7 @@ const stepsByPath = {
       element: '[data-tour="sidebar"]',
       popover: {
         title: 'Navigation',
-        description: 'Use the sidebar to move between sections. Home, Copier Service (Customers, Meter Readings, Machines, Consumable Summary), and Admin tools if you have access.',
-        side: 'right',
-      },
-    },
-    {
-      element: '[data-tour="branch-selector"]',
-      popover: {
-        title: 'Switch Branch',
-        description: 'If you have access to multiple branches, use Switch branch to open the site picker (same as after login). Choose Johannesburg (JHB) or Cape Town (CT); you return to where you were.',
+        description: 'Use the sidebar to move between sections. Home, Copier Service (Customers, Meter Readings, Machines, Consumable Summary), and Admin tools if you have access. Your site (Johannesburg or Cape Town) is shown at the bottom of the sidebar.',
         side: 'right',
       },
     },
@@ -342,14 +334,6 @@ const stepsByPath = {
       popover: {
         title: 'Search',
         description: 'Filter parts by part name, item code, make, or model.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="parts-pricing-branch"]',
-      popover: {
-        title: 'Branch',
-        description: 'Show parts for a specific branch (JHB/CT) or all branches.',
         side: 'bottom',
       },
     },

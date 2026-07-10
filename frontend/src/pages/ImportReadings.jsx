@@ -67,14 +67,16 @@ function mapReadingCsvField(header, value, row) {
 const ImportReadings = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { selectedBranch, effectiveBranch } = useAuth();
+  const { effectiveBranch } = useAuth();
   const [file, setFile] = useState(null);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
-  const [branch, setBranch] = useState(effectiveBranch || 'JHB');
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState(null);
   const [errors, setErrors] = useState([]);
+  const branch = effectiveBranch;
+  const branchCityLabel =
+    branch === 'CT' ? 'Cape Town' : branch === 'JHB' ? 'Johannesburg' : null;
 
   // CSV parsing function - handles quoted values
   const parseCSVLine = (line) => {
@@ -220,7 +222,7 @@ const ImportReadings = () => {
     }
 
     if (!branch) {
-      toast.error('Please select a branch');
+      toast.error('Your account has no branch assigned');
       return;
     }
 
@@ -385,17 +387,11 @@ const ImportReadings = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Branch *
+              Branch
             </label>
-            <select
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              required
-            >
-              <option value="JHB">Johannesburg (JHB)</option>
-              <option value="CT">Cape Town (CT)</option>
-            </select>
+            <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800">
+              {branchCityLabel || '—'}
+            </div>
           </div>
         </div>
 
