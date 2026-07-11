@@ -212,11 +212,14 @@ model FibreProduct {
   defaultEtaWeeks Int      @map("default_eta_weeks")
   notes           String?  @map("notes")
   isActive        Boolean  @default(true) @map("is_active")
+  branch          Branch   @map("branch")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   orders FibreOrder[]
 
+  @@unique([name, branch])
+  @@index([branch])
   @@map("fibre_products")
 }
 
@@ -332,10 +335,13 @@ model Customer {
 
 model Make {
   id      String   @id @default(uuid())
-  name    String   @unique @map("name")
+  name    String   @map("name")
+  branch  Branch   @map("branch")
 
   models  Model[]
 
+  @@unique([name, branch])
+  @@index([branch])
   @@map("makes")
 }
 
@@ -356,6 +362,7 @@ model Model {
   paperSize   PaperSize  @default(A4) @map("paper_size")
   modelType   ModelType  @default(mono) @map("model_type")
   machineLife Int?       @map("machine_life")
+  branch      Branch     @map("branch")
 
   make      Make      @relation(fields: [makeId], references: [id], onDelete: Restrict)
   machines  Machine[]
@@ -363,6 +370,7 @@ model Model {
 
   @@unique([makeId, name])
   @@index([makeId])
+  @@index([branch])
   @@map("models")
 }
 

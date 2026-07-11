@@ -198,9 +198,17 @@ export class FibreOrderService {
     return agent;
   }
 
-  async computeExpectedInstallDate(productId, orderPlacementDate) {
+  async assertProductInTenant(productId, tenantBranch, { requireActive = true } = {}) {
     const product = await this.productRepo.findById(productId);
-    if (!product || !product.isActive) throw new NotFoundError('Fibre product');
+    assertRecordInTenant(product, tenantBranch, 'Fibre product');
+    if (requireActive && !product.isActive) throw new NotFoundError('Fibre product');
+    return product;
+  }
+
+  async computeExpectedInstallDate(productId, orderPlacementDate, tenantBranch) {
+    const product = await this.assertProductInTenant(productId, tenantBranch, {
+      requireActive: true,
+    });
     const placement = typeof orderPlacementDate === 'string'
       ? parseDateOnly(orderPlacementDate)
       : orderPlacementDate;
@@ -215,7 +223,8 @@ export class FibreOrderService {
     await this.validateSalesAgent(data.salesAgentId);
     const expectedInstallDate = await this.computeExpectedInstallDate(
       data.productId,
-      data.orderPlacementDate
+      data.orderPlacementDate,
+      tenantBranch
     );
     const pipelineStatus = data.pipelineStatus ?? 'order_placed';
     const placementDate = parseDateOnly(data.orderPlacementDate);
@@ -275,8 +284,12 @@ export class FibreOrderService {
     if (data.productId || data.orderPlacementDate) {
       updateData.expectedInstallDate = await this.computeExpectedInstallDate(
         productId,
-        placementInput
+        placementInput,
+        tenantBranch
       );
+    } else {
+      // Ensure existing product still belongs to tenant (defence in depth)
+      await this.assertProductInTenant(productId, tenantBranch, { requireActive: false });
     }
 
     if (data.orderPlacementDate) {

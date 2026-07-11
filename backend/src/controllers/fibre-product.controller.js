@@ -7,28 +7,33 @@ export class FibreProductController {
   }
 
   listProducts = asyncHandler(async (req, res) => {
-    const includeInactive = req.query.includeInactive === 'true' && ['admin', 'manager'].includes(req.user?.role);
-    const products = await this.fibreProductService.list(!includeInactive);
+    const includeInactive =
+      req.query.includeInactive === 'true' && ['admin', 'manager'].includes(req.user?.role);
+    const products = await this.fibreProductService.list(req.tenantBranch, !includeInactive);
     res.json({ products });
   });
 
   getProduct = asyncHandler(async (req, res) => {
-    const product = await this.fibreProductService.getById(req.params.id);
+    const product = await this.fibreProductService.getById(req.params.id, req.tenantBranch);
     res.json({ product });
   });
 
   createProduct = asyncHandler(async (req, res) => {
-    const product = await this.fibreProductService.create(req.body);
+    const product = await this.fibreProductService.create(req.body, req.tenantBranch);
     res.status(201).json({ product });
   });
 
   updateProduct = asyncHandler(async (req, res) => {
-    const product = await this.fibreProductService.update(req.params.id, req.body);
+    const product = await this.fibreProductService.update(
+      req.params.id,
+      req.body,
+      req.tenantBranch,
+    );
     res.json({ product });
   });
 
   deleteProduct = asyncHandler(async (req, res) => {
-    const product = await this.fibreProductService.deactivate(req.params.id);
+    const product = await this.fibreProductService.deactivate(req.params.id, req.tenantBranch);
     res.json({ product });
   });
 }

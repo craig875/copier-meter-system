@@ -167,7 +167,7 @@ const MachineConfiguration = () => {
   });
 
   const importMakeModelParts = useMutation({
-    mutationFn: ({ data, branch }) => makesApi.import(data, branch),
+    mutationFn: ({ data }) => makesApi.import(data),
     onSuccess: (res) => {
       const r = res?.results || res;
       toast.success(
@@ -257,7 +257,6 @@ const MachineConfiguration = () => {
     }
     importMakeModelParts.mutate({
       data: importPreview.fullData,
-      branch: effectiveBranch || 'JHB',
     });
   };
 

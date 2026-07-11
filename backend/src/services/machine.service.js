@@ -1,5 +1,7 @@
 import { repositories } from '../repositories/index.js';
+import prisma from '../config/database.js';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
+import { assertRecordInTenant } from '../middleware/tenant.js';
 
 /**
  * Compute life status from machine (with model.machineLife) and latest reading.
@@ -130,11 +132,14 @@ export class MachineService {
       throw new ConflictError('Machine serial number already exists');
     }
 
+    if (data.modelId) {
+      const model = await prisma.model.findUnique({ where: { id: data.modelId } });
+      assertRecordInTenant(model, data.branch, 'Model');
+    }
+
     if (data.customerId) {
       const customer = await this.customerRepo.findById(data.customerId);
-      if (!customer) {
-        throw new NotFoundError('Customer');
-      }
+      assertRecordInTenant(customer, data.branch, 'Customer');
       if (customer.isArchived) {
         throw new ConflictError(
           'Cannot add machines to an archived customer. Unarchive the customer first.'
@@ -166,11 +171,14 @@ export class MachineService {
       }
     }
 
+    if (data.modelId) {
+      const model = await prisma.model.findUnique({ where: { id: data.modelId } });
+      assertRecordInTenant(model, existing.branch, 'Model');
+    }
+
     if (data.customerId) {
       const customer = await this.customerRepo.findById(data.customerId);
-      if (!customer) {
-        throw new NotFoundError('Customer');
-      }
+      assertRecordInTenant(customer, existing.branch, 'Customer');
       if (customer.isArchived) {
         throw new ConflictError(
           'Cannot assign machines to an archived customer. Unarchive the customer first.'

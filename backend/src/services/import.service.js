@@ -94,8 +94,8 @@ export class ImportService {
             results.skipped++;
             continue;
           }
-          const foundById = await prisma.model.findUnique({
-            where: { id: rawModelId.trim() },
+          const foundById = await prisma.model.findFirst({
+            where: { id: rawModelId.trim(), branch },
           });
           if (!foundById) {
             results.errors.push({
@@ -114,8 +114,9 @@ export class ImportService {
           const modelName = firstSpace > 0 ? modelStr.slice(firstSpace + 1) : modelStr;
           const found = await prisma.model.findFirst({
             where: {
-              make: { name: makeName },
+              branch,
               name: modelName,
+              make: { name: makeName, branch },
             },
           });
           if (found) modelId = found.id;
@@ -124,7 +125,8 @@ export class ImportService {
         // Resolve customer - find or create by name; optional contact fields on create only
         let customerId = null;
         const customerName = row.customer?.trim();
-        const machineBranch = row.branch ? row.branch.toUpperCase() : branch;
+        // Hard tenancy: machines always land in the importer's branch (ignore CSV branch)
+        const machineBranch = branch;
         if (!machineBranch || !['JHB', 'CT'].includes(machineBranch)) {
           results.errors.push({
             row: rowNumber,
@@ -584,12 +586,13 @@ export class ImportService {
   }
 
   /**
-   * Import makes, models, and model parts from data array
-   * CSV columns: make, model, paper_size, model_type, machine_life, part_name, item_code, part_type, toner_color, expected_yield, cost_rand, meter_type, branch
+   * Import makes, models, and model parts from data array (tenant-scoped).
+   * CSV columns: make, model, paper_size, model_type, machine_life, part_name, item_code, part_type, toner_color, expected_yield, cost_rand, meter_type
    * - make + model required for each row
    * - part_name optional; if empty, only create/upsert make and model
+   * - Client/CSV branch is ignored; all rows use the importer's tenant branch
    * @param {Array} data
-   * @param {string} branch - Default branch for parts (JHB or CT)
+   * @param {string} branch - Tenant branch (JHB or CT)
    * @returns {Promise<Object>}
    */
   async importMakeModelParts(data, branch) {
@@ -597,7 +600,7 @@ export class ImportService {
       throw new ValidationError('Import data must be a non-empty array');
     }
 
-    const partBranch = (branch || 'JHB').toUpperCase();
+    const partBranch = (branch || '').toUpperCase();
     if (partBranch !== 'JHB' && partBranch !== 'CT') {
       throw new ValidationError('Branch must be JHB or CT');
     }
@@ -633,9 +636,9 @@ export class ImportService {
 
         let make = makeCache.get(makeName);
         if (!make) {
-          make = await prisma.make.findUnique({ where: { name: makeName } });
+          make = await prisma.make.findFirst({ where: { name: makeName, branch: partBranch } });
           if (!make) {
-            make = await prisma.make.create({ data: { name: makeName } });
+            make = await prisma.make.create({ data: { name: makeName, branch: partBranch } });
             results.makesCreated++;
           }
           makeCache.set(makeName, make);
@@ -645,7 +648,7 @@ export class ImportService {
         let model = modelCache.get(modelKey);
         if (!model) {
           model = await prisma.model.findFirst({
-            where: { makeId: make.id, name: modelName },
+            where: { makeId: make.id, name: modelName, branch: partBranch },
           });
           if (!model) {
             const paperSize = ['A3', 'A4'].includes(String(row.paper_size || 'A4').toUpperCase())
@@ -663,6 +666,7 @@ export class ImportService {
                 paperSize,
                 modelType,
                 machineLife: !isNaN(machineLife) ? machineLife : null,
+                branch: partBranch,
               },
             });
             results.modelsCreated++;
@@ -709,15 +713,11 @@ export class ImportService {
         const meterType = meterTypes.includes(meterTypeVal) ? meterTypeVal : 'mono';
         const itemCode = (row.item_code || row.itemCode || '').trim() || null;
 
-        // Use row branch if provided and valid, else use request branch
-        const rowBranch = (row.branch || row.Branch || '').toString().toUpperCase();
-        const partBranchForRow = rowBranch === 'JHB' || rowBranch === 'CT' ? rowBranch : partBranch;
-
         const existingPart = await prisma.modelPart.findFirst({
           where: {
             modelId: model.id,
             partName,
-            branch: partBranchForRow,
+            branch: partBranch,
           },
         });
 
@@ -730,7 +730,7 @@ export class ImportService {
           expectedYield,
           costRand,
           meterType,
-          branch: partBranchForRow,
+          branch: partBranch,
           isActive: true,
         };
 

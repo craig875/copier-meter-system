@@ -157,7 +157,7 @@ export const makesApi = {
   create: (data) => api.post('/makes', data).then((r) => r.data),
   update: (id, data) => api.put(`/makes/${id}`, data).then((r) => r.data),
   delete: (id) => api.delete(`/makes/${id}`).then((r) => r.data),
-  import: (data, branch) => api.post('/makes/import', { data, branch }).then((r) => r.data),
+  import: (data) => api.post('/makes/import', { data }).then((r) => r.data),
 };
 export const modelsApi = {
   getAll: (makeId = null) => {

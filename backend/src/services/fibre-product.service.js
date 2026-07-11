@@ -1,42 +1,45 @@
 import { repositories } from '../repositories/index.js';
-import { NotFoundError, ValidationError } from '../utils/errors.js';
+import { assertRecordInTenant } from '../middleware/tenant.js';
 
 /**
- * Fibre Product Service - product catalogue for fibre orders
+ * Fibre Product Service - product catalogue for fibre orders (tenant-scoped)
  */
 export class FibreProductService {
   constructor(repos = repositories) {
     this.productRepo = repos.fibreProduct;
   }
 
-  list(activeOnly = true) {
+  list(tenantBranch, activeOnly = true) {
     return activeOnly
-      ? this.productRepo.findActive()
-      : this.productRepo.findAllIncludingInactive();
+      ? this.productRepo.findActive(tenantBranch)
+      : this.productRepo.findAllIncludingInactive(tenantBranch);
   }
 
-  async getById(id) {
+  async getById(id, tenantBranch) {
     const product = await this.productRepo.findById(id);
-    if (!product) throw new NotFoundError('Fibre product');
+    assertRecordInTenant(product, tenantBranch, 'Fibre product');
     return product;
   }
 
-  create(data) {
+  create(data, tenantBranch) {
+    const { branch: _ignored, ...rest } = data;
     return this.productRepo.create({
-      name: data.name,
-      productType: data.productType,
-      defaultEtaWeeks: data.defaultEtaWeeks,
-      notes: data.notes ?? null,
+      name: rest.name,
+      productType: rest.productType,
+      defaultEtaWeeks: rest.defaultEtaWeeks,
+      notes: rest.notes ?? null,
+      branch: tenantBranch,
     });
   }
 
-  async update(id, data) {
-    await this.getById(id);
-    return this.productRepo.update(id, data);
+  async update(id, data, tenantBranch) {
+    await this.getById(id, tenantBranch);
+    const { branch: _ignored, ...rest } = data;
+    return this.productRepo.update(id, rest);
   }
 
-  async deactivate(id) {
-    const product = await this.getById(id);
+  async deactivate(id, tenantBranch) {
+    const product = await this.getById(id, tenantBranch);
     if (!product.isActive) return product;
     return this.productRepo.softDeactivate(id);
   }

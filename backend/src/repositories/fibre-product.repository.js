@@ -5,15 +5,19 @@ export class FibreProductRepository extends BaseRepository {
     super('fibreProduct', prisma);
   }
 
-  findActive() {
+  findActive(branch) {
     return this.prisma.fibreProduct.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(branch ? { branch } : {}),
+      },
       orderBy: { name: 'asc' },
     });
   }
 
-  findAllIncludingInactive() {
+  findAllIncludingInactive(branch) {
     return this.prisma.fibreProduct.findMany({
+      where: branch ? { branch } : {},
       orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
     });
   }
