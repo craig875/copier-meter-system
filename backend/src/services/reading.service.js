@@ -6,6 +6,11 @@ import { calculateReadingMetrics } from '../utils/reading.utils.js';
 import { resolveUnchangedReason } from '../utils/reading-unchanged.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 import { assertRecordInTenant } from '../middleware/tenant.js';
+import {
+  isConsecutiveUnableToReadBlocked,
+  CONSECUTIVE_UNABLE_TO_READ_MESSAGE,
+} from '../utils/reading-completeness.js';
+import prisma from '../config/database.js';
 
 /**
  * Reading Service - Business logic for meter readings
@@ -17,6 +22,7 @@ export class ReadingService {
     this.readingRepo = repos.reading;
     this.machineRepo = repos.machine;
     this.submissionRepo = repos.submission;
+    this.unableToObtainOverrideRequestRepo = repos.unableToObtainOverrideRequest;
   }
 
   /**
@@ -49,25 +55,42 @@ export class ReadingService {
       : await this.machineRepo.findActive(branch, false);
 
     // Get readings - repository methods now handle null branch
-    const [currentReadings, previousReadings, submission] = await Promise.all([
+    const [currentReadings, previousReadings, submission, pendingOverrideRequests] = await Promise.all([
       this.readingRepo.findByYearMonth(targetYear, targetMonth, branch),
       this.readingRepo.findByYearMonth(prev.year, prev.month, branch),
       branch ? this.submissionRepo.findByYearMonth(targetYear, targetMonth, branch) : null,
+      this.unableToObtainOverrideRequestRepo
+        ? this.unableToObtainOverrideRequestRepo.findPendingByYearMonthBranch(targetYear, targetMonth, branch)
+        : Promise.resolve([]),
     ]);
 
     // Create lookup maps
     const currentReadingMap = new Map(currentReadings.map(r => [r.machineId, r]));
     const previousReadingMap = new Map(previousReadings.map(r => [r.machineId, r]));
+    const pendingOverrideMap = new Map(
+      (pendingOverrideRequests || []).map((r) => [r.machineId, r]),
+    );
 
     // Get list of machine IDs for filtering readings
     const machineIds = new Set(machines.map(m => m.id));
 
     // Combine data and filter readings to only include those for machines in the filtered list
-    const data = machines.map(machine => ({
-      machine,
-      currentReading: currentReadingMap.get(machine.id) || null,
-      previousReading: previousReadingMap.get(machine.id) || null,
-    }));
+    const data = machines.map(machine => {
+      const pending = pendingOverrideMap.get(machine.id) || null;
+      return {
+        machine,
+        currentReading: currentReadingMap.get(machine.id) || null,
+        previousReading: previousReadingMap.get(machine.id) || null,
+        pendingUnableToObtainOverrideRequest: pending
+          ? {
+              id: pending.id,
+              note: pending.note,
+              createdAt: pending.createdAt,
+              requestedBy: pending.requestedBy || null,
+            }
+          : null,
+      };
+    });
 
     // Count only readings that belong to machines in the filtered list
     // AND have actual reading values (not just notes)
@@ -163,6 +186,20 @@ export class ReadingService {
     );
     const previousReadingMap = new Map(previousReadings.map(r => [r.machineId, r]));
 
+    // Normal capture path cannot create consecutive Unable-to-obtain readings
+    const consecutiveBlocked = readingsToProcess.filter(
+      (r) => r.unableToRead === true
+        && isConsecutiveUnableToReadBlocked(previousReadingMap.get(r.machineId)),
+    );
+    if (consecutiveBlocked.length > 0) {
+      const serials = consecutiveBlocked
+        .map((r) => machineMap.get(r.machineId)?.machineSerialNumber || r.machineId)
+        .join(', ');
+      throw new ValidationError(
+        `${CONSECUTIVE_UNABLE_TO_READ_MESSAGE} Blocked: ${serials}`,
+      );
+    }
+
     // Validate readings (only for machines we're processing)
     const validation = validateReadings(readingsToProcess, machineMap, previousReadingMap);
     if (!validation.valid) {
@@ -200,6 +237,11 @@ export class ReadingService {
         note: unableToRead ? null : (reading.note && reading.note.trim().length > 0 ? reading.note.trim() : null),
         unableToRead,
         unableToReadReason,
+        // Capture path never sets override flags
+        unableToReadOverride: false,
+        unableToReadOverrideReason: null,
+        unableToReadOverrideBy: null,
+        unableToReadOverrideAt: null,
         monoUnchangedReason: unableToRead ? null : resolveUnchangedReason(
           reading.monoReading,
           prevReading?.monoReading,
@@ -239,6 +281,295 @@ export class ReadingService {
       response.skippedSerialNumbers = skippedMachines.map(m => m.machineSerialNumber);
     }
     return response;
+  }
+
+  /**
+   * Derived list of machines blocked from Unable-to-obtain because the previous
+   * month was also Unable-to-obtain, and no current reading exists yet.
+   * Also returns pending manager override requests for the period.
+   */
+  async listUnableToObtainBlocked(year, month, branch) {
+    const targetYear = parseInt(year, 10);
+    const targetMonth = parseInt(month, 10);
+    const prev = getPreviousMonth(targetYear, targetMonth);
+
+    const [machines, currentReadings, previousReadings, submission, pendingRequests] = await Promise.all([
+      this.machineRepo.findActive(branch, false),
+      this.readingRepo.findByYearMonth(targetYear, targetMonth, branch),
+      this.readingRepo.findByYearMonth(prev.year, prev.month, branch),
+      branch ? this.submissionRepo.findByYearMonth(targetYear, targetMonth, branch) : null,
+      this.unableToObtainOverrideRequestRepo.findPendingByYearMonthBranch(
+        targetYear,
+        targetMonth,
+        branch,
+      ),
+    ]);
+
+    const currentReadingMap = new Map(currentReadings.map((r) => [r.machineId, r]));
+    const previousReadingMap = new Map(previousReadings.map((r) => [r.machineId, r]));
+    const pendingByMachine = new Map(pendingRequests.map((r) => [r.machineId, r]));
+
+    const blocked = machines
+      .filter((machine) => {
+        if (currentReadingMap.has(machine.id)) return false;
+        return isConsecutiveUnableToReadBlocked(previousReadingMap.get(machine.id));
+      })
+      .map((machine) => {
+        const previousReading = previousReadingMap.get(machine.id);
+        const pending = pendingByMachine.get(machine.id) || null;
+        return {
+          machine: {
+            id: machine.id,
+            machineSerialNumber: machine.machineSerialNumber,
+            customer: machine.customer
+              ? { id: machine.customer.id, name: machine.customer.name }
+              : null,
+            model: machine.model || null,
+          },
+          previousReading: {
+            year: previousReading.year,
+            month: previousReading.month,
+            unableToRead: previousReading.unableToRead,
+            unableToReadReason: previousReading.unableToReadReason,
+            unableToReadOverride: previousReading.unableToReadOverride === true,
+          },
+          pendingRequest: pending
+            ? {
+                id: pending.id,
+                note: pending.note,
+                createdAt: pending.createdAt,
+                requestedBy: pending.requestedBy || null,
+              }
+            : null,
+        };
+      });
+
+    const pending = pendingRequests.map((req) => ({
+      id: req.id,
+      note: req.note,
+      createdAt: req.createdAt,
+      machine: {
+        id: req.machine.id,
+        machineSerialNumber: req.machine.machineSerialNumber,
+        customer: req.machine.customer
+          ? { id: req.machine.customer.id, name: req.machine.customer.name }
+          : null,
+      },
+      requestedBy: req.requestedBy || null,
+      previousUnableToReadReason: previousReadingMap.get(req.machineId)?.unableToReadReason || null,
+      isStillBlocked:
+        !currentReadingMap.has(req.machineId)
+        && isConsecutiveUnableToReadBlocked(previousReadingMap.get(req.machineId)),
+    }));
+
+    return {
+      year: targetYear,
+      month: targetMonth,
+      branch,
+      isLocked: !!submission,
+      blocked,
+      pendingRequests: pending,
+      summary: {
+        blockedCount: blocked.length,
+        pendingRequestCount: pending.length,
+      },
+    };
+  }
+
+  /**
+   * Manager requests admin force-approve for consecutive Unable-to-obtain.
+   */
+  async requestUnableToObtainOverride(year, month, branch, machineId, note, userId) {
+    const targetYear = parseInt(year, 10);
+    const targetMonth = parseInt(month, 10);
+
+    const submission = await this.submissionRepo.findByYearMonth(targetYear, targetMonth, branch);
+    if (submission) {
+      throw new ForbiddenError('This month has been submitted and is locked for editing');
+    }
+
+    const machine = await this.machineRepo.findById(machineId);
+    if (!machine) {
+      throw new NotFoundError('Machine not found');
+    }
+    assertRecordInTenant(machine, branch, 'Machine');
+
+    const existing = await this.readingRepo.findByMachineIdAndYearMonth(
+      machineId,
+      targetYear,
+      targetMonth,
+    );
+    if (existing) {
+      throw new ValidationError('This machine already has a reading for the selected month');
+    }
+
+    const prev = getPreviousMonth(targetYear, targetMonth);
+    const previousReading = await this.readingRepo.findByMachineIdAndYearMonth(
+      machineId,
+      prev.year,
+      prev.month,
+    );
+    if (!isConsecutiveUnableToReadBlocked(previousReading)) {
+      throw new ValidationError(
+        'A request is only allowed when the previous month was also Unable to obtain',
+      );
+    }
+
+    const alreadyPending = await this.unableToObtainOverrideRequestRepo.findPendingByMachinePeriod(
+      machineId,
+      targetYear,
+      targetMonth,
+    );
+    if (alreadyPending) {
+      throw new ValidationError('An override has already been requested for this machine and period');
+    }
+
+    const trimmedNote = typeof note === 'string' && note.trim() ? note.trim() : null;
+
+    try {
+      const request = await this.unableToObtainOverrideRequestRepo.create({
+        machineId,
+        year: targetYear,
+        month: targetMonth,
+        branch,
+        requestedById: userId,
+        note: trimmedNote,
+      });
+      return {
+        request,
+        machine: request.machine,
+        previousUnableToReadReason: previousReading.unableToReadReason,
+      };
+    } catch (err) {
+      if (err?.code === 'P2002') {
+        throw new ValidationError('An override has already been requested for this machine and period');
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Admin force-approve: directly write Unable-to-obtain for a consecutive month.
+   * Resolves any pending manager request in the same transaction.
+   */
+  async forceUnableToObtainOverride(year, month, branch, machineId, reason, userId) {
+    const targetYear = parseInt(year, 10);
+    const targetMonth = parseInt(month, 10);
+    const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+    if (!trimmedReason) {
+      throw new ValidationError('Override reason is required');
+    }
+
+    const submission = await this.submissionRepo.findByYearMonth(targetYear, targetMonth, branch);
+    if (submission) {
+      throw new ForbiddenError('This month has been submitted and is locked for editing');
+    }
+
+    const machine = await this.machineRepo.findById(machineId);
+    if (!machine) {
+      throw new NotFoundError('Machine not found');
+    }
+    assertRecordInTenant(machine, branch, 'Machine');
+
+    const existing = await this.readingRepo.findByMachineIdAndYearMonth(
+      machineId,
+      targetYear,
+      targetMonth,
+    );
+    if (existing) {
+      throw new ValidationError(
+        'This machine already has a reading for the selected month. Delete it first if you need to override.',
+      );
+    }
+
+    const prev = getPreviousMonth(targetYear, targetMonth);
+    const previousReading = await this.readingRepo.findByMachineIdAndYearMonth(
+      machineId,
+      prev.year,
+      prev.month,
+    );
+    if (!isConsecutiveUnableToReadBlocked(previousReading)) {
+      throw new ValidationError(
+        'Override is only allowed when the previous month was also Unable to obtain',
+      );
+    }
+
+    const now = new Date();
+    const reading = await prisma.$transaction(async (tx) => {
+      const saved = await tx.reading.upsert({
+        where: {
+          machineId_year_month: {
+            machineId,
+            year: targetYear,
+            month: targetMonth,
+          },
+        },
+        create: {
+          machineId,
+          year: targetYear,
+          month: targetMonth,
+          monoReading: null,
+          colourReading: null,
+          scanReading: null,
+          note: null,
+          monoUnchangedReason: null,
+          colourUnchangedReason: null,
+          scanUnchangedReason: null,
+          unableToRead: true,
+          unableToReadReason: trimmedReason,
+          unableToReadOverride: true,
+          unableToReadOverrideReason: trimmedReason,
+          unableToReadOverrideBy: userId,
+          unableToReadOverrideAt: now,
+          monoUsage: null,
+          colourUsage: null,
+          scanUsage: null,
+          capturedBy: userId,
+          branch,
+        },
+        update: {
+          monoReading: null,
+          colourReading: null,
+          scanReading: null,
+          note: null,
+          monoUnchangedReason: null,
+          colourUnchangedReason: null,
+          scanUnchangedReason: null,
+          unableToRead: true,
+          unableToReadReason: trimmedReason,
+          unableToReadOverride: true,
+          unableToReadOverrideReason: trimmedReason,
+          unableToReadOverrideBy: userId,
+          unableToReadOverrideAt: now,
+          monoUsage: null,
+          colourUsage: null,
+          scanUsage: null,
+        },
+      });
+
+      await this.unableToObtainOverrideRequestRepo.resolvePendingForMachinePeriod(
+        machineId,
+        targetYear,
+        targetMonth,
+        userId,
+        tx,
+      );
+
+      return saved;
+    });
+
+    return {
+      message: 'Unable to obtain override saved',
+      reading,
+      machine: {
+        id: machine.id,
+        machineSerialNumber: machine.machineSerialNumber,
+        customer: machine.customer
+          ? { id: machine.customer.id, name: machine.customer.name }
+          : null,
+      },
+      previousUnableToReadReason: previousReading.unableToReadReason,
+    };
   }
 
   /**

@@ -288,11 +288,24 @@ const History = () => {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 max-w-xs">
                       {currentReading?.unableToRead ? (
-                        <div className="bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                          <p className="text-xs text-amber-900 break-words">
-                            ⚠ Unable to obtain reading
-                            {currentReading.unableToReadReason
-                              ? ` — ${currentReading.unableToReadReason}`
+                        <div className={clsx(
+                          'border rounded px-2 py-1',
+                          currentReading.unableToReadOverride
+                            ? 'bg-violet-50 border-violet-200'
+                            : 'bg-amber-50 border-amber-200',
+                        )}
+                        >
+                          <p className={clsx(
+                            'text-xs break-words',
+                            currentReading.unableToReadOverride ? 'text-violet-900' : 'text-amber-900',
+                          )}
+                          >
+                            {currentReading.unableToReadOverride
+                              ? 'Override — Unable to obtain'
+                              : '⚠ Unable to obtain reading'}
+                            {(currentReading.unableToReadOverrideReason
+                              || currentReading.unableToReadReason)
+                              ? ` — ${currentReading.unableToReadOverrideReason || currentReading.unableToReadReason}`
                               : ''}
                           </p>
                         </div>
@@ -318,10 +331,17 @@ const History = () => {
                     <td className="px-4 py-3 text-center">
                       {currentReading ? (
                         currentReading.unableToRead ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            Unable to obtain
-                          </span>
+                          currentReading.unableToReadOverride ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-800">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Override
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Unable to obtain
+                            </span>
+                          )
                         ) : (currentReading.monoReading != null ||
                           currentReading.colourReading != null ||
                           currentReading.scanReading != null) ? (

@@ -52,7 +52,7 @@ export const hasAdminAccess = (role) => {
   return role === 'admin' || role === 'manager';
 };
 
-/** Strict administrator only (rare checks) */
+/** Strict administrator only (role === 'admin', excludes manager) */
 export const isStrictAdmin = (role) => role === 'admin';
 
 /**

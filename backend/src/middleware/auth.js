@@ -60,6 +60,14 @@ export const requireAdmin = (req, res, next) => {
   next();
 };
 
+/** Genuine admin role only (excludes manager). Prefer this over requireAdmin when managers must be blocked. */
+export const requireStrictAdmin = (req, res, next) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'Administrator access required' });
+  }
+  next();
+};
+
 export const requireMeterOrAdmin = (req, res, next) => {
   if (!['admin', 'manager', 'meter_user'].includes(req.user?.role)) {
     return res.status(403).json({ error: 'Admin or meter user access required' });

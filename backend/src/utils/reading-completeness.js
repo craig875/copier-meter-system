@@ -12,6 +12,17 @@ export function isUnableToRead(reading) {
   return reading?.unableToRead === true;
 }
 
+/**
+ * Consecutive Unable-to-obtain is blocked on the normal capture path
+ * when the previous month's reading was also unable-to-obtain.
+ */
+export function isConsecutiveUnableToReadBlocked(previousReading) {
+  return previousReading?.unableToRead === true;
+}
+
+export const CONSECUTIVE_UNABLE_TO_READ_MESSAGE =
+  'Unable to obtain is not allowed for two consecutive months. An administrator must force-approve via Admin Tools → Unable to Obtain Overrides.';
+
 export function hasReadingValues(reading) {
   return reading.monoReading != null
     || reading.colourReading != null

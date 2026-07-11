@@ -63,6 +63,20 @@ export const unlockQuerySchema = z.object({
   branch: z.enum(['JHB', 'CT']),
 });
 
+export const unableToObtainOverrideSchema = z.object({
+  year: z.number().int().min(2000).max(2100),
+  month: z.number().int().min(1).max(12),
+  machineId: z.string().uuid('Invalid machine ID'),
+  reason: z.string().trim().min(1, 'Override reason is required').max(500, 'Reason must be 500 characters or less'),
+});
+
+export const unableToObtainOverrideRequestSchema = z.object({
+  year: z.number().int().min(2000).max(2100),
+  month: z.number().int().min(1).max(12),
+  machineId: z.string().uuid('Invalid machine ID'),
+  note: z.string().max(500, 'Note must be 500 characters or less').nullable().optional(),
+});
+
 export const importReadingsSchema = z.object({
   data: z.array(z.object({
     machineSerialNumber: z.string().min(1, 'Machine serial number is required'),

@@ -35,6 +35,7 @@ import FibreOrdersCompleted from './pages/FibreOrdersCompleted';
 import FibreOrderDetail from './pages/FibreOrderDetail';
 import FibreOrderForm from './pages/FibreOrderForm';
 import FibreProducts from './pages/FibreProducts';
+import UnableToObtainOverrides from './pages/admin/UnableToObtainOverrides';
 
 function App() {
   const { user, loading } = useAuth();
@@ -198,6 +199,16 @@ function App() {
           <ProtectedRoute adminOnly>
             <Layout>
               <MachineConfiguration />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/unable-to-obtain-overrides"
+        element={
+          <ProtectedRoute strictAdminOnly>
+            <Layout>
+              <UnableToObtainOverrides />
             </Layout>
           </ProtectedRoute>
         }
