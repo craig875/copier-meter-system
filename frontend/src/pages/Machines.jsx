@@ -44,14 +44,19 @@ const Machines = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isElevated, isMeterUser, selectedBranch, effectiveBranch, user, loading: authLoading } = useAuth();
+  const [listTab, setListTab] = useState('active');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingMachine, setEditingMachine] = useState(null);
 
   const { data, isLoading, error, isError } = useQuery({
-    queryKey: ['machines', { branch: effectiveBranch }],
-    queryFn: () => machinesApi.getAll({ limit: '1000', branch: effectiveBranch }),
+    queryKey: ['machines', { branch: effectiveBranch, listTab }],
+    queryFn: () => machinesApi.getAll({
+      limit: '1000',
+      branch: effectiveBranch,
+      decommissioned: listTab === 'decommissioned',
+    }),
     enabled: !authLoading && !!user, // Wait for auth to be ready
     retry: 1,
     staleTime: 60 * 1000,
@@ -174,7 +179,7 @@ const Machines = () => {
   };
 
   const handleRecommission = (machine) => {
-    if (!isElevated) return;
+    if (!(isElevated || isMeterUser)) return;
     if (window.confirm(`Recommission machine ${machine.machineSerialNumber}? It will be added back to capture lists.`)) {
       recommissionMutation.mutate(machine.id);
     }
@@ -255,7 +260,9 @@ const Machines = () => {
             {selectedModelId ? `Machines – ${selectedModelInfo?.modelDisplay || 'Model'}` : 'Machines'}
           </h1>
           <p className="text-gray-500">
-            Manage copier machines and meter configurations
+            {listTab === 'active'
+              ? 'Manage copier machines and meter configurations'
+              : 'Decommissioned machines are hidden from capture lists; history remains accessible'}
             <span className="ml-2 text-gray-400 font-medium">
               · {displayMachines.length} machine{displayMachines.length !== 1 ? 's' : ''}
               {selectedModelId ? ` in this model` : ` across ${modelTiles.length} model${modelTiles.length !== 1 ? 's' : ''}`}
@@ -263,7 +270,7 @@ const Machines = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          {isElevated && (
+          {isElevated && listTab === 'active' && (
             <button
               onClick={() => setShowImportModal(true)}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -272,15 +279,48 @@ const Machines = () => {
               Import
             </button>
           )}
-          <button
-            data-tour="add-machine"
-            onClick={() => setShowModal(true)}
-            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Machine
-          </button>
+          {listTab === 'active' && (
+            <button
+              data-tour="add-machine"
+              onClick={() => setShowModal(true)}
+              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Machine
+            </button>
+          )}
         </div>
+      </div>
+
+      <div className="flex gap-2 border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => {
+            setListTab('active');
+            if (searchParams.get('model')) setSearchParams({}, { replace: true });
+          }}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            listTab === 'active'
+              ? 'border-red-600 text-red-700'
+              : 'border-transparent text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          Active
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setListTab('decommissioned');
+            if (searchParams.get('model')) setSearchParams({}, { replace: true });
+          }}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            listTab === 'decommissioned'
+              ? 'border-red-600 text-red-700'
+              : 'border-transparent text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          Decommissioned
+        </button>
       </div>
 
       {/* Back to models (list view only) */}
@@ -327,9 +367,11 @@ const Machines = () => {
               <p className="mb-4">
                 {noMatchesFromSearch
                   ? 'No machines match your search. Clear the search box to see all machines.'
-                  : 'No machines found. Add a machine or try another branch.'}
+                  : listTab === 'decommissioned'
+                    ? 'No decommissioned machines found.'
+                    : 'No machines found. Add a machine or try another branch.'}
               </p>
-              {data && (
+              {data && listTab === 'active' && (
                 <button
                   onClick={() => setShowModal(true)}
                   className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
@@ -367,31 +409,44 @@ const Machines = () => {
         </div>
       ) : (
         /* List view */
-        <div data-tour="machines-table" className="tile-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial Number</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Branch</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Meters</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+      <div
+        data-tour="machines-table"
+        className={clsx(
+          'tile-card overflow-hidden',
+          listTab === 'decommissioned' && '!bg-gray-50',
+        )}
+      >
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial Number</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Branch</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Meters</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
                 {displayMachines.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
                       {hasSearch && allMachines.length > 0
                         ? 'No machines match your search in this model. Clear the search or pick another model.'
-                        : 'No machines in this model.'}
+                        : listTab === 'decommissioned'
+                          ? 'No decommissioned machines in this model.'
+                          : 'No machines in this model.'}
                     </td>
                   </tr>
                 ) : (
                   displayMachines.map((machine) => (
-                <tr key={machine.id} className={clsx(!machine.isActive && 'bg-gray-800/80 opacity-60')}>
+                <tr
+                  key={machine.id}
+                  className={clsx(
+                    listTab === 'decommissioned' && 'bg-gray-50/80 opacity-90',
+                  )}
+                >
                   <td className="px-4 py-3">
                     <Link
                       to={`/consumables/machines/${machine.id}`}
@@ -421,7 +476,7 @@ const Machines = () => {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex flex-col items-center gap-1">
-                      {machine.isDecommissioned ? (
+                      {listTab === 'decommissioned' || machine.isDecommissioned ? (
                         <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
                           Decommissioned
                         </span>
@@ -453,21 +508,23 @@ const Machines = () => {
                       <Pencil className="h-4 w-4" />
                       <span>Edit</span>
                     </button>
-                    {machine.isDecommissioned ? (
+                    {listTab === 'decommissioned' || machine.isDecommissioned ? (
                       (isElevated || isMeterUser) ? (
                         <button
                           onClick={() => handleRecommission(machine)}
-                          className="p-1 text-gray-500 hover:text-green-600 transition-colors ml-2"
+                          disabled={recommissionMutation.isPending}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-sm text-green-700 hover:bg-green-50 rounded transition-colors ml-2 disabled:opacity-50"
                           title="Recommission"
                         >
                           <RotateCcw className="h-4 w-4" />
+                          <span>Recommission</span>
                         </button>
                       ) : null
                     ) : (
                       <button
                         onClick={() => handleDecommission(machine)}
                         className="p-1 text-gray-500 hover:text-orange-600 transition-colors ml-2"
-                        title="Archive"
+                        title="Decommission"
                       >
                         <Archive className="h-4 w-4" />
                       </button>

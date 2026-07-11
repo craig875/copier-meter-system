@@ -68,6 +68,11 @@ export const machinesApi = {
     if (cleanParams.branch === null || cleanParams.branch === undefined || cleanParams.branch === '') {
       delete cleanParams.branch;
     }
+    if (cleanParams.decommissioned === true) cleanParams.decommissioned = 'true';
+    else if (cleanParams.decommissioned === false) cleanParams.decommissioned = 'false';
+    else if (cleanParams.decommissioned === null || cleanParams.decommissioned === undefined) {
+      delete cleanParams.decommissioned;
+    }
     return api.get('/machines', { params: cleanParams }).then(res => res.data);
   },
   getOne: (id) => api.get(`/machines/${id}`),

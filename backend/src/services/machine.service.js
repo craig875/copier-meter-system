@@ -41,12 +41,15 @@ export class MachineService {
    * @returns {Promise<Object>}
    */
   async getMachines(filters = {}) {
-    const { page = 1, limit = 50, search, isActive, branch } = filters;
+    const { page = 1, limit = 50, search, isActive, decommissioned, branch } = filters;
     const skip = (page - 1) * limit;
 
     const where = {};
     if (isActive !== undefined) {
       where.isActive = isActive === true || isActive === 'true';
+    }
+    if (decommissioned !== undefined) {
+      where.isDecommissioned = decommissioned === true || decommissioned === 'true';
     }
     // Only filter by branch if it's provided and is a valid enum value
     // null/undefined/empty string means show all

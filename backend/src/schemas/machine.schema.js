@@ -48,6 +48,10 @@ export const machineQuerySchema = z.object({
     (v) => firstQueryValue(v),
     z.string().optional().transform((s) => (s === undefined ? undefined : s === 'true'))
   ),
+  decommissioned: z.preprocess(
+    (v) => firstQueryValue(v),
+    z.string().optional().transform((s) => (s === undefined ? undefined : s === 'true'))
+  ),
   branch: z.preprocess(
     (v) => firstQueryValue(v),
     z.enum(['JHB', 'CT']).optional()
