@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate, useMatch } from 'react-router-dom';
+import { Link, useLocation, useMatch } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard,
@@ -30,6 +30,7 @@ import Setup2FAPrompt from './Setup2FAPrompt';
 import ConnectivityAlertBanner from './connectivity/ConnectivityAlertBanner';
 import { notificationsApi, machinesApi } from '../services/api';
 import { MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS } from '../constants/modules';
+import { useBackNavigation } from '../hooks/useBackNavigation';
 
 const Layout = ({ children }) => {
   const {
@@ -45,8 +46,8 @@ const Layout = ({ children }) => {
   const showFibreOrders = hasModule(MODULE_FIBRE_ORDERS);
   const branchCityLabel =
     effectiveBranch === 'CT' ? 'Cape Town' : effectiveBranch === 'JHB' ? 'Johannesburg' : null;
-  const navigate = useNavigate();
   const location = useLocation();
+  const { goBack } = useBackNavigation();
   const consumablesMachineMatch = useMatch('/consumables/machines/:machineId/*');
   const consumablesMachineId = consumablesMachineMatch?.params?.machineId;
   const showBackButton = location.pathname !== '/';
@@ -353,7 +354,8 @@ const Layout = ({ children }) => {
           <div className="flex items-center gap-3">
             {showBackButton && (
               <button
-                onClick={() => navigate(-1)}
+                type="button"
+                onClick={goBack}
                 className="p-2 -ml-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-white/30 transition-colors"
                 title="Back"
               >

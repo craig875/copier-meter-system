@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customersApi, consumablesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
+import { buildFromState } from '../utils/navigationFrom';
 import toast from 'react-hot-toast';
 import {
   Plus,
@@ -325,6 +326,7 @@ const CustomerBulkImportModal = ({ onClose }) => {
 
 const Customers = ({ title = 'Customers' }) => {
   const queryClient = useQueryClient();
+  const location = useLocation();
   const { effectiveBranch, isElevated, isMeterUser } = useAuth();
   const canArchive = isElevated || isMeterUser;
   const [listTab, setListTab] = useState('active');
@@ -504,6 +506,7 @@ const Customers = ({ title = 'Customers' }) => {
           >
             <Link
               to={`/customers/${customer.id}`}
+              state={buildFromState(location)}
               className="block flex"
             >
               {/* Left: status badges only (no icon) */}

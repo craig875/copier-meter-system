@@ -1,6 +1,7 @@
 import { useMemo, useState, Fragment } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
 import { Plus, Search } from 'lucide-react';
 import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +17,7 @@ function formatDate(d) {
 }
 
 export default function FibreOrdersList() {
+  const location = useLocation();
   const { hasModule, isElevated, isSalesAgent, effectiveBranch } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -57,14 +59,14 @@ export default function FibreOrdersList() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
-            to="/fibre-orders/completed"
+            to="/fibre-orders/completed" state={buildFromState(location)}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
             Completed Installs
           </Link>
           {isElevated && (
           <Link
-            to="/fibre-orders/new"
+            to="/fibre-orders/new" state={buildFromState(location)}
             className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -122,7 +124,8 @@ export default function FibreOrdersList() {
                 <Fragment key={order.id}>
                   <tr className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <Link to={`/fibre-orders/${order.id}`} className="font-medium text-red-600 hover:text-red-700">
+                      <Link to={`/fibre-orders/${order.id}`}
+                      state={buildFromState(location)} className="font-medium text-red-600 hover:text-red-700">
                         {order.customerName}
                       </Link>
                       {order.customerReference && (

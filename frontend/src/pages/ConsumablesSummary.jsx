@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
 import { consumablesApi, machinesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -8,6 +9,7 @@ import { useState } from 'react';
 
 const ConsumablesSummary = () => {
   const queryClient = useQueryClient();
+  const location = useLocation();
   const { effectiveBranch, isElevated } = useAuth();
   const [partTypeFilter, setPartTypeFilter] = useState('');
   const [complianceFilter, setComplianceFilter] = useState('');
@@ -237,6 +239,7 @@ const ConsumablesSummary = () => {
                     <td className="py-3 px-2">
                       <Link
                         to={`/consumables/machines/${row.machineId}`}
+                        state={buildFromState(location)}
                         className="font-medium text-gray-900 hover:underline"
                       >
                         {row.machineSerialNumber}
@@ -269,6 +272,7 @@ const ConsumablesSummary = () => {
                     <td className="py-3 px-2">
                       <Link
                         to={`/consumables/machines/${row.machineId}`}
+                        state={buildFromState(location)}
                         className="text-gray-900 hover:text-gray-700"
                       >
                         <ChevronRight className="h-5 w-5" />
@@ -390,6 +394,7 @@ const ConsumablesSummary = () => {
               <Link
                 key={m.id}
                 to={`/consumables/machines/${m.id}`}
+                state={buildFromState(location)}
                 className="px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 text-sm font-medium"
               >
                 {m.machineSerialNumber}

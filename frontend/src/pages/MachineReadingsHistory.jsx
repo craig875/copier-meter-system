@@ -1,8 +1,8 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readingsApi, machinesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const MachineReadingsHistory = () => {
   const { machineId } = useParams();
@@ -35,9 +35,6 @@ const MachineReadingsHistory = () => {
     return (
       <div className="liquid-glass rounded-xl p-6">
         <p className="text-red-600">Machine not found</p>
-        <Link to="/consumables/summary" className="text-red-600 hover:underline mt-2 inline-block">
-          ← Back to Summary
-        </Link>
       </div>
     );
   }
@@ -46,14 +43,6 @@ const MachineReadingsHistory = () => {
 
   return (
     <div className="space-y-6">
-      <Link
-        to={`/consumables/machines/${machineId}`}
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-      >
-        <ArrowLeft className="h-5 w-5" />
-        Back to machine
-      </Link>
-
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Meter reading history</h1>
         <p className="text-gray-500 mt-1">{machineLabel}</p>

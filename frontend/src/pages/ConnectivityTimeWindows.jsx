@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { connectivityApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,9 +27,6 @@ export default function ConnectivityTimeWindows() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-xl font-bold text-gray-900">Alert Time Windows</h1>
-        <Link to="/connectivity" className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-          Back to Dashboard
-        </Link>
       </div>
 
       <p className="text-gray-600 text-sm">

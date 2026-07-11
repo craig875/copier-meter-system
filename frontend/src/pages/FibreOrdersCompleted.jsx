@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { Search, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
+import { Search, CheckCircle } from 'lucide-react';
 import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
@@ -14,6 +15,7 @@ function formatDate(d) {
 }
 
 export default function FibreOrdersCompleted() {
+  const location = useLocation();
   const { hasModule, isSalesAgent, effectiveBranch } = useAuth();
   const [search, setSearch] = useState('');
 
@@ -48,13 +50,6 @@ export default function FibreOrdersCompleted() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <Link
-            to="/fibre-orders"
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to dashboard
-          </Link>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <CheckCircle className="h-7 w-7 text-green-600" />
             Completed Installs
@@ -64,7 +59,7 @@ export default function FibreOrdersCompleted() {
           </p>
         </div>
         <Link
-          to="/fibre-orders/list"
+          to="/fibre-orders/list" state={buildFromState(location)}
           className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
         >
           Active Orders
@@ -106,7 +101,8 @@ export default function FibreOrdersCompleted() {
               {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <Link to={`/fibre-orders/${order.id}`} className="font-medium text-red-600 hover:text-red-700">
+                    <Link to={`/fibre-orders/${order.id}`}
+                    state={buildFromState(location)} className="font-medium text-red-600 hover:text-red-700">
                       {order.customerName}
                     </Link>
                     {order.customerReference && (

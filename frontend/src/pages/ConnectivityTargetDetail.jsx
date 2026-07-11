@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   LineChart,
@@ -13,7 +14,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import {
-  ArrowLeft,
   Pencil,
   CheckCircle,
   XCircle,
@@ -43,6 +43,7 @@ function formatDateTime(d) {
 
 export default function ConnectivityTargetDetail() {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { canManageConnectivity, canAccessConnectivity, effectiveBranch } = useAuth();
@@ -242,12 +243,6 @@ export default function ConnectivityTargetDetail() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link
-            to="/connectivity"
-            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
           <div>
             <h1 className="text-xl font-bold text-gray-900">
               {target.customerName} — {target.siteName}
@@ -258,6 +253,7 @@ export default function ConnectivityTargetDetail() {
         {canManageConnectivity && (
           <Link
             to={`/connectivity/targets/${id}/edit`}
+            state={buildFromState(location)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Pencil className="h-4 w-4" />

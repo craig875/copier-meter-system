@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { buildFromState, mergeNavigationState } from '../utils/navigationFrom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Pencil, Loader2, Globe, MessageSquare } from 'lucide-react';
+import { Pencil, Loader2, Globe, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import { fibreOrdersApi } from '../services/api';
@@ -39,6 +40,7 @@ function formatDateTime(d) {
 export default function FibreOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { hasModule, isElevated, isSalesAgent, canManageConnectivity } = useAuth();
   const [newPipelineStatus, setNewPipelineStatus] = useState('');
@@ -121,9 +123,6 @@ export default function FibreOrderDetail() {
     return (
       <div className="tile-card p-6 text-center text-red-600">
         Order not found or failed to load.
-        <button onClick={() => navigate('/fibre-orders/list')} className="block mx-auto mt-4 text-red-600 underline">
-          Back to list
-        </button>
       </div>
     );
   }
@@ -155,7 +154,10 @@ export default function FibreOrderDetail() {
     dismissConnectivityPrompt(order.id);
     setShowInstalledBanner(false);
     navigate('/connectivity/targets/new', {
-      state: { fromFibreOrder: fibreOrderToConnectivityPrefill(order) },
+      state: mergeNavigationState(
+        { pathname: `/fibre-orders/${order.id}`, search: '', hash: '' },
+        { fromFibreOrder: fibreOrderToConnectivityPrefill(order) }
+      ),
     });
   };
 
@@ -200,9 +202,6 @@ export default function FibreOrderDetail() {
         </div>
       )}
       <div className="flex items-center gap-3">
-        <Link to="/fibre-orders/list" className="p-2 hover:bg-gray-100 rounded-lg">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold text-gray-900 truncate">{order.customerName}</h1>
           <p className="text-gray-500">{order.customerReference || 'No reference'}</p>
@@ -218,6 +217,7 @@ export default function FibreOrderDetail() {
         {isElevated && (
           <Link
             to={`/fibre-orders/${id}/edit`}
+            state={buildFromState(location)}
             className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
             <Pencil className="h-4 w-4 mr-1" />

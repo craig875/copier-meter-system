@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
 import { Download, BarChart2 } from 'lucide-react';
 import { connectivityApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +13,7 @@ function formatDate(d) {
 }
 
 export default function ConnectivityReports() {
+  const location = useLocation();
   const { canAccessConnectivity, effectiveBranch } = useAuth();
   const navigate = useNavigate();
   const [startDate, setStartDate] = useState(() => {
@@ -64,9 +66,6 @@ export default function ConnectivityReports() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-xl font-bold text-gray-900">Connectivity Reports</h1>
-        <Link to="/connectivity" className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-          Back to Dashboard
-        </Link>
       </div>
 
       <div className="tile-card p-4 flex flex-wrap gap-4 items-end">
@@ -122,8 +121,9 @@ export default function ConnectivityReports() {
                 </tr>
               ) : (
                 results.map((r) => (
-                  <tr key={r.targetId} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/connectivity/targets/${r.targetId}`)}>
-                    <td className="px-4 py-2 text-sm"><Link to={`/connectivity/targets/${r.targetId}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{r.customerName}</Link></td>
+                  <tr key={r.targetId} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/connectivity/targets/${r.targetId}`, { state: buildFromState(location) })}>
+                    <td className="px-4 py-2 text-sm"><Link to={`/connectivity/targets/${r.targetId}`}
+                      state={buildFromState(location)} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{r.customerName}</Link></td>
                     <td className="px-4 py-2 text-sm">{r.siteName}</td>
                     <td className="px-4 py-2 text-sm">{r.supplier || '-'}</td>
                     <td className="px-4 py-2 text-sm font-mono">{r.circuitNumber || '-'}</td>
@@ -164,8 +164,9 @@ export default function ConnectivityReports() {
                 </tr>
               ) : (
                 slaResults.map((r) => (
-                  <tr key={r.targetId} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/connectivity/targets/${r.targetId}`)}>
-                    <td className="px-4 py-2 text-sm"><Link to={`/connectivity/targets/${r.targetId}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{r.customerName}</Link></td>
+                  <tr key={r.targetId} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/connectivity/targets/${r.targetId}`, { state: buildFromState(location) })}>
+                    <td className="px-4 py-2 text-sm"><Link to={`/connectivity/targets/${r.targetId}`}
+                      state={buildFromState(location)} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{r.customerName}</Link></td>
                     <td className="px-4 py-2 text-sm">{r.siteName}</td>
                     <td className="px-4 py-2 text-sm">{r.supplier || '-'}</td>
                     <td className="px-4 py-2 text-sm font-mono">{r.circuitNumber || '-'}</td>

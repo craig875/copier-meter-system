@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, X, ArrowLeft } from 'lucide-react';
+import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fibreProductsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -93,9 +92,6 @@ export default function FibreProducts() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link to="/fibre-orders" className="p-2 hover:bg-gray-100 rounded-lg">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Fibre Products</h1>
             <p className="text-gray-500">Manage product catalogue and default ETAs</p>

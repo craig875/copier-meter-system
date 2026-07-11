@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
 import { Search, Plus, Settings, BarChart2, AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
 import { connectivityApi } from '../services/api';
@@ -23,6 +24,7 @@ function formatDate(d) {
 }
 
 export default function ConnectivityDashboard() {
+  const location = useLocation();
   const { canAccessConnectivity, canManageConnectivity, effectiveBranch } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -100,14 +102,14 @@ export default function ConnectivityDashboard() {
         <h1 className="text-xl font-bold text-gray-900">Connectivity Monitoring</h1>
         <div className="flex gap-2">
           <Link
-            to="/connectivity/reports"
+            to="/connectivity/reports" state={buildFromState(location)}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             <BarChart2 className="h-4 w-4" />
             Reports
           </Link>
           <Link
-            to="/connectivity/outages"
+            to="/connectivity/outages" state={buildFromState(location)}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             <AlertTriangle className="h-4 w-4" />
@@ -116,14 +118,14 @@ export default function ConnectivityDashboard() {
           {canManageConnectivity && (
             <>
               <Link
-                to="/connectivity/targets"
+                to="/connectivity/targets" state={buildFromState(location)}
                 className="flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 <Settings className="h-4 w-4" />
                 Manage Targets
               </Link>
               <Link
-                to="/connectivity/targets/new"
+                to="/connectivity/targets/new" state={buildFromState(location)}
                 className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Plus className="h-4 w-4" />
@@ -195,7 +197,7 @@ export default function ConnectivityDashboard() {
                   <tr
                     key={t.id}
                     className={clsx('cursor-pointer hover:opacity-90', style.bg)}
-                    onClick={() => navigate(`/connectivity/targets/${t.id}`)}
+                    onClick={() => navigate(`/connectivity/targets/${t.id}`, { state: buildFromState(location) })}
                   >
                     <td className={clsx('px-4 py-3 text-sm text-gray-900', style.border)}>
                       {t.customerName}

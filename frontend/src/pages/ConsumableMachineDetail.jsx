@@ -1,4 +1,5 @@
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { consumablesApi, machinesApi, readingsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +29,7 @@ import MachineModal from '../components/MachineModal';
 
 const ConsumableMachineDetail = () => {
   const { machineId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { effectiveBranch, isElevated, isMeterUser } = useAuth();
@@ -141,9 +143,6 @@ const ConsumableMachineDetail = () => {
     return (
       <div className="tile-card p-6">
         <p className="text-red-600">Machine not found</p>
-        <Link to="/consumables/summary" className="text-red-600 hover:underline mt-2 inline-block">
-          ← Back to Summary
-        </Link>
       </div>
     );
   }
@@ -322,6 +321,7 @@ const ConsumableMachineDetail = () => {
           {(readingsHistoryData?.readings?.length ?? 0) > 0 && (
             <Link
               to={`/consumables/machines/${machineId}/readings`}
+              state={buildFromState(location)}
               className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1 font-medium"
             >
               View all
@@ -354,7 +354,7 @@ const ConsumableMachineDetail = () => {
                   return (
                     <tr
                       key={r.id || `${r.machineId}-${r.year}-${r.month}`}
-                      onClick={() => navigate(`/consumables/machines/${machineId}/readings`)}
+                      onClick={() => navigate(`/consumables/machines/${machineId}/readings`, { state: buildFromState(location) })}
                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
                     >
                       <td className="py-2 px-2 text-gray-700 font-medium">{monthName}</td>

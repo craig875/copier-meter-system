@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { connectivityApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
@@ -49,9 +48,6 @@ export default function ConnectivityOutages() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-xl font-bold text-gray-900">Outage Log</h1>
-        <Link to="/connectivity" className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-          Back to Dashboard
-        </Link>
       </div>
 
       <div className="tile-card p-4 flex flex-wrap gap-4 items-end">

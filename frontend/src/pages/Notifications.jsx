@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
 import { notificationsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -15,6 +16,7 @@ import clsx from 'clsx';
 const Notifications = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isElevated } = useAuth();
 
   const { data, isLoading, error, isError } = useQuery({
@@ -66,7 +68,7 @@ const Notifications = () => {
     }
     if (n.linkUrl) {
       const path = n.linkUrl.startsWith('/') ? n.linkUrl : `/${n.linkUrl}`;
-      navigate(path);
+      navigate(path, { state: buildFromState(location) });
     }
   };
 
@@ -74,9 +76,6 @@ const Notifications = () => {
     return (
       <div className="liquid-glass rounded-xl p-6">
         <p className="text-red-600">Access denied. Notifications are for administrators only.</p>
-        <Link to="/" className="text-red-600 hover:underline mt-2 inline-block">
-          ← Back to Home
-        </Link>
       </div>
     );
   }

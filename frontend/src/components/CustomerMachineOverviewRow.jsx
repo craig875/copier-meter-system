@@ -1,7 +1,8 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Printer, AlertTriangle, AlertCircle, ChevronRight } from 'lucide-react';
 import { readingsApi } from '../services/api';
+import { buildFromState } from '../utils/navigationFrom';
 import MeterBlocks from './MeterBlocks';
 import MachineLifeTile from './MachineLifeTile';
 import MonthlyUsageCycleTile from './MonthlyUsageCycleTile';
@@ -11,6 +12,7 @@ import ThreeMonthAverageUsageTile from './ThreeMonthAverageUsageTile';
  * One customer machine row: identity + badges on the left; life / monthly / 3-month tiles (no usage chart) on the right.
  */
 const CustomerMachineOverviewRow = ({ machine, partsDue = [], effectiveBranch }) => {
+  const location = useLocation();
   const { data: readingsHistoryData, isLoading } = useQuery({
     queryKey: ['readings-history', machine.id, effectiveBranch],
     queryFn: () => readingsApi.getHistory(machine.id, 24, effectiveBranch).then((r) => r.data),
@@ -31,6 +33,7 @@ const CustomerMachineOverviewRow = ({ machine, partsDue = [], effectiveBranch })
       <div className="shrink-0 w-full xl:w-64 flex flex-col">
         <Link
           to={`/consumables/machines/${machine.id}`}
+          state={buildFromState(location)}
           className="group flex flex-1 p-4 xl:p-5 min-h-64 tile-card"
         >
           {hasBadges && (

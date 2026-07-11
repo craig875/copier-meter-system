@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { buildFromState } from '../../utils/navigationFrom';
 import { useQuery } from '@tanstack/react-query';
 import { Bell, Loader2 } from 'lucide-react';
 import { fibreOrdersApi } from '../../services/api';
@@ -12,6 +13,7 @@ function formatWhen(d) {
 }
 
 export default function FibreOrderUpdateRequestsPanel() {
+  const location = useLocation();
   const { isElevated, hasModule, effectiveBranch } = useAuth();
 
   const { data, isLoading } = useQuery({
@@ -53,6 +55,7 @@ export default function FibreOrderUpdateRequestsPanel() {
           <li key={req.id}>
             <Link
               to={`/fibre-orders/${req.orderId}`}
+              state={buildFromState(location)}
               className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
             >
               <div className="min-w-0">

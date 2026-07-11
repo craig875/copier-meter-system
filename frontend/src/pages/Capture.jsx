@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import { readingsApi } from '../services/api';
 import toast from 'react-hot-toast';
 import { trimLeading } from '../utils/string';
+import { buildFromState } from '../utils/navigationFrom';
 import { useAuth } from '../context/AuthContext';
 import { 
   Save, 
@@ -133,6 +134,7 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
   onDeleteReading,
 }) {
   const mid = machine.id;
+  const location = useLocation();
   return (
     <tr
       data-machine-id={mid}
@@ -144,6 +146,7 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
       <td className="px-4 py-3">
         <Link
           to={`/consumables/machines/${mid}`}
+          state={buildFromState(location)}
           className="font-medium text-red-600 hover:text-red-700 hover:underline"
         >
           {machine.machineSerialNumber}
@@ -153,6 +156,7 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
         {machine.customer?.id ? (
           <Link
             to={`/customers/${machine.customer.id}`}
+            state={buildFromState(location)}
             className="text-gray-500 hover:text-red-700 hover:underline"
           >
             {machine.customer.name}

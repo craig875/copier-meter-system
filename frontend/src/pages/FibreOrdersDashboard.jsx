@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
 import { Plus, List, Package, AlertTriangle, TrendingUp, CheckCircle } from 'lucide-react';
 import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +12,7 @@ import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderUpdateRequestsPanel from '../components/fibre/FibreOrderUpdateRequestsPanel';
 
 export default function FibreOrdersDashboard() {
+  const location = useLocation();
   const { hasModule, isElevated, isSalesAgent, effectiveBranch } = useAuth();
 
   const branchScope = { effectiveBranch, isSalesAgent };
@@ -63,14 +65,14 @@ export default function FibreOrdersDashboard() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
-            to="/fibre-orders/list"
+            to="/fibre-orders/list" state={buildFromState(location)}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
             <List className="h-4 w-4 mr-2" />
             Active Orders
           </Link>
           <Link
-            to="/fibre-orders/completed"
+            to="/fibre-orders/completed" state={buildFromState(location)}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
             <CheckCircle className="h-4 w-4 mr-2" />
@@ -84,14 +86,14 @@ export default function FibreOrdersDashboard() {
           {isElevated && (
             <>
               <Link
-                to="/fibre-orders/products"
+                to="/fibre-orders/products" state={buildFromState(location)}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
               >
                 <Package className="h-4 w-4 mr-2" />
                 Products
               </Link>
               <Link
-                to="/fibre-orders/new"
+                to="/fibre-orders/new" state={buildFromState(location)}
                 className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -147,7 +149,7 @@ export default function FibreOrdersDashboard() {
       <div className="tile-card overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">Recent Active Orders</h2>
-          <Link to="/fibre-orders/list" className="text-sm text-red-600 hover:text-red-700">
+          <Link to="/fibre-orders/list" state={buildFromState(location)} className="text-sm text-red-600 hover:text-red-700">
             View all
           </Link>
         </div>
@@ -161,6 +163,7 @@ export default function FibreOrdersDashboard() {
               <Link
                 key={order.id}
                 to={`/fibre-orders/${order.id}`}
+                state={buildFromState(location)}
                 className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
               >
                 <div className="min-w-0 flex-1">

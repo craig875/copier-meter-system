@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { machinesApi, makesApi, modelsApi, customersApi } from '../services/api';
 import toast from 'react-hot-toast';
@@ -44,6 +45,7 @@ const Machines = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isElevated, isMeterUser, selectedBranch, effectiveBranch, user, loading: authLoading } = useAuth();
+  const location = useLocation();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -395,6 +397,7 @@ const Machines = () => {
                   <td className="px-4 py-3">
                     <Link
                       to={`/consumables/machines/${machine.id}`}
+                      state={buildFromState(location)}
                       className="font-medium text-red-600 hover:text-red-700 hover:underline"
                     >
                       {machine.machineSerialNumber}

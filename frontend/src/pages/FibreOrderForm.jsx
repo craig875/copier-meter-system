@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fibreOrdersApi, fibreProductsApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +16,7 @@ export default function FibreOrderForm() {
   const { id } = useParams();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
+  const location = useLocation();
   const { hasModule, isElevated, effectiveBranch } = useAuth();
 
   const [form, setForm] = useState({
@@ -81,7 +82,10 @@ export default function FibreOrderForm() {
       isEditing ? fibreOrdersApi.update(id, payload) : fibreOrdersApi.create(payload),
     onSuccess: (result) => {
       toast.success(isEditing ? 'Order updated' : 'Order created');
-      navigate(`/fibre-orders/${result.order.id}`);
+      const passFrom = location.state?.from;
+      navigate(`/fibre-orders/${result.order.id}`, {
+        state: passFrom ? { from: passFrom } : undefined,
+      });
     },
     onError: (err) => {
       const details = err?.response?.data?.details;
@@ -139,9 +143,6 @@ export default function FibreOrderForm() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Link to={isEditing ? `/fibre-orders/${id}` : '/fibre-orders'} className="p-2 hover:bg-gray-100 rounded-lg">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
         <h1 className="text-2xl font-bold text-gray-900">
           {isEditing ? 'Edit Fibre Order' : 'New Fibre Order'}
         </h1>

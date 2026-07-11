@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customersApi, consumablesApi, machinesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, ArrowLeft, Building2, Plus, FileDown, Archive, RotateCcw } from 'lucide-react';
+import { Loader2, Building2, Plus, FileDown, Archive, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import MachineModal from '../components/MachineModal';
 import CustomerMachineOverviewRow from '../components/CustomerMachineOverviewRow';
@@ -113,25 +113,12 @@ const CustomerDetail = () => {
     return (
       <div className="tile-card p-6">
         <p className="text-red-600">Customer not found</p>
-        <Link to="/customers" className="text-red-600 hover:underline mt-2 inline-block">
-          ← Back to Customers
-        </Link>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4" data-pdf-exclude>
-        <Link
-          to="/customers"
-          className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          Back to Customers
-        </Link>
-      </div>
-
       {customer.isArchived && (
         <div className="tile-card p-4 border-l-4 border-gray-400 bg-gray-50 text-sm text-gray-700">
           This customer is archived and is hidden from capture, consumables, and toner alerts.

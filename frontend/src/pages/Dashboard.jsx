@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { buildFromState } from '../utils/navigationFrom';
 import { readingsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
+  const location = useLocation();
   const { effectiveBranch, isElevated } = useAuth();
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -83,7 +85,7 @@ const Dashboard = () => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
-            to="/capture"
+            to="/capture" state={buildFromState(location)}
             data-tour="meter-action-capture"
             className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
           >
@@ -97,7 +99,7 @@ const Dashboard = () => {
           </Link>
 
           <Link
-            to="/history"
+            to="/history" state={buildFromState(location)}
             data-tour="meter-action-history"
             className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
           >
@@ -111,7 +113,7 @@ const Dashboard = () => {
           </Link>
 
           <Link
-            to="/machines"
+            to="/machines" state={buildFromState(location)}
             data-tour="meter-action-machines"
             className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
           >
@@ -126,7 +128,7 @@ const Dashboard = () => {
 
           {isElevated && (
             <Link
-              to="/import-readings"
+              to="/import-readings" state={buildFromState(location)}
               data-tour="meter-action-import"
               className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
             >

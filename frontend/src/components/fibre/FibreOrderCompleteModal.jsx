@@ -4,6 +4,7 @@ import {
   fibreOrderToConnectivityPrefill,
   dismissConnectivityPrompt,
 } from '../../utils/fibreOrderConnectivity';
+import { mergeNavigationState } from '../../utils/navigationFrom';
 
 export default function FibreOrderCompleteModal({
   order,
@@ -18,7 +19,12 @@ export default function FibreOrderCompleteModal({
     dismissConnectivityPrompt(order.id);
     const prefill = fibreOrderToConnectivityPrefill(order);
     onClose();
-    navigate('/connectivity/targets/new', { state: { fromFibreOrder: prefill } });
+    navigate('/connectivity/targets/new', {
+      state: mergeNavigationState(
+        { pathname: `/fibre-orders/${order.id}`, search: '', hash: '' },
+        { fromFibreOrder: prefill }
+      ),
+    });
   };
 
   const handleDismiss = () => {

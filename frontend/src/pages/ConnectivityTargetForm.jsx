@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { normalizeFrom } from '../utils/navigationFrom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { connectivityApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
@@ -69,9 +69,12 @@ export default function ConnectivityTargetForm() {
 
   const createMutation = useMutation({
     mutationFn: (body) => connectivityApi.createTarget(body, effectiveBranch),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['connectivity'] });
-      navigate('/connectivity/targets');
+      const newId = res?.target?.id;
+      const passFrom = location.state?.from ? { from: location.state.from } : undefined;
+      if (newId) navigate(`/connectivity/targets/${newId}`, { state: passFrom });
+      else navigate(normalizeFrom(location.state?.from) || '/connectivity/targets');
     },
   });
 
@@ -79,7 +82,8 @@ export default function ConnectivityTargetForm() {
     mutationFn: (body) => connectivityApi.updateTarget(id, body, effectiveBranch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['connectivity'] });
-      navigate(`/connectivity/targets/${id}`);
+      const passFrom = location.state?.from ? { from: location.state.from } : undefined;
+      navigate(`/connectivity/targets/${id}`, { state: passFrom });
     },
   });
 
@@ -106,12 +110,6 @@ export default function ConnectivityTargetForm() {
 
   return (
     <div className="max-w-2xl">
-      <div className="mb-6">
-        <Link to={isEdit ? `/connectivity/targets/${id}` : '/connectivity/targets'} className="text-sm text-blue-600 hover:underline">
-          ← {isEdit ? 'Back to target' : 'Back to targets'}
-        </Link>
-      </div>
-
       <h1 className="text-xl font-bold text-gray-900 mb-6">
         {isEdit ? 'Edit Target' : 'Add Monitoring Target'}
       </h1>
@@ -120,13 +118,8 @@ export default function ConnectivityTargetForm() {
         <div className="mb-4 p-4 rounded-lg border border-blue-200 bg-blue-50 text-sm text-blue-900">
           <p>
             Pre-filled from completed fibre order. Enter the monitoring IP or hostname, then save.
+            Use the header Back button to return to that order.
           </p>
-          <Link
-            to={`/fibre-orders/${fromFibreOrder.fibreOrderId}`}
-            className="inline-block mt-2 text-blue-700 hover:underline font-medium"
-          >
-            ← Back to fibre order
-          </Link>
         </div>
       )}
 
