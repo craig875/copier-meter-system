@@ -1,6 +1,6 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { hasAdminAccess } from '../utils/permissions.js';
+import { hasAdminAccess, isStrictAdmin } from '../utils/permissions.js';
 import { ForbiddenError, ValidationError } from '../utils/errors.js';
 
 /**
@@ -153,6 +153,92 @@ export class ReadingController {
     });
     res.json(result);
   });
+
+  listUnableToObtainBlocked = asyncHandler(async (req, res) => {
+    if (!isStrictAdmin(req.user.role)) {
+      throw new ForbiddenError('Only administrators can view Unable to obtain overrides');
+    }
+    const { year, month } = req.query;
+    const result = await this.readingService.listUnableToObtainBlocked(
+      year,
+      month,
+      req.tenantBranch,
+    );
+    res.json(result);
+  });
+
+  forceUnableToObtainOverride = asyncHandler(async (req, res) => {
+    if (!isStrictAdmin(req.user.role)) {
+      throw new ForbiddenError('Only administrators can force-approve consecutive Unable to obtain');
+    }
+    const { year, month, machineId, reason } = req.body;
+    const branch = req.tenantBranch;
+    const userId = req.user.id;
+
+    const result = await this.readingService.forceUnableToObtainOverride(
+      year,
+      month,
+      branch,
+      machineId,
+      reason,
+      userId,
+    );
+
+    this.auditService.log(userId, 'unable_to_read_override', 'reading', result.reading?.id, {
+      year,
+      month,
+      branch,
+      machineId,
+      machineSerialNumber: result.machine?.machineSerialNumber,
+      customerName: result.machine?.customer?.name || null,
+      previousUnableToReadReason: result.previousUnableToReadReason || null,
+      overrideReason: reason?.trim?.() || reason,
+    });
+
+    res.json(result);
+  });
+
+  requestUnableToObtainOverride = asyncHandler(async (req, res) => {
+    if (req.user.role !== 'manager') {
+      throw new ForbiddenError('Only managers can request Unable to obtain override approval');
+    }
+    const { year, month, machineId, note } = req.body;
+    const branch = req.tenantBranch;
+
+    const result = await this.readingService.requestUnableToObtainOverride(
+      year,
+      month,
+      branch,
+      machineId,
+      note,
+      req.user.id,
+    );
+
+    try {
+      const { services: svc } = await import('../services/index.js');
+      await svc.notification.notifyUnableToObtainOverrideRequested({
+        machine: result.machine,
+        year,
+        month,
+        branch,
+        managerName: req.user.name || req.user.email || 'A manager',
+        note,
+        requestId: result.request.id,
+      });
+    } catch (err) {
+      console.error('Failed to notify admins of U2O override request:', err);
+    }
+
+    this.auditService.log(req.user.id, 'unable_to_read_override_requested', 'unable_to_obtain_override_request', result.request.id, {
+      year,
+      month,
+      branch,
+      machineId,
+      machineSerialNumber: result.machine?.machineSerialNumber,
+    });
+
+    res.status(201).json(result);
+  });
 }
 
 const readingController = new ReadingController();
@@ -165,3 +251,6 @@ export const getReadingsSplitByBranch = readingController.getReadingsSplitByBran
 export const exportReadingsSplitByBranch = readingController.exportReadingsSplitByBranch.bind(readingController);
 export const deleteReading = readingController.deleteReading.bind(readingController);
 export const unlockMonth = readingController.unlockMonth.bind(readingController);
+export const listUnableToObtainBlocked = readingController.listUnableToObtainBlocked.bind(readingController);
+export const forceUnableToObtainOverride = readingController.forceUnableToObtainOverride.bind(readingController);
+export const requestUnableToObtainOverride = readingController.requestUnableToObtainOverride.bind(readingController);

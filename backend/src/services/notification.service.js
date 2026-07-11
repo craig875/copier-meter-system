@@ -124,6 +124,41 @@ export class NotificationService {
   }
 
   /**
+   * Notify administrators when a manager requests consecutive Unable-to-obtain override
+   */
+  async notifyUnableToObtainOverrideRequested({
+    machine,
+    year,
+    month,
+    branch,
+    managerName,
+    note,
+    requestId,
+  }) {
+    const adminIds = await this.getAdminUserIds();
+    if (adminIds.length === 0) return;
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = monthNames[month - 1] || String(month);
+    const serial = machine.machineSerialNumber || 'machine';
+    const customer = machine.customer?.name ? ` — ${machine.customer.name}` : '';
+    const linkUrl = `/admin/unable-to-obtain-overrides?year=${year}&month=${month}&machineId=${machine.id}`;
+    const title = `U2O override requested: ${serial} (${monthName} ${year})`;
+    const message = note
+      ? `${managerName} requested approval${customer} — "${note.length > 80 ? `${note.slice(0, 80)}...` : note}"`
+      : `${managerName} requested Unable to obtain override for ${serial}${customer} (${monthName} ${year}${branch ? `, ${branch}` : ''})`;
+
+    await this.notificationRepo.createForUsers(adminIds, {
+      type: 'unable_to_obtain_override_requested',
+      title,
+      message,
+      linkUrl,
+      entityType: 'unable_to_obtain_override_request',
+      entityId: requestId,
+    });
+  }
+
+  /**
    * Notify admins when a connectivity link goes down, is restored, or has DNS failure
    * @param {Object} target - MonitoringTarget with id, customerName, siteName, monitoringTarget
    * @param {string} alertType - down, restored, dns_failure

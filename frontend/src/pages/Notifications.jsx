@@ -148,7 +148,8 @@ const Notifications = () => {
                 >
                   {n.type === 'part_order_captured' ? (
                     <Package className="h-5 w-5" />
-                  ) : n.type === 'fibre_order_update_requested' ? (
+                  ) : n.type === 'fibre_order_update_requested'
+                    || n.type === 'unable_to_obtain_override_requested' ? (
                     <Bell className="h-5 w-5" />
                   ) : (
                     <MessageSquare className="h-5 w-5" />

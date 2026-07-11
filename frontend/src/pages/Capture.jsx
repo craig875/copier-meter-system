@@ -36,6 +36,8 @@ import {
   validateReadingForSubmit,
   isUnableToReadReading,
   hasReadingValues,
+  isConsecutiveUnableToReadBlocked,
+  CONSECUTIVE_UNABLE_TO_READ_MESSAGE,
 } from '../utils/readingCompleteness';
 
 const MeterInput = memo(function MeterInput({
@@ -130,6 +132,13 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
   onMinBill,
   canMinBill,
   canUnableToObtain,
+  consecutiveUnableBlocked,
+  unableToObtainOverridesHref,
+  consecutiveBlockHint,
+  pendingUnableToObtainOverrideRequest,
+  canRequestUnableToObtainOverride,
+  onRequestUnableToObtainOverride,
+  requestOverridePending,
   onCancelMachine,
   onDeleteReading,
 }) {
@@ -228,10 +237,17 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
       <td className="px-4 py-3 text-center">
         {currentReading ? (
           currentReading.unableToRead ? (
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-              <AlertTriangle className="h-3 w-3 mr-1" />
-              Unable to obtain
-            </span>
+            currentReading.unableToReadOverride ? (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-800">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Override
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Unable to obtain
+              </span>
+            )
           ) : (currentReading.monoReading != null ||
             currentReading.colourReading != null ||
             currentReading.scanReading != null) ? (
@@ -248,7 +264,7 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
       </td>
       <td className="px-4 py-3 text-center">
         <div className="flex flex-col items-center gap-2">
-          {(canMinBill || canUnableToObtain) && (
+          {(canMinBill || canUnableToObtain || consecutiveUnableBlocked) && (
             <div className="flex flex-col items-stretch gap-1.5 w-full max-w-[10rem] mx-auto">
               {canMinBill && (
                 <button
@@ -271,6 +287,40 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
                 >
                   Unable to obtain
                 </button>
+              )}
+              {consecutiveUnableBlocked && (
+                <div className="text-[10px] leading-tight text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-2 py-1.5 space-y-1.5">
+                  <p className="font-medium">Blocked: consecutive Unable to obtain</p>
+                  {unableToObtainOverridesHref ? (
+                    <Link
+                      to={unableToObtainOverridesHref}
+                      className="underline hover:text-rose-950"
+                    >
+                      Force-approve in Admin
+                    </Link>
+                  ) : pendingUnableToObtainOverrideRequest ? (
+                    <p className="font-medium text-amber-900 bg-amber-50 border border-amber-200 rounded px-1.5 py-1">
+                      Approval requested
+                      {pendingUnableToObtainOverrideRequest.createdAt
+                        ? ` · ${new Date(pendingUnableToObtainOverrideRequest.createdAt).toLocaleDateString('en-ZA', {
+                            day: 'numeric',
+                            month: 'short',
+                          })}`
+                        : ''}
+                    </p>
+                  ) : canRequestUnableToObtainOverride ? (
+                    <button
+                      type="button"
+                      onClick={() => onRequestUnableToObtainOverride(mid)}
+                      disabled={savePending || isLocked || requestOverridePending}
+                      className="w-full inline-flex items-center justify-center px-2 py-1 text-[10px] font-medium text-white bg-amber-600 rounded hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {requestOverridePending ? 'Sending…' : 'Request admin approval'}
+                    </button>
+                  ) : (
+                    <p className="mt-0.5">{consecutiveBlockHint || 'An administrator must force-approve.'}</p>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -322,7 +372,7 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
 const Capture = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isElevated, effectiveBranch } = useAuth();
+  const { isElevated, isAdmin, isManager, effectiveBranch } = useAuth();
   const now = new Date();
   const urlYear = searchParams.get('year');
   const urlMonth = searchParams.get('month');
@@ -335,6 +385,7 @@ const Capture = () => {
   const [unchangedModal, setUnchangedModal] = useState(null);
   const [unableToObtainModal, setUnableToObtainModal] = useState(null);
   const [unableToObtainSubmitting, setUnableToObtainSubmitting] = useState(false);
+  const [requestOverrideMachineId, setRequestOverrideMachineId] = useState(null);
 
   const queryBranch = effectiveBranch;
 
@@ -493,8 +544,37 @@ const Capture = () => {
     const entry = machinesRef.current.find((m) => m.machine.id === machineId);
     if (!entry || entry.currentReading) return;
 
+    if (isConsecutiveUnableToReadBlocked(entry.previousReading)) {
+      toast.error(CONSECUTIVE_UNABLE_TO_READ_MESSAGE);
+      return;
+    }
+
     setUnableToObtainModal({ entry });
   }, [isElevated, isLocked]);
+
+  const handleRequestUnableToObtainOverride = useCallback(async (machineId) => {
+    if (!isManager || isLocked) return;
+    const entry = machinesRef.current.find((m) => m.machine.id === machineId);
+    if (!entry || entry.currentReading || entry.pendingUnableToObtainOverrideRequest) return;
+    if (!isConsecutiveUnableToReadBlocked(entry.previousReading)) return;
+
+    setRequestOverrideMachineId(machineId);
+    try {
+      await readingsApi.requestUnableToObtainOverride({
+        year,
+        month,
+        machineId,
+        note: null,
+      });
+      toast.success('Admin approval requested');
+      queryClient.invalidateQueries(['readings', year, month, queryBranch]);
+      queryClient.invalidateQueries(['notifications', 'unread-count']);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to request approval');
+    } finally {
+      setRequestOverrideMachineId(null);
+    }
+  }, [isManager, isLocked, year, month, queryBranch, queryClient]);
 
   const handleUnableToObtainCancel = useCallback(() => {
     if (unableToObtainSubmitting) return;
@@ -518,6 +598,7 @@ const Capture = () => {
 
     const validationErrors = validateReadingForSubmit(reading, entry.machine, {
       canUseUnableToObtain: true,
+      previousReading: entry.previousReading,
     });
     if (validationErrors.length > 0) {
       toast.error(validationErrors[0].message);
@@ -568,7 +649,10 @@ const Capture = () => {
       const entry = machinesRef.current.find((m) => m.machine.id === reading.machineId);
       if (!entry) continue;
       if (!applyValidationErrors(
-        validateReadingForSubmit(reading, entry.machine, { canUseUnableToObtain: isElevated }),
+        validateReadingForSubmit(reading, entry.machine, {
+          canUseUnableToObtain: isElevated,
+          previousReading: entry.previousReading,
+        }),
         reading.machineId,
       )) {
         ok = false;
@@ -805,7 +889,10 @@ const Capture = () => {
       }
 
       const reading = buildReadingPayload(machineId, entry, editedValues);
-      const submitOptions = { canUseUnableToObtain: isElevated };
+      const submitOptions = {
+        canUseUnableToObtain: isElevated,
+        previousReading: entry.previousReading,
+      };
 
       if (!isUnableToReadReading(reading) && !hasReadingValues(reading) && !reading.note) {
         toast.error(
@@ -1255,7 +1342,7 @@ const Capture = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredMachines.map(({ machine, currentReading, previousReading }) => (
+              {filteredMachines.map(({ machine, currentReading, previousReading, pendingUnableToObtainOverrideRequest }) => (
                 <CaptureMachineRow
                   key={machine.id}
                   machine={machine}
@@ -1279,7 +1366,29 @@ const Capture = () => {
                     && !currentReading
                     && !!buildMinBillFieldUpdates(machine, previousReading)
                   }
-                  canUnableToObtain={isElevated && !currentReading}
+                  canUnableToObtain={
+                    isElevated
+                    && !currentReading
+                    && !isConsecutiveUnableToReadBlocked(previousReading)
+                  }
+                  consecutiveUnableBlocked={
+                    isElevated
+                    && !currentReading
+                    && isConsecutiveUnableToReadBlocked(previousReading)
+                  }
+                  unableToObtainOverridesHref={
+                    isAdmin
+                      ? `/admin/unable-to-obtain-overrides?year=${year}&month=${month}&machineId=${machine.id}`
+                      : null
+                  }
+                  consecutiveBlockHint="Ask an administrator to force-approve."
+                  pendingUnableToObtainOverrideRequest={pendingUnableToObtainOverrideRequest}
+                  canRequestUnableToObtainOverride={
+                    isManager
+                    && !pendingUnableToObtainOverrideRequest
+                  }
+                  onRequestUnableToObtainOverride={handleRequestUnableToObtainOverride}
+                  requestOverridePending={requestOverrideMachineId === machine.id}
                   onCancelMachine={handleCancelMachine}
                   onDeleteReading={handleDeleteReading}
                 />

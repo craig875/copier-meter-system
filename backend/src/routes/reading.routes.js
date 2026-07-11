@@ -8,13 +8,23 @@ import {
   exportReadingsSplitByBranch,
   deleteReading,
   unlockMonth,
+  listUnableToObtainBlocked,
+  forceUnableToObtainOverride,
+  requestUnableToObtainOverride,
 } from '../controllers/reading.controller.js';
 import { importReadings } from '../controllers/import.controller.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, requireStrictAdmin } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireMeterReadingAccess } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';
-import { submitReadingsSchema, readingsQuerySchema, exportQuerySchema, importReadingsSchema } from '../schemas/reading.schema.js';
+import {
+  submitReadingsSchema,
+  readingsQuerySchema,
+  exportQuerySchema,
+  importReadingsSchema,
+  unableToObtainOverrideSchema,
+  unableToObtainOverrideRequestSchema,
+} from '../schemas/reading.schema.js';
 
 const router = Router();
 
@@ -29,6 +39,24 @@ router.post('/import', requireAdmin, validate(importReadingsSchema), importReadi
 router.get('/export', validateQuery(exportQuerySchema), exportReadings);
 router.get('/split-by-branch', validateQuery(readingsQuerySchema), getReadingsSplitByBranch);
 router.get('/export/split-by-branch', validateQuery(exportQuerySchema), exportReadingsSplitByBranch);
+router.get(
+  '/unable-to-obtain-blocked',
+  requireStrictAdmin,
+  validateQuery(readingsQuerySchema),
+  listUnableToObtainBlocked,
+);
+router.post(
+  '/unable-to-obtain-override',
+  requireStrictAdmin,
+  validate(unableToObtainOverrideSchema),
+  forceUnableToObtainOverride,
+);
+router.post(
+  '/unable-to-obtain-override-request',
+  requireAdmin,
+  validate(unableToObtainOverrideRequestSchema),
+  requestUnableToObtainOverride,
+);
 router.get('/history/:machineId', getReadingHistory);
 router.delete('/machine/:machineId', requireAdmin, deleteReading);
 router.post('/unlock', requireAdmin, unlockMonth);

@@ -40,6 +40,9 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   readings        Reading[]
+  unableToReadOverrides Reading[] @relation("UnableToReadOverrideBy")
+  unableToObtainOverrideRequestsRequested UnableToObtainOverrideRequest[] @relation("UnableToObtainOverrideRequestedBy")
+  unableToObtainOverrideRequestsResolved UnableToObtainOverrideRequest[] @relation("UnableToObtainOverrideResolvedBy")
   submissions     Submission[]
   auditLogs       AuditLog[]
   partReplacements PartReplacement[]
@@ -393,12 +396,41 @@ model Machine {
   customer  Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   readings  Reading[]
   partReplacements  PartReplacement[]
+  unableToObtainOverrideRequests UnableToObtainOverrideRequest[]
 
   @@index([contractReference])
   @@index([modelId])
   @@index([customerId])
   @@index([branch])
   @@map("machines")
+}
+
+enum UnableToObtainOverrideRequestStatus {
+  pending
+  resolved
+}
+
+model UnableToObtainOverrideRequest {
+  id            String                              @id @default(uuid())
+  machineId     String                              @map("machine_id")
+  year          Int
+  month         Int
+  branch        Branch                              @default(JHB)
+  requestedById String                              @map("requested_by_id")
+  note          String?
+  status        UnableToObtainOverrideRequestStatus @default(pending)
+  resolvedAt    DateTime?                           @map("resolved_at")
+  resolvedById  String?                             @map("resolved_by_id")
+  createdAt     DateTime                            @default(now()) @map("created_at")
+
+  machine     Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  requestedBy User    @relation("UnableToObtainOverrideRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  resolvedBy  User?   @relation("UnableToObtainOverrideResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([machineId, year, month])
+  @@index([status, createdAt])
+  @@index([branch, status])
+  @@map("unable_to_obtain_override_requests")
 }
 
 model Reading {
@@ -415,6 +447,10 @@ model Reading {
   note         String?  @map("note")
   unableToRead         Boolean  @default(false) @map("unable_to_read")
   unableToReadReason   String?  @map("unable_to_read_reason")
+  unableToReadOverride       Boolean   @default(false) @map("unable_to_read_override")
+  unableToReadOverrideReason String?   @map("unable_to_read_override_reason")
+  unableToReadOverrideBy     String?   @map("unable_to_read_override_by")
+  unableToReadOverrideAt     DateTime? @map("unable_to_read_override_at")
   monoUnchangedReason   String?  @map("mono_unchanged_reason")
   colourUnchangedReason String?  @map("colour_unchanged_reason")
   scanUnchangedReason   String?  @map("scan_unchanged_reason")
@@ -425,11 +461,13 @@ model Reading {
 
   machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [capturedBy], references: [id])
+  unableToReadOverrideUser User? @relation("UnableToReadOverrideBy", fields: [unableToReadOverrideBy], references: [id], onDelete: SetNull)
 
   @@unique([machineId, year, month])
   @@index([machineId])
   @@index([year, month])
   @@index([branch])
+  @@index([unableToReadOverrideBy])
   @@map("readings")
 }
 

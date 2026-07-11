@@ -21,6 +21,7 @@ import {
   Shield,
   Globe,
   Radio,
+  ShieldAlert,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -37,6 +38,7 @@ const Layout = ({ children }) => {
     user,
     logout,
     isElevated,
+    isAdmin,
     isCapturer,
     hasModule,
     effectiveBranch,
@@ -130,6 +132,9 @@ const Layout = ({ children }) => {
         children: [
           { name: 'Machine Configuration', href: '/admin/machine-configuration', icon: Cog },
           { name: 'Parts & Pricing', href: '/admin/parts-pricing', icon: Package },
+          ...(isAdmin
+            ? [{ name: 'Unable to Obtain Overrides', href: '/admin/unable-to-obtain-overrides', icon: ShieldAlert }]
+            : []),
           { name: 'Users', href: '/users', icon: Users },
           { name: 'Transaction History', href: '/transaction-history', icon: ScrollText },
         ],

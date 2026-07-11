@@ -12,6 +12,13 @@ export function isUnableToReadReading(reading) {
   return reading?.unableToRead === true;
 }
 
+export function isConsecutiveUnableToReadBlocked(previousReading) {
+  return previousReading?.unableToRead === true;
+}
+
+export const CONSECUTIVE_UNABLE_TO_READ_MESSAGE =
+  'Unable to obtain is not allowed for two consecutive months. An administrator must force-approve via Admin Tools → Unable to Obtain Overrides.';
+
 export function hasReadingValues(reading) {
   return reading?.monoReading != null
     || reading?.colourReading != null
@@ -31,12 +38,24 @@ export function getMissingEnabledCounters(reading, machine) {
   });
 }
 
-export function validateReadingForSubmit(reading, machine, { canUseUnableToObtain = false } = {}) {
+export function validateReadingForSubmit(
+  reading,
+  machine,
+  { canUseUnableToObtain = false, previousReading = null } = {},
+) {
   const errors = [];
 
   if (isUnableToReadReading(reading)) {
     if (!canUseUnableToObtain) {
       return getMissingEnabledCounters(reading, machine);
+    }
+
+    if (isConsecutiveUnableToReadBlocked(previousReading)) {
+      errors.push({
+        field: 'unableToRead',
+        message: CONSECUTIVE_UNABLE_TO_READ_MESSAGE,
+      });
+      return errors;
     }
 
     const reason = typeof reading.unableToReadReason === 'string'

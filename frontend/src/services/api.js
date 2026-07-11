@@ -113,6 +113,15 @@ export const readingsApi = {
   unlock: (year, month, branch) => {
     return api.post('/readings/unlock', {}, { params: { year, month, branch } });
   },
+  listUnableToObtainBlocked: (year, month) => {
+    return api.get('/readings/unable-to-obtain-blocked', { params: { year, month } });
+  },
+  forceUnableToObtainOverride: ({ year, month, machineId, reason }) => {
+    return api.post('/readings/unable-to-obtain-override', { year, month, machineId, reason });
+  },
+  requestUnableToObtainOverride: ({ year, month, machineId, note }) => {
+    return api.post('/readings/unable-to-obtain-override-request', { year, month, machineId, note });
+  },
 };
 
 // Dashboard API
