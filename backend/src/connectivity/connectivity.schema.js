@@ -50,6 +50,14 @@ export const monitoringTargetSchema = z.object({
     { message: 'Invalid characters in notes' }
   ),
   alertEmail: z.string().email().optional().nullable().or(z.literal('')),
+  contactPersonName: z.string().max(200).optional().nullable().or(z.literal('')).refine(
+    (s) => !s || !DANGEROUS_CHARS.test(s),
+    { message: 'Invalid characters in contact person name' }
+  ),
+  contactPersonPhone: z.string().max(50).optional().nullable().or(z.literal('')).refine(
+    (s) => !s || !DANGEROUS_CHARS.test(s),
+    { message: 'Invalid characters in contact person phone' }
+  ),
   status: z.enum(['enabled', 'disabled']).optional().default('enabled'),
   dnsRefreshIntervalMinutes: z.coerce.number().min(1).max(60).optional().default(5),
 });
@@ -94,4 +102,11 @@ export const outagesQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(500).optional().default(50),
   offset: z.coerce.number().min(0).optional().default(0),
   branch: branchQuery,
+});
+
+export const outageNoteSchema = z.object({
+  note: z.string().max(2000).optional().nullable().or(z.literal('')).refine(
+    (s) => !s || !DANGEROUS_CHARS.test(s),
+    { message: 'Invalid characters in outage note' }
+  ),
 });

@@ -23,7 +23,8 @@ function playAlertSound() {
 }
 
 export default function ConnectivityAlertBanner({ enabled, branch }) {
-  const prevAffectedRef = useRef(null);
+  const seenOutageIdsRef = useRef(new Set());
+  const initializedRef = useRef(false);
 
   const { data } = useQuery({
     queryKey: ['connectivity', 'summary', branch],
@@ -40,12 +41,31 @@ export default function ConnectivityAlertBanner({ enabled, branch }) {
 
   useEffect(() => {
     if (data === undefined) return;
-    const prev = prevAffectedRef.current;
-    prevAffectedRef.current = affectedCount;
-    if (prev !== null && prev === 0 && affectedCount > 0) {
+
+    const currentIds = new Set((data.openOutages ?? []).map((o) => o.id));
+
+    // First successful poll: seed seen IDs without beeping for already-open outages
+    if (!initializedRef.current) {
+      seenOutageIdsRef.current = currentIds;
+      initializedRef.current = true;
+      return;
+    }
+
+    let hasNew = false;
+    for (const id of currentIds) {
+      if (!seenOutageIdsRef.current.has(id)) {
+        hasNew = true;
+        break;
+      }
+    }
+
+    if (hasNew) {
       playAlertSound();
     }
-  }, [affectedCount, data]);
+
+    // Drop recovered outages; keep currently open ones as seen
+    seenOutageIdsRef.current = currentIds;
+  }, [data]);
 
   if (affectedCount === 0) return null;
 

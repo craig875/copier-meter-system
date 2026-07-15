@@ -617,6 +617,8 @@ model MonitoringTarget {
   serviceType            ConnectivityServiceType @default(other) @map("service_type")
   notes                  String?   @map("notes")
   alertEmail             String?   @map("alert_email")
+  contactPersonName      String?   @map("contact_person_name")
+  contactPersonPhone     String?   @map("contact_person_phone")
   status                 MonitoringStatus @default(enabled) @map("status")
   resolvedIp             String?   @map("resolved_ip")
   dnsRefreshIntervalMinutes Int    @default(5) @map("dns_refresh_interval_minutes")
@@ -691,6 +693,7 @@ model OutageLog {
   endedAt         DateTime? @map("ended_at")
   durationSeconds Int?     @map("duration_seconds")
   statusAtEnd     String?   @map("status_at_end")
+  note            String?   @map("note")
   createdAt       DateTime  @default(now()) @map("created_at")
 
   target MonitoringTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)

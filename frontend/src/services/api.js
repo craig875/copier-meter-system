@@ -211,6 +211,10 @@ export const connectivityApi = {
   getSlaReport: (params) => api.get('/connectivity/reports/sla', { params }).then((r) => r.data),
   exportReport: (params) => api.get('/connectivity/reports/export', { params, responseType: 'blob' }),
   getOutages: (params = {}) => api.get('/connectivity/outages', { params }).then((r) => r.data),
+  updateOutageNote: (id, note, branch) =>
+    api
+      .patch(`/connectivity/outages/${id}/note`, { note }, { params: connectivityBranchParams(branch) })
+      .then((r) => r.data),
 };
 
 // Consumables API

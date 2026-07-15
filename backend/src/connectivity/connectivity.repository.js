@@ -131,6 +131,26 @@ export class ConnectivityRepository {
     });
   }
 
+  /**
+   * Open outages for a branch (endedAt IS NULL). Used by dashboard/summary enrichment.
+   */
+  async findOpenOutages(branch) {
+    const where = { endedAt: null };
+    if (branch) where.target = { branch };
+    return this.prisma.outageLog.findMany({
+      where,
+      select: { id: true, targetId: true, startedAt: true, note: true },
+      orderBy: { startedAt: 'desc' },
+    });
+  }
+
+  async findOutageById(id) {
+    return this.prisma.outageLog.findUnique({
+      where: { id },
+      include: { target: true },
+    });
+  }
+
   async findOutageLogs(filters = {}, options = {}) {
     const where = {};
     if (filters.targetId) where.targetId = filters.targetId;

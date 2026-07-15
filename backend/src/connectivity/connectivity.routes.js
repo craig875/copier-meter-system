@@ -15,6 +15,7 @@ import {
   getSlaReport,
   exportReport,
   getOutages,
+  updateOutageNote,
 } from './connectivity.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
@@ -28,6 +29,7 @@ import {
   uptimeReportQuerySchema,
   exportReportQuerySchema,
   outagesQuerySchema,
+  outageNoteSchema,
 } from './connectivity.schema.js';
 
 const router = Router();
@@ -62,5 +64,6 @@ router.get('/reports/export', validateQuery(exportReportQuerySchema), exportRepo
 
 // Outages
 router.get('/outages', validateQuery(outagesQuerySchema.partial()), getOutages);
+router.patch('/outages/:id/note', validate(outageNoteSchema), updateOutageNote);
 
 export default router;

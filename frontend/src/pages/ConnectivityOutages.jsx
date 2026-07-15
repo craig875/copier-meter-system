@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { connectivityApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
+import OutageNoteEditor from '../components/connectivity/OutageNoteEditor';
 
 function formatDuration(sec) {
   if (sec == null) return '-';
@@ -83,23 +84,35 @@ export default function ConnectivityOutages() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ended</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Note</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {outages.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">No outages recorded</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">No outages recorded</td>
                 </tr>
               ) : (
-                outages.map((o) => (
-                  <tr key={o.id}>
-                    <td className="px-4 py-3 text-sm">{o.target?.customerName || '-'}</td>
-                    <td className="px-4 py-3 text-sm">{o.target?.siteName || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{formatDate(o.startedAt)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{formatDate(o.endedAt)}</td>
-                    <td className="px-4 py-3 text-sm">{formatDuration(o.durationSeconds)}</td>
-                  </tr>
-                ))
+                outages.map((o) => {
+                  const isOpen = o.endedAt == null;
+                  return (
+                    <tr key={o.id}>
+                      <td className="px-4 py-3 text-sm">{o.target?.customerName || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{o.target?.siteName || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{formatDate(o.startedAt)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{formatDate(o.endedAt)}</td>
+                      <td className="px-4 py-3 text-sm">{formatDuration(o.durationSeconds)}</td>
+                      <td className="px-4 py-3 text-sm max-w-xs">
+                        <OutageNoteEditor
+                          outageId={o.id}
+                          note={o.note}
+                          editable={isOpen}
+                          branch={effectiveBranch}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

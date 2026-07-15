@@ -1,5 +1,5 @@
 import { ConnectivityRepository } from './connectivity.repository.js';
-import { NotFoundError } from '../utils/errors.js';
+import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { assertTargetInBranch } from './connectivity-branch.util.js';
 
 /**
@@ -11,18 +11,43 @@ export class ConnectivityService {
   }
 
   async getDashboard(branch) {
-    const targets = await this.repo.findTargets({ branch });
-    const summary = this._buildSummary(targets);
-    return { summary, targets };
+    const [targets, openOutages] = await Promise.all([
+      this.repo.findTargets({ branch }),
+      this.repo.findOpenOutages(branch),
+    ]);
+    const openByTarget = new Map(openOutages.map((o) => [o.targetId, o]));
+    const enriched = targets.map((t) => {
+      const open = openByTarget.get(t.id);
+      return {
+        ...t,
+        wentDownAt: open?.startedAt ?? null,
+        outageId: open?.id ?? null,
+        outageNote: open?.note ?? null,
+      };
+    });
+    const summary = this._buildSummary(enriched);
+    return { summary, targets: enriched };
   }
 
   /**
-   * Lightweight summary for Layout polling (down/dns_failure counts for alert banner)
+   * Lightweight summary for Layout polling (down/dns_failure counts + open outages for alert banner)
    */
   async getSummary(branch) {
-    const targets = await this.repo.findTargets({ branch });
+    const [targets, openOutages] = await Promise.all([
+      this.repo.findTargets({ branch }),
+      this.repo.findOpenOutages(branch),
+    ]);
     const summary = this._buildSummary(targets);
-    return { down: summary.down, dnsFailure: summary.dnsFailure, total: summary.total };
+    return {
+      down: summary.down,
+      dnsFailure: summary.dnsFailure,
+      total: summary.total,
+      openOutages: openOutages.map((o) => ({
+        id: o.id,
+        targetId: o.targetId,
+        startedAt: o.startedAt,
+      })),
+    };
   }
 
   _buildSummary(targets) {
@@ -60,6 +85,8 @@ export class ConnectivityService {
       serviceType: data.serviceType || 'other',
       notes: data.notes || null,
       alertEmail: data.alertEmail && data.alertEmail.trim() ? data.alertEmail.trim() : null,
+      contactPersonName: data.contactPersonName?.trim() || null,
+      contactPersonPhone: data.contactPersonPhone?.trim() || null,
       status: data.status || 'enabled',
       dnsRefreshIntervalMinutes: data.dnsRefreshIntervalMinutes ?? 5,
     };
@@ -82,6 +109,12 @@ export class ConnectivityService {
     if (data.serviceType !== undefined) payload.serviceType = data.serviceType;
     if (data.notes !== undefined) payload.notes = data.notes || null;
     if (data.alertEmail !== undefined) payload.alertEmail = data.alertEmail?.trim() || null;
+    if (data.contactPersonName !== undefined) {
+      payload.contactPersonName = data.contactPersonName?.trim() || null;
+    }
+    if (data.contactPersonPhone !== undefined) {
+      payload.contactPersonPhone = data.contactPersonPhone?.trim() || null;
+    }
     if (data.status !== undefined) payload.status = data.status;
     if (data.dnsRefreshIntervalMinutes !== undefined) {
       const mins = Number(data.dnsRefreshIntervalMinutes);
@@ -149,5 +182,22 @@ export class ConnectivityService {
       options
     );
     return { outages: items, total };
+  }
+
+  /**
+   * Update note on an open outage only. Closed outages keep their note but are not editable.
+   */
+  async updateOutageNote(outageId, note, branch) {
+    const outage = await this.repo.findOutageById(outageId);
+    if (!outage) throw new NotFoundError('Outage');
+    assertTargetInBranch(outage.target, branch);
+
+    if (outage.endedAt != null) {
+      throw new ValidationError('Notes can only be edited while the outage is open');
+    }
+
+    const cleaned = note != null && String(note).trim() ? String(note).trim() : null;
+    const updated = await this.repo.updateOutageLog(outageId, { note: cleaned });
+    return { outage: updated };
   }
 }

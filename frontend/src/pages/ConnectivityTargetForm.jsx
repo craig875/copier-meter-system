@@ -27,6 +27,8 @@ export default function ConnectivityTargetForm() {
     serviceType: 'other',
     notes: '',
     alertEmail: '',
+    contactPersonName: '',
+    contactPersonPhone: '',
     status: 'enabled',
     dnsRefreshIntervalMinutes: 5,
   });
@@ -49,6 +51,8 @@ export default function ConnectivityTargetForm() {
         serviceType: data.target.serviceType || 'other',
         notes: data.target.notes || '',
         alertEmail: data.target.alertEmail || '',
+        contactPersonName: data.target.contactPersonName || '',
+        contactPersonPhone: data.target.contactPersonPhone || '',
         status: data.target.status || 'enabled',
         dnsRefreshIntervalMinutes: data.target.dnsRefreshIntervalMinutes ?? 5,
       });
@@ -227,6 +231,28 @@ export default function ConnectivityTargetForm() {
             type="email"
             value={form.alertEmail}
             onChange={(e) => setForm((f) => ({ ...f, alertEmail: trimLeading(e.target.value) }))}
+            placeholder="optional"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+          <input
+            type="text"
+            value={form.contactPersonName}
+            onChange={(e) => setForm((f) => ({ ...f, contactPersonName: trimLeading(e.target.value) }))}
+            placeholder="optional"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+          <input
+            type="tel"
+            value={form.contactPersonPhone}
+            onChange={(e) => setForm((f) => ({ ...f, contactPersonPhone: trimLeading(e.target.value) }))}
             placeholder="optional"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg"
           />

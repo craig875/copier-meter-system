@@ -171,6 +171,16 @@ export class ConnectivityController {
     const result = await connectivityService.getOutages(filters, options);
     res.json(result);
   });
+
+  updateOutageNote = asyncHandler(async (req, res) => {
+    const branch = req.tenantBranch;
+    const result = await connectivityService.updateOutageNote(
+      req.params.id,
+      req.body.note,
+      branch
+    );
+    res.json(result);
+  });
 }
 
 const controller = new ConnectivityController();
@@ -190,3 +200,4 @@ export const getUptimeReport = controller.getUptimeReport.bind(controller);
 export const getSlaReport = controller.getSlaReport.bind(controller);
 export const exportReport = controller.exportReport.bind(controller);
 export const getOutages = controller.getOutages.bind(controller);
+export const updateOutageNote = controller.updateOutageNote.bind(controller);

@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
 import ConnectivitySummaryCards from '../components/connectivity/ConnectivitySummaryCards';
 import StatusBadge from '../components/connectivity/StatusBadge';
+import OutageNoteEditor from '../components/connectivity/OutageNoteEditor';
 
 const rowStyleByStatus = {
   up: { border: 'border-l-4 border-l-green-500', bg: 'bg-green-50/40' },
@@ -18,9 +19,42 @@ const rowStyleByStatus = {
   unknown: { border: 'border-l-4 border-l-gray-300', bg: 'bg-gray-50/40' },
 };
 
+const BASE_HEADERS = ['Customer', 'Site', 'Supplier', 'Circuit No', 'FNO', 'Target', 'Resolved IP', 'Status', 'Latency', 'Last Check'];
+
+function headerToSortKey(h) {
+  if (h === 'Customer') return 'customerName';
+  if (h === 'Site') return 'siteName';
+  if (h === 'Supplier') return 'supplier';
+  if (h === 'Circuit No') return 'circuitNumber';
+  if (h === 'FNO') return 'fno';
+  if (h === 'Target') return 'monitoringTarget';
+  if (h === 'Resolved IP') return 'resolvedIp';
+  if (h === 'Status') return 'currentStatus';
+  if (h === 'Latency') return 'currentLatencyMs';
+  if (h === 'Went down at') return 'wentDownAt';
+  return 'lastCheckAt';
+}
+
 function formatDate(d) {
   if (!d) return '-';
   return new Date(d).toLocaleString();
+}
+
+function compareValues(aVal, bVal, sortDir) {
+  const aEmpty = aVal == null || aVal === '';
+  const bEmpty = bVal == null || bVal === '';
+  if (aEmpty && bEmpty) return 0;
+  if (aEmpty) return 1;
+  if (bEmpty) return -1;
+  if (aVal instanceof Date || bVal instanceof Date || (typeof aVal === 'string' && /^\d{4}-\d{2}-\d{2}/.test(String(aVal)))) {
+    const aTime = new Date(aVal).getTime();
+    const bTime = new Date(bVal).getTime();
+    if (!Number.isNaN(aTime) && !Number.isNaN(bTime)) {
+      return sortDir === 'asc' ? aTime - bTime : bTime - aTime;
+    }
+  }
+  const cmp = String(aVal).localeCompare(String(bVal), undefined, { numeric: true });
+  return sortDir === 'asc' ? cmp : -cmp;
 }
 
 export default function ConnectivityDashboard() {
@@ -35,8 +69,27 @@ export default function ConnectivityDashboard() {
   useEffect(() => {
     if (statusFromUrl) setStatusFilter(statusFromUrl);
   }, [statusFromUrl]);
+
+  const isDownFilter = statusFilter === 'down';
   const [sortBy, setSortBy] = useState('customerName');
   const [sortDir, setSortDir] = useState('asc');
+  const [userSortOverride, setUserSortOverride] = useState(false);
+
+  useEffect(() => {
+    if (!userSortOverride) {
+      if (isDownFilter) {
+        setSortBy('wentDownAt');
+        setSortDir('desc');
+      } else {
+        setSortBy('customerName');
+        setSortDir('asc');
+      }
+    }
+  }, [isDownFilter, userSortOverride]);
+
+  useEffect(() => {
+    setUserSortOverride(false);
+  }, [statusFilter]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['connectivity', 'dashboard', effectiveBranch],
@@ -44,6 +97,13 @@ export default function ConnectivityDashboard() {
     refetchInterval: 30000,
     enabled: !!canAccessConnectivity,
   });
+
+  const headers = useMemo(() => {
+    if (isDownFilter) {
+      return [...BASE_HEADERS.slice(0, -1), 'Went down at', 'Last Check'];
+    }
+    return BASE_HEADERS;
+  }, [isDownFilter]);
 
   const filtered = useMemo(() => {
     if (!data?.targets) return [];
@@ -62,12 +122,7 @@ export default function ConnectivityDashboard() {
     if (statusFilter) {
       list = list.filter((t) => t.currentStatus === statusFilter);
     }
-    list.sort((a, b) => {
-      const aVal = a[sortBy] ?? '';
-      const bVal = b[sortBy] ?? '';
-      const cmp = String(aVal).localeCompare(String(bVal), undefined, { numeric: true });
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
+    list.sort((a, b) => compareValues(a[sortBy], b[sortBy], sortDir));
     return list;
   }, [data?.targets, search, statusFilter, sortBy, sortDir]);
 
@@ -167,12 +222,13 @@ export default function ConnectivityDashboard() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {['Customer', 'Site', 'Supplier', 'Circuit No', 'FNO', 'Target', 'Resolved IP', 'Status', 'Latency', 'Last Check'].map((h) => (
+                {headers.map((h) => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                     onClick={() => {
-                      const key = h === 'Customer' ? 'customerName' : h === 'Site' ? 'siteName' : h === 'Supplier' ? 'supplier' : h === 'Circuit No' ? 'circuitNumber' : h === 'FNO' ? 'fno' : h === 'Target' ? 'monitoringTarget' : h === 'Resolved IP' ? 'resolvedIp' : h === 'Status' ? 'currentStatus' : h === 'Latency' ? 'currentLatencyMs' : 'lastCheckAt';
+                      const key = headerToSortKey(h);
+                      setUserSortOverride(true);
                       setSortBy(key);
                       setSortDir(sortBy === key && sortDir === 'asc' ? 'desc' : 'asc');
                     }}
@@ -185,7 +241,7 @@ export default function ConnectivityDashboard() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={headers.length} className="px-4 py-8 text-center text-gray-500">
                     No monitoring targets. {canManageConnectivity && 'Add a target to get started.'}
                   </td>
                 </tr>
@@ -200,7 +256,18 @@ export default function ConnectivityDashboard() {
                     onClick={() => navigate(`/connectivity/targets/${t.id}`, { state: buildFromState(location) })}
                   >
                     <td className={clsx('px-4 py-3 text-sm text-gray-900', style.border)}>
-                      {t.customerName}
+                      <div>{t.customerName}</div>
+                      {isDownFilter && t.outageId && (
+                        <div className="mt-1 max-w-[220px]">
+                          <OutageNoteEditor
+                            outageId={t.outageId}
+                            note={t.outageNote}
+                            editable
+                            branch={effectiveBranch}
+                            compact
+                          />
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{t.siteName}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{t.supplier || '-'}</td>
@@ -212,6 +279,9 @@ export default function ConnectivityDashboard() {
                       <StatusBadge status={t.currentStatus} />
                     </td>
                     <td className="px-4 py-3 text-sm">{t.currentLatencyMs != null ? `${Math.round(t.currentLatencyMs)} ms` : '-'}</td>
+                    {isDownFilter && (
+                      <td className="px-4 py-3 text-sm text-gray-500">{formatDate(t.wentDownAt)}</td>
+                    )}
                     <td className="px-4 py-3 text-sm text-gray-500">{formatDate(t.lastCheckAt)}</td>
                   </tr>
                 );

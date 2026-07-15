@@ -248,6 +248,14 @@ export default function ConnectivityTargetDetail() {
               {target.customerName} — {target.siteName}
             </h1>
             <p className="text-sm text-gray-500 font-mono">{target.monitoringTarget}</p>
+            {(target.contactPersonName || target.contactPersonPhone) && (
+              <p className="text-sm text-gray-600 mt-1">
+                Contact
+                {target.contactPersonName ? `: ${target.contactPersonName}` : ''}
+                {target.contactPersonName && target.contactPersonPhone ? ' · ' : target.contactPersonPhone ? ': ' : ''}
+                {target.contactPersonPhone || ''}
+              </p>
+            )}
           </div>
         </div>
         {canManageConnectivity && (
