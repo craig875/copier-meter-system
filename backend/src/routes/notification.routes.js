@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
+import { shadowRequirePermission } from '../middleware/requirePermission.js';
 import {
   getNotifications,
   markRead,
@@ -11,6 +12,8 @@ import {
 const router = Router();
 
 router.use(authenticate);
+// Stage C: observe permission vs requireAdmin; never blocks.
+router.use(shadowRequirePermission('notifications.access'));
 // requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
 router.use(requireAdmin);
 router.use(requireTenantBranch);

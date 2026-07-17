@@ -121,8 +121,27 @@ model User {
   assignedRole                 Role                     @relation(fields: [roleId], references: [id])
   permissionOverrides          UserPermissionOverride[] @relation("UserPermissionOverrides")
   permissionOverridesGranted   UserPermissionOverride[] @relation("UserPermissionOverrideGrantedBy")
+  permissionShadowLogs         PermissionShadowLog[]
 
   @@map("users")
+}
+
+/// Stage C: mismatch log between legacy role gates and effective permissions (observe-only).
+model PermissionShadowLog {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  route         String
+  permissionKey String   @map("permission_key")
+  oldAllowed    Boolean  @map("old_allowed")
+  newAllowed    Boolean  @map("new_allowed")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([permissionKey])
+  @@map("permission_shadow_log")
 }
 
 /// Which branches a user may access (Stage 6a). Active branch selection is enforced in later stages.
