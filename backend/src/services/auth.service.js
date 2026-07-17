@@ -4,9 +4,35 @@ import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { config } from '../config/index.js';
 import { repositories } from '../repositories/index.js';
-import { UnauthorizedError, ConflictError, NotFoundError } from '../utils/errors.js';
+import { UnauthorizedError, ConflictError, NotFoundError, ForbiddenError } from '../utils/errors.js';
+import { normalizeBranch } from '../middleware/tenant.js';
 import prisma from '../config/database.js';
 import { defaultModulesForRole, sanitizeUserModules } from '../utils/permissions.js';
+
+/** Load allowed branches for a user from UserBranchAccess. */
+async function loadAllowedBranches(userId) {
+  const rows = await prisma.userBranchAccess.findMany({
+    where: { userId },
+    select: { branch: true },
+    orderBy: { branch: 'asc' },
+  });
+  return rows.map((r) => r.branch);
+}
+
+/** Auth session user shape returned by login, /me, and verify-2fa. */
+function toSessionUser(user, allowedBranches) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    branch: user.branch,
+    defaultBranch: user.branch,
+    allowedBranches,
+    modules: sanitizeUserModules(user.modules ?? []),
+    twoFactorEnabled: !!user.twoFactorEnabled,
+  };
+}
 
 /** Safe user shape for API responses (no password hash) */
 function publicUser(user) {
@@ -65,17 +91,11 @@ export class AuthService {
       { expiresIn: config.jwtExpiresIn }
     );
 
+    const allowedBranches = await loadAllowedBranches(user.id);
+
     return {
       token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        branch: user.branch,
-        modules: sanitizeUserModules(user.modules ?? []),
-        twoFactorEnabled: !!user.twoFactorEnabled,
-      },
+      user: toSessionUser(user, allowedBranches),
     };
   }
 
@@ -111,17 +131,11 @@ export class AuthService {
       { expiresIn: config.jwtExpiresIn }
     );
 
+    const allowedBranches = await loadAllowedBranches(user.id);
+
     return {
       token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        branch: user.branch,
-        modules: sanitizeUserModules(user.modules ?? []),
-        twoFactorEnabled: !!user.twoFactorEnabled,
-      },
+      user: toSessionUser(user, allowedBranches),
     };
   }
 
@@ -208,21 +222,33 @@ export class AuthService {
    * @param {string} userId
    * @returns {Promise<Object>}
    */
-  async getCurrentUser(userId) {
+  async getCurrentUser(userId, allowedBranches = null) {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User');
+    }
+    const branches = allowedBranches ?? await loadAllowedBranches(userId);
+    return {
+      user: toSessionUser(user, branches),
+    };
+  }
+
+  /**
+   * Validate branch is in user's allowed list (no persistence yet — Stage 6c).
+   */
+  async switchBranch(userId, allowedBranches, branch) {
+    const normalized = normalizeBranch(branch);
+    if (!normalized || !allowedBranches.includes(normalized)) {
+      throw new ForbiddenError('Branch not permitted');
+    }
     const user = await this.userRepo.findById(userId);
     if (!user) {
       throw new NotFoundError('User');
     }
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        branch: user.branch,
-        modules: sanitizeUserModules(user.modules ?? []),
-        twoFactorEnabled: !!user.twoFactorEnabled,
-      },
+      branch: normalized,
+      defaultBranch: user.branch,
+      allowedBranches,
     };
   }
 }

@@ -27,7 +27,20 @@ export class AuthController {
   });
 
   getMe = asyncHandler(async (req, res) => {
-    const result = await this.authService.getCurrentUser(req.user.id);
+    const result = await this.authService.getCurrentUser(
+      req.user.id,
+      req.user.allowedBranches,
+    );
+    res.json(result);
+  });
+
+  switchBranch = asyncHandler(async (req, res) => {
+    const { branch } = req.body;
+    const result = await this.authService.switchBranch(
+      req.user.id,
+      req.user.allowedBranches,
+      branch,
+    );
     res.json(result);
   });
 
@@ -91,6 +104,7 @@ const authController = new AuthController();
 // Export individual functions for backward compatibility
 export const login = authController.login.bind(authController);
 export const getMe = authController.getMe.bind(authController);
+export const switchBranch = authController.switchBranch.bind(authController);
 export const verify2FA = authController.verify2FA.bind(authController);
 export const get2FAStatus = authController.get2FAStatus.bind(authController);
 export const setup2FA = authController.setup2FA.bind(authController);

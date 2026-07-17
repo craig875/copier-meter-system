@@ -58,7 +58,24 @@ model User {
   fibreUpdateRequests     FibreOrderUpdateRequest[] @relation("FibreUpdateRequestRequestedBy")
   fibreUpdateRequestsResolved FibreOrderUpdateRequest[] @relation("FibreUpdateRequestResolvedBy")
 
+  branchAccess        UserBranchAccess[]
+  branchAccessGranted UserBranchAccess[] @relation("UserBranchAccessGrantedBy")
+
   @@map("users")
+}
+
+/// Which branches a user may access (Stage 6a). Active branch selection is enforced in later stages.
+model UserBranchAccess {
+  userId    String   @map("user_id")
+  branch    Branch
+  grantedAt DateTime @default(now()) @map("granted_at")
+  grantedBy String?  @map("granted_by")
+
+  user          User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grantedByUser User? @relation("UserBranchAccessGrantedBy", fields: [grantedBy], references: [id], onDelete: SetNull)
+
+  @@id([userId, branch])
+  @@map("user_branch_access")
 }
 
 enum InstallationDuty {

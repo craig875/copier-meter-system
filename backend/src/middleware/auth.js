@@ -15,14 +15,26 @@ export const authenticate = async (req, res, next) => {
     
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, name: true, role: true, branch: true, modules: true }
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        branch: true,
+        modules: true,
+        branchAccess: { select: { branch: true }, orderBy: { branch: 'asc' } },
+      },
     });
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    req.user = user;
+    const { branchAccess, ...userFields } = user;
+    req.user = {
+      ...userFields,
+      allowedBranches: branchAccess.map((a) => a.branch),
+    };
     next();
   } catch (error) {
     // Log the error for debugging - make it very visible

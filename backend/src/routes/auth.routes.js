@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   login,
   getMe,
+  switchBranch,
   verify2FA,
   get2FAStatus,
   setup2FA,
@@ -12,6 +13,7 @@ import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import {
   loginSchema,
+  switchBranchSchema,
   verify2FASchema,
   verifySetupSchema,
   disable2FASchema,
@@ -22,6 +24,7 @@ const router = Router();
 router.post('/login', validate(loginSchema), login);
 router.post('/verify-2fa', validate(verify2FASchema), verify2FA);
 router.get('/me', authenticate, getMe);
+router.post('/switch-branch', authenticate, validate(switchBranchSchema), switchBranch);
 router.get('/2fa/status', authenticate, get2FAStatus);
 router.post('/2fa/setup', authenticate, setup2FA);
 router.post('/2fa/verify-setup', validate(verifySetupSchema), authenticate, verify2FASetup);
