@@ -547,6 +547,8 @@ model ModelPart {
 model Notification {
   id         String    @id @default(uuid())
   userId     String    @map("user_id")
+  /// Tenant branch for this alert (nullable until legacy rows are backfilled).
+  branch     Branch?   @map("branch")
   type       String    @map("type")
   title      String    @map("title")
   message    String?   @map("message")
@@ -559,6 +561,7 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, branch])
   @@index([createdAt])
   @@index([readAt])
   @@map("notifications")

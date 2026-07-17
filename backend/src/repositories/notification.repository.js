@@ -12,6 +12,7 @@ export class NotificationRepository {
     return prisma.notification.create({
       data: {
         userId: data.userId,
+        branch: data.branch ?? null,
         type: data.type,
         title: data.title,
         message: data.message ?? null,
@@ -30,6 +31,7 @@ export class NotificationRepository {
     const notifications = await prisma.notification.createMany({
       data: userIds.map((userId) => ({
         userId,
+        branch: data.branch ?? null,
         type: data.type,
         title: data.title,
         message: data.message ?? null,
@@ -45,10 +47,11 @@ export class NotificationRepository {
    * Find notifications for a user, ordered by created_at desc
    */
   async findByUserId(userId, options = {}) {
-    const { limit = 50, unreadOnly = false } = options;
+    const { limit = 50, unreadOnly = false, branch = null } = options;
     return prisma.notification.findMany({
       where: {
         userId,
+        ...(branch ? { branch } : {}),
         ...(unreadOnly ? { readAt: null } : {}),
       },
       orderBy: { createdAt: 'desc' },
@@ -57,10 +60,16 @@ export class NotificationRepository {
   }
 
   /**
-   * Mark notification as read
+   * Mark notification as read (optionally scoped to active branch)
    */
-  async markRead(id, userId) {
-    const existing = await prisma.notification.findFirst({ where: { id, userId } });
+  async markRead(id, userId, branch = null) {
+    const existing = await prisma.notification.findFirst({
+      where: {
+        id,
+        userId,
+        ...(branch ? { branch } : {}),
+      },
+    });
     if (!existing) throw new NotFoundError('Notification');
     return prisma.notification.update({
       where: { id },
@@ -69,21 +78,29 @@ export class NotificationRepository {
   }
 
   /**
-   * Mark all notifications as read for a user
+   * Mark all notifications as read for user (optionally scoped to active branch)
    */
-  async markAllRead(userId) {
+  async markAllRead(userId, branch = null) {
     return prisma.notification.updateMany({
-      where: { userId, readAt: null },
+      where: {
+        userId,
+        readAt: null,
+        ...(branch ? { branch } : {}),
+      },
       data: { readAt: new Date() },
     });
   }
 
   /**
-   * Count unread for user
+   * Count unread for user (optionally scoped to active branch)
    */
-  async countUnread(userId) {
+  async countUnread(userId, branch = null) {
     return prisma.notification.count({
-      where: { userId, readAt: null },
+      where: {
+        userId,
+        readAt: null,
+        ...(branch ? { branch } : {}),
+      },
     });
   }
 }

@@ -65,9 +65,9 @@ const Layout = ({ children }) => {
   };
 
   const { data: unreadData } = useQuery({
-    queryKey: ['notifications', 'unread-count'],
+    queryKey: ['notifications', 'unread-count', effectiveBranch],
     queryFn: () => notificationsApi.getUnreadCount(),
-    enabled: Boolean(user),
+    enabled: Boolean(user) && effectiveBranch != null,
     refetchInterval: 60000, // refresh every 60s
     staleTime: 0, // always consider stale so invalidations trigger refetch
   });

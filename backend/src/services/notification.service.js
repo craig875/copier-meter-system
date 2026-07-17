@@ -1,6 +1,7 @@
 import { repositories } from '../repositories/index.js';
 import prisma from '../config/database.js';
 import { MODULE_FIBRE_ORDERS } from '../utils/permissions.js';
+import { normalizeBranch } from '../middleware/tenant.js';
 
 /**
  * Notification Service - Business logic for admin notifications
@@ -48,7 +49,7 @@ export class NotificationService {
    * @param {string} params.machineId
    * @param {number} params.year
    * @param {number} params.month
-   * @param {string} [params.branch] - branch for the reading (JHB/CT)
+   * @param {string} params.branch - branch for the reading (JHB/CT)
    * @param {string} params.note - the note text (truncated for message)
    * @param {string} params.capturerName - name of user who added the note
    */
@@ -56,12 +57,14 @@ export class NotificationService {
     const adminIds = await this.getAdminUserIds();
     if (adminIds.length === 0) return;
 
+    const tenantBranch = normalizeBranch(branch);
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthName = monthNames[month - 1];
     const noteSnippet = note && note.length > 50 ? note.substring(0, 50) + '...' : (note || '');
-    const linkUrl = `/capture?year=${year}&month=${month}&machineId=${machineId}${branch ? `&branch=${branch}` : ''}`;
+    const linkUrl = `/capture?year=${year}&month=${month}&machineId=${machineId}${tenantBranch ? `&branch=${tenantBranch}` : ''}`;
 
     await this.notificationRepo.createForUsers(adminIds, {
+      branch: tenantBranch,
       type: 'reading_note_added',
       title: `Note added to ${machineSerialNumber} (${monthName} ${year})`,
       message: `${capturerName} added a note: "${noteSnippet}"`,
@@ -80,8 +83,17 @@ export class NotificationService {
    * @param {string} [params.customerName]
    * @param {string} params.capturedByName - name of user who captured the order
    * @param {string} params.orderId - part replacement/order id for entity tracking
+   * @param {string} params.branch - tenant branch for the order
    */
-  async notifyPartOrderCaptured({ machineId, partName, machineSerialNumber, customerName, capturedByName, orderId }) {
+  async notifyPartOrderCaptured({
+    machineId,
+    partName,
+    machineSerialNumber,
+    customerName,
+    capturedByName,
+    orderId,
+    branch,
+  }) {
     const adminIds = await this.getAdminUserIds();
     if (adminIds.length === 0) return;
 
@@ -91,6 +103,7 @@ export class NotificationService {
     const message = `${capturedByName} recorded a new part order`;
 
     await this.notificationRepo.createForUsers(adminIds, {
+      branch: normalizeBranch(branch),
       type: 'part_order_captured',
       title,
       message,
@@ -114,6 +127,7 @@ export class NotificationService {
       : `${salesAgentName} requested a status update on this fibre order`;
 
     await this.notificationRepo.createForUsers(managerIds, {
+      branch: normalizeBranch(order.branch),
       type: 'fibre_order_update_requested',
       title,
       message,
@@ -138,6 +152,7 @@ export class NotificationService {
     const adminIds = await this.getAdminUserIds();
     if (adminIds.length === 0) return;
 
+    const tenantBranch = normalizeBranch(branch);
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthName = monthNames[month - 1] || String(month);
     const serial = machine.machineSerialNumber || 'machine';
@@ -146,9 +161,10 @@ export class NotificationService {
     const title = `U2O override requested: ${serial} (${monthName} ${year})`;
     const message = note
       ? `${managerName} requested approval${customer} — "${note.length > 80 ? `${note.slice(0, 80)}...` : note}"`
-      : `${managerName} requested Unable to obtain override for ${serial}${customer} (${monthName} ${year}${branch ? `, ${branch}` : ''})`;
+      : `${managerName} requested Unable to obtain override for ${serial}${customer} (${monthName} ${year}${tenantBranch ? `, ${tenantBranch}` : ''})`;
 
     await this.notificationRepo.createForUsers(adminIds, {
+      branch: tenantBranch,
       type: 'unable_to_obtain_override_requested',
       title,
       message,
@@ -160,7 +176,7 @@ export class NotificationService {
 
   /**
    * Notify admins when a connectivity link goes down, is restored, or has DNS failure
-   * @param {Object} target - MonitoringTarget with id, customerName, siteName, monitoringTarget
+   * @param {Object} target - MonitoringTarget with id, customerName, siteName, monitoringTarget, branch
    * @param {string} alertType - down, restored, dns_failure
    * @param {Object} details - { duration, message }
    */
@@ -184,6 +200,7 @@ export class NotificationService {
     const linkUrl = `/connectivity/targets/${target.id}`;
 
     await this.notificationRepo.createForUsers(adminIds, {
+      branch: normalizeBranch(target.branch),
       type,
       title,
       message,
@@ -194,7 +211,7 @@ export class NotificationService {
   }
 
   /**
-   * Get notifications for current user (admin)
+   * Get notifications for current user (admin), scoped to active branch
    */
   async getForUser(userId, options = {}) {
     return this.notificationRepo.findByUserId(userId, options);
@@ -203,21 +220,21 @@ export class NotificationService {
   /**
    * Mark notification as read
    */
-  async markRead(notificationId, userId) {
-    return this.notificationRepo.markRead(notificationId, userId);
+  async markRead(notificationId, userId, branch = null) {
+    return this.notificationRepo.markRead(notificationId, userId, branch);
   }
 
   /**
-   * Mark all as read for user
+   * Mark all as read for user (active branch)
    */
-  async markAllRead(userId) {
-    return this.notificationRepo.markAllRead(userId);
+  async markAllRead(userId, branch = null) {
+    return this.notificationRepo.markAllRead(userId, branch);
   }
 
   /**
-   * Count unread for user
+   * Count unread for user (active branch)
    */
-  async countUnread(userId) {
-    return this.notificationRepo.countUnread(userId);
+  async countUnread(userId, branch = null) {
+    return this.notificationRepo.countUnread(userId, branch);
   }
 }

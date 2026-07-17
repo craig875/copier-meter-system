@@ -2,7 +2,7 @@ import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
 /**
- * Notification Controller - Admin notifications
+ * Notification Controller - Admin notifications (scoped to req.tenantBranch)
  */
 export class NotificationController {
   constructor(notificationService = services.notification) {
@@ -14,23 +14,24 @@ export class NotificationController {
     const notifications = await this.notificationService.getForUser(req.user.id, {
       unreadOnly: unreadOnly === 'true',
       limit: limit ? parseInt(limit, 10) : 50,
+      branch: req.tenantBranch,
     });
     res.json({ notifications });
   });
 
   markRead = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    await this.notificationService.markRead(id, req.user.id);
+    await this.notificationService.markRead(id, req.user.id, req.tenantBranch);
     res.json({ success: true });
   });
 
   markAllRead = asyncHandler(async (req, res) => {
-    await this.notificationService.markAllRead(req.user.id);
+    await this.notificationService.markAllRead(req.user.id, req.tenantBranch);
     res.json({ success: true });
   });
 
   getUnreadCount = asyncHandler(async (req, res) => {
-    const count = await this.notificationService.countUnread(req.user.id);
+    const count = await this.notificationService.countUnread(req.user.id, req.tenantBranch);
     res.json({ count });
   });
 }

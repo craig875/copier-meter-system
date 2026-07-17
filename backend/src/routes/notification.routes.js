@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireTenantBranch } from '../middleware/tenant.js';
 import {
   getNotifications,
   markRead,
@@ -10,6 +11,7 @@ import {
 const router = Router();
 
 router.use(authenticate);
+router.use(requireTenantBranch);
 
 router.get('/', getNotifications);
 router.get('/unread-count', getUnreadCount);

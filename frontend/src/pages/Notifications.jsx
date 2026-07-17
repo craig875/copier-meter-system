@@ -17,12 +17,12 @@ const Notifications = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isElevated } = useAuth();
+  const { isElevated, effectiveBranch } = useAuth();
 
   const { data, isLoading, error, isError } = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', effectiveBranch],
     queryFn: () => notificationsApi.getAll(),
-    enabled: !!isElevated,
+    enabled: !!isElevated && effectiveBranch != null,
   });
 
   const markReadMutation = useMutation({
@@ -30,7 +30,7 @@ const Notifications = () => {
     onSuccess: (_, notificationId) => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       // Optimistically update notifications list - mark this one as read
-      queryClient.setQueryData(['notifications'], (old) => {
+      queryClient.setQueryData(['notifications', effectiveBranch], (old) => {
         if (!old?.notifications) return old;
         return {
           notifications: old.notifications.map((n) =>
@@ -39,7 +39,7 @@ const Notifications = () => {
         };
       });
       // Optimistically update unread count so red dot disappears immediately
-      queryClient.setQueryData(['notifications', 'unread-count'], (old) => {
+      queryClient.setQueryData(['notifications', 'unread-count', effectiveBranch], (old) => {
         if (old && typeof old.count === 'number') {
           return { count: Math.max(0, old.count - 1) };
         }
@@ -52,7 +52,7 @@ const Notifications = () => {
     mutationFn: () => notificationsApi.markAllRead(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.setQueryData(['notifications', 'unread-count'], { count: 0 });
+      queryClient.setQueryData(['notifications', 'unread-count', effectiveBranch], { count: 0 });
     },
   });
 

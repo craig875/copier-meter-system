@@ -27,6 +27,7 @@ export class ConsumableController {
         customerName: replacement.machine?.customer?.name || null,
         capturedByName: req.user.name || req.user.email || 'A user',
         orderId: replacement.id,
+        branch: req.tenantBranch,
       }).catch((err) => console.error('Part order notification error:', err));
     }
     res.status(201).json(result);
