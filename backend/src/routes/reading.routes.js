@@ -14,6 +14,7 @@ import {
 } from '../controllers/reading.controller.js';
 import { importReadings } from '../controllers/import.controller.js';
 import { authenticate, requireAdmin, requireStrictAdmin } from '../middleware/auth.js';
+// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireMeterReadingAccess } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';

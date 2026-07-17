@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getCustomers, getCustomer, createCustomer, updateCustomer, deleteCustomer, archiveCustomer } from '../controllers/customer.controller.js';
 import { importCustomers } from '../controllers/import.controller.js';
 import { authenticate, requireAdmin, requireMeterOrAdmin } from '../middleware/auth.js';
+// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireCustomerAccess } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';

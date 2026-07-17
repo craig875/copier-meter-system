@@ -285,7 +285,7 @@ function App() {
       <Route
         path="/notifications"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute adminOnly>
             <Layout>
               <Notifications />
             </Layout>

@@ -11,6 +11,7 @@ import {
   listUpdateRequests,
 } from '../controllers/fibre-order.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireFibreOrderAccess } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';

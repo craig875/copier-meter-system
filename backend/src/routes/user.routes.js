@@ -6,7 +6,7 @@ import { createUserSchema, updateUserSchema } from '../schemas/auth.schema.js';
 
 const router = Router();
 
-// All user routes require admin access
+// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
 router.use(authenticate, requireAdmin);
 
 router.get('/', getUsers);

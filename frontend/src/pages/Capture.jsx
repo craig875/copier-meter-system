@@ -372,7 +372,7 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
 const Capture = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isElevated, isAdmin, isManager, effectiveBranch } = useAuth();
+  const { isElevated, isAdmin, effectiveBranch } = useAuth();
   const now = new Date();
   const urlYear = searchParams.get('year');
   const urlMonth = searchParams.get('month');
@@ -553,7 +553,7 @@ const Capture = () => {
   }, [isElevated, isLocked]);
 
   const handleRequestUnableToObtainOverride = useCallback(async (machineId) => {
-    if (!isManager || isLocked) return;
+    if (!isElevated || isLocked) return;
     const entry = machinesRef.current.find((m) => m.machine.id === machineId);
     if (!entry || entry.currentReading || entry.pendingUnableToObtainOverrideRequest) return;
     if (!isConsecutiveUnableToReadBlocked(entry.previousReading)) return;
@@ -574,7 +574,7 @@ const Capture = () => {
     } finally {
       setRequestOverrideMachineId(null);
     }
-  }, [isManager, isLocked, year, month, queryBranch, queryClient]);
+  }, [isElevated, isLocked, year, month, queryBranch, queryClient]);
 
   const handleUnableToObtainCancel = useCallback(() => {
     if (unableToObtainSubmitting) return;
@@ -1384,7 +1384,7 @@ const Capture = () => {
                   consecutiveBlockHint="Ask an administrator to force-approve."
                   pendingUnableToObtainOverrideRequest={pendingUnableToObtainOverrideRequest}
                   canRequestUnableToObtainOverride={
-                    isManager
+                    isElevated
                     && !pendingUnableToObtainOverrideRequest
                   }
                   onRequestUnableToObtainOverride={handleRequestUnableToObtainOverride}

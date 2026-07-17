@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
 import {
   getNotifications,
@@ -11,6 +11,8 @@ import {
 const router = Router();
 
 router.use(authenticate);
+// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
+router.use(requireAdmin);
 router.use(requireTenantBranch);
 
 router.get('/', getNotifications);

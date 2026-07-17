@@ -65,6 +65,11 @@ export const authenticate = async (req, res, next) => {
   }
 };
 
+/**
+ * Elevated access: role is admin OR manager (not admin-only).
+ * Prefer `requireStrictAdmin` when the action must be limited to genuine admins.
+ * Error body already says "Administrator or manager access required".
+ */
 export const requireAdmin = (req, res, next) => {
   if (req.user?.role !== 'admin' && req.user?.role !== 'manager') {
     return res.status(403).json({ error: 'Administrator or manager access required' });

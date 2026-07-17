@@ -15,6 +15,7 @@ import {
   importPartOrders,
 } from '../controllers/consumable.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireMeterReadingAccess, requireConsumableAccess } from '../middleware/permissions.js';
 import { validate, validateQuery } from '../middleware/validate.js';

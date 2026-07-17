@@ -199,8 +199,9 @@ export class ReadingController {
   });
 
   requestUnableToObtainOverride = asyncHandler(async (req, res) => {
-    if (req.user.role !== 'manager') {
-      throw new ForbiddenError('Only managers can request Unable to obtain override approval');
+    // Align with route requireAdmin: admin OR manager (elevated).
+    if (!hasAdminAccess(req.user.role)) {
+      throw new ForbiddenError('Administrator or manager access required to request Unable to obtain override approval');
     }
     const { year, month, machineId, note } = req.body;
     const branch = req.tenantBranch;
