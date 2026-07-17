@@ -14,16 +14,42 @@ export function normalizeBranch(value) {
 }
 
 /**
- * After authenticate: require user.branch and attach req.tenantBranch.
+ * After authenticate: resolve req.tenantBranch from X-Active-Branch (validated
+ * against allowedBranches) or auto-select when the user has exactly one grant.
  * Does not mutate req.body.branch (user-admin create/update still sets another user's home branch).
  */
 export function requireTenantBranch(req, res, next) {
-  const branch = normalizeBranch(req.user?.branch);
-  if (!branch) {
-    return next(new ForbiddenError('User has no branch assigned'));
+  const allowed = Array.isArray(req.user?.allowedBranches)
+    ? req.user.allowedBranches
+    : [];
+
+  const headerRaw = req.get('X-Active-Branch');
+  const fromHeader = normalizeBranch(headerRaw);
+
+  if (headerRaw != null && headerRaw !== '') {
+    // Header was sent — must be a valid, permitted branch
+    if (!fromHeader || !allowed.includes(fromHeader)) {
+      return next(new ForbiddenError('Branch not permitted'));
+    }
+    req.tenantBranch = fromHeader;
+    return next();
   }
-  req.tenantBranch = branch;
-  next();
+
+  // No header: auto-select only when the user has exactly one allowed branch
+  if (allowed.length === 1) {
+    const only = normalizeBranch(allowed[0]);
+    if (!only) {
+      return next(new ForbiddenError('User has no branch assigned'));
+    }
+    req.tenantBranch = only;
+    return next();
+  }
+
+  if (allowed.length > 1) {
+    return next(new ForbiddenError('Branch selection required'));
+  }
+
+  return next(new ForbiddenError('User has no branch assigned'));
 }
 
 /**
