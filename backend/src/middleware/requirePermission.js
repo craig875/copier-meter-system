@@ -39,8 +39,9 @@ export function shadowRequirePermission(permissionKey, options = {}) {
 }
 
 /**
- * Future Stage D cutover helper (NOT wired in Stage C).
- * Do not mount on routes yet — blocking enforcement comes later.
+ * Stage D+ permission gate — blocks when the effective permission set lacks the key.
+ * Used on the audit/notifications pilot cutover; expand to other routes gradually.
+ * shadowRequirePermission remains available for dual-run observation on other groups.
  */
 export function requirePermission(permissionKey) {
   return (req, res, next) => {
