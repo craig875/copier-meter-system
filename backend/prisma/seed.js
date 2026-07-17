@@ -1,10 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { resolveRoleIdForEnum } from '../src/permissions/rolePermissionMatrix.js';
 
 const prisma = new PrismaClient();
 
 /** Ensure seeded accounts work for local login without an authenticator after re-seed. */
 const seedUser2FAClear = { twoFactorEnabled: false, twoFactorSecret: null };
+
+/** Enum role + matching Role.id (Stage A dual-run). */
+function withRole(role) {
+  return { role, roleId: resolveRoleIdForEnum(role) };
+}
 
 async function main() {
   console.log('Seeding database...');
@@ -16,7 +22,7 @@ async function main() {
     update: {
       passwordHash: adminPassword,
       name: 'System Admin',
-      role: 'admin',
+      ...withRole('admin'),
       branch: 'JHB',
       modules: ['copiers', 'connectivity', 'fibre-orders'],
       ...seedUser2FAClear,
@@ -25,7 +31,7 @@ async function main() {
       email: 'admin@example.com',
       passwordHash: adminPassword,
       name: 'System Admin',
-      role: 'admin',
+      ...withRole('admin'),
       branch: 'JHB',
       modules: ['copiers', 'connectivity', 'fibre-orders'],
       ...seedUser2FAClear,
@@ -33,14 +39,14 @@ async function main() {
   });
   console.log('Created admin user:', admin.email);
 
-  // Create management user (always update password so demo credentials work after re-seed)
+  // Former "management" demo → manager (legacy enum roles are not seeded after Stage A)
   const managementPassword = await bcrypt.hash('management123', 12);
   const management = await prisma.user.upsert({
     where: { email: 'management@example.com' },
     update: {
       passwordHash: managementPassword,
       name: 'Management User',
-      role: 'management',
+      ...withRole('manager'),
       branch: 'JHB',
       modules: ['copiers'],
       ...seedUser2FAClear,
@@ -49,7 +55,7 @@ async function main() {
       email: 'management@example.com',
       passwordHash: managementPassword,
       name: 'Management User',
-      role: 'management',
+      ...withRole('manager'),
       branch: 'JHB',
       modules: ['copiers'],
       ...seedUser2FAClear,
@@ -57,14 +63,14 @@ async function main() {
   });
   console.log('Created management user:', management.email);
 
-  // Create regular user (always update password so demo credentials work after re-seed)
+  // Former "user" demo → meter_user
   const userPassword = await bcrypt.hash('user123', 12);
   const user = await prisma.user.upsert({
     where: { email: 'user@example.com' },
     update: {
       passwordHash: userPassword,
       name: 'Regular User',
-      role: 'user',
+      ...withRole('meter_user'),
       branch: 'JHB',
       modules: ['copiers'],
       ...seedUser2FAClear,
@@ -73,7 +79,7 @@ async function main() {
       email: 'user@example.com',
       passwordHash: userPassword,
       name: 'Regular User',
-      role: 'user',
+      ...withRole('meter_user'),
       branch: 'JHB',
       modules: ['copiers'],
       ...seedUser2FAClear,
@@ -88,7 +94,7 @@ async function main() {
     update: {
       passwordHash: meterUserPassword,
       name: 'Meter User',
-      role: 'meter_user',
+      ...withRole('meter_user'),
       branch: 'JHB',
       modules: ['copiers'],
       ...seedUser2FAClear,
@@ -97,7 +103,7 @@ async function main() {
       email: 'meter@example.com',
       passwordHash: meterUserPassword,
       name: 'Meter User',
-      role: 'meter_user',
+      ...withRole('meter_user'),
       branch: 'JHB',
       modules: ['copiers'],
       ...seedUser2FAClear,
@@ -112,7 +118,7 @@ async function main() {
     update: {
       passwordHash: salesAgentPassword,
       name: 'Sales Agent',
-      role: 'sales_agent',
+      ...withRole('sales_agent'),
       branch: 'JHB',
       modules: ['fibre-orders'],
       ...seedUser2FAClear,
@@ -121,7 +127,7 @@ async function main() {
       email: 'sales@example.com',
       passwordHash: salesAgentPassword,
       name: 'Sales Agent',
-      role: 'sales_agent',
+      ...withRole('sales_agent'),
       branch: 'JHB',
       modules: ['fibre-orders'],
       ...seedUser2FAClear,
@@ -136,7 +142,7 @@ async function main() {
     update: {
       passwordHash: capturerPassword,
       name: 'Capturer',
-      role: 'capturer',
+      ...withRole('capturer'),
       branch: 'JHB',
       modules: ['copiers'],
       ...seedUser2FAClear,
@@ -145,7 +151,7 @@ async function main() {
       email: 'capturer@example.com',
       passwordHash: capturerPassword,
       name: 'Capturer',
-      role: 'capturer',
+      ...withRole('capturer'),
       branch: 'JHB',
       modules: ['copiers'],
       ...seedUser2FAClear,
@@ -153,14 +159,14 @@ async function main() {
   });
   console.log('Created capturer:', capturer.email);
 
-  // Create viewer (connectivity monitoring read-only)
+  // Former "viewer" demo → manager with connectivity-only modules
   const viewerPassword = await bcrypt.hash('viewer123', 12);
   const viewer = await prisma.user.upsert({
     where: { email: 'viewer@example.com' },
     update: {
       passwordHash: viewerPassword,
       name: 'Viewer',
-      role: 'viewer',
+      ...withRole('manager'),
       branch: 'JHB',
       modules: ['connectivity'],
       ...seedUser2FAClear,
@@ -169,7 +175,7 @@ async function main() {
       email: 'viewer@example.com',
       passwordHash: viewerPassword,
       name: 'Viewer',
-      role: 'viewer',
+      ...withRole('manager'),
       branch: 'JHB',
       modules: ['connectivity'],
       ...seedUser2FAClear,

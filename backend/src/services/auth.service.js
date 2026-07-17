@@ -8,6 +8,7 @@ import { UnauthorizedError, ConflictError, NotFoundError, ForbiddenError, Valida
 import { normalizeBranch } from '../middleware/tenant.js';
 import prisma from '../config/database.js';
 import { defaultModulesForRole, sanitizeUserModules } from '../utils/permissions.js';
+import { resolveRoleIdForEnum } from '../permissions/rolePermissionMatrix.js';
 
 /** Load allowed branches for a user from UserBranchAccess. */
 async function loadAllowedBranches(userId) {
@@ -370,6 +371,7 @@ export class UserService {
       passwordHash,
       name,
       role: resolvedRole,
+      roleId: resolveRoleIdForEnum(resolvedRole),
       branch: homeBranch,
       modules: resolvedModules,
     });
@@ -395,7 +397,10 @@ export class UserService {
     const updateData = {};
     if (data.email) updateData.email = data.email;
     if (data.name) updateData.name = data.name;
-    if (data.role) updateData.role = data.role;
+    if (data.role) {
+      updateData.role = data.role;
+      updateData.roleId = resolveRoleIdForEnum(data.role);
+    }
     if (data.password) {
       updateData.passwordHash = await bcrypt.hash(data.password, 12);
     }

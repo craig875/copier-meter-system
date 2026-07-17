@@ -10,7 +10,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
+/// Legacy enum role (kept for dual-run). DB type name remains "Role".
+enum UserRole {
   admin
   manager
   user
@@ -19,6 +20,8 @@ enum Role {
   sales_agent
   capturer
   viewer
+
+  @@map("Role")
 }
 
 enum Branch {
@@ -26,12 +29,66 @@ enum Branch {
   CT
 }
 
+enum PermissionEffect {
+  GRANT
+  DENY
+}
+
+/// Editable / system roles for the permission redesign (Stage A+).
+model Role {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  isImmutable Boolean  @default(false) @map("is_immutable")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  permissions RolePermission[]
+  users       User[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  roleId        String @map("role_id")
+  permissionKey String @map("permission_key")
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionKey])
+  @@index([permissionKey])
+  @@map("role_permissions")
+}
+
+model UserPermissionOverride {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  permissionKey String           @map("permission_key")
+  effect        PermissionEffect
+  grantedBy     String?          @map("granted_by")
+  note          String?
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  user          User  @relation("UserPermissionOverrides", fields: [userId], references: [id], onDelete: Cascade)
+  grantedByUser User? @relation("UserPermissionOverrideGrantedBy", fields: [grantedBy], references: [id], onDelete: SetNull)
+
+  @@unique([userId, permissionKey])
+  @@index([permissionKey])
+  @@map("user_permission_overrides")
+}
+
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
   passwordHash String    @map("password_hash")
   name         String
-  role         Role      @default(meter_user)
+  /// Legacy enum role — still authoritative for enforcement in Stage A
+  role         UserRole  @default(meter_user)
+  /// New role FK — seeded in Stage A; not enforced yet
+  roleId       String    @map("role_id")
   branch       Branch
   /// Feature modules this user may access: copiers, connectivity (extensible)
   modules      String[]  @default([])
@@ -60,6 +117,10 @@ model User {
 
   branchAccess        UserBranchAccess[]
   branchAccessGranted UserBranchAccess[] @relation("UserBranchAccessGrantedBy")
+
+  assignedRole                 Role                     @relation(fields: [roleId], references: [id])
+  permissionOverrides          UserPermissionOverride[] @relation("UserPermissionOverrides")
+  permissionOverridesGranted   UserPermissionOverride[] @relation("UserPermissionOverrideGrantedBy")
 
   @@map("users")
 }
