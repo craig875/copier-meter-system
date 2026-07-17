@@ -1,4 +1,4 @@
-import { Link, useLocation, useMatch } from 'react-router-dom';
+import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard,
@@ -42,6 +42,7 @@ const Layout = ({ children }) => {
     isCapturer,
     hasModule,
     effectiveBranch,
+    canSwitchBranches,
   } = useAuth();
   const showCopiers = hasModule(MODULE_COPERS);
   const showConnectivity = hasModule(MODULE_CONNECTIVITY);
@@ -49,12 +50,19 @@ const Layout = ({ children }) => {
   const branchCityLabel =
     effectiveBranch === 'CT' ? 'Cape Town' : effectiveBranch === 'JHB' ? 'Johannesburg' : null;
   const location = useLocation();
+  const navigate = useNavigate();
   const { goBack } = useBackNavigation();
   const consumablesMachineMatch = useMatch('/consumables/machines/:machineId/*');
   const consumablesMachineId = consumablesMachineMatch?.params?.machineId;
   const showBackButton = location.pathname !== '/';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState(new Set());
+
+  const requestBranchSwitch = () => {
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    sessionStorage.setItem('branchSelectReturn', returnTo);
+    navigate('/select-branch');
+  };
 
   const { data: unreadData } = useQuery({
     queryKey: ['notifications', 'unread-count'],
@@ -324,6 +332,17 @@ const Layout = ({ children }) => {
             <Shield className="h-5 w-5 mr-3" />
             Security
           </Link>
+          {canSwitchBranches && (
+            <button
+              type="button"
+              data-tour="branch-selector"
+              onClick={requestBranchSwitch}
+              className="w-full mb-1 px-3 py-2.5 text-sm font-medium text-center text-white bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+              title="Choose another permitted branch"
+            >
+              Switch branch
+            </button>
+          )}
           {/* User Info */}
           <div className="flex items-center justify-between">
             <div>

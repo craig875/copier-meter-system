@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import CapturerRestrict from './components/CapturerRestrict';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import BranchSelect from './pages/BranchSelect';
 import HomeDashboard from './pages/HomeDashboard';
 import Dashboard from './pages/Dashboard';
 import Capture from './pages/Capture';
@@ -38,7 +39,8 @@ import FibreProducts from './pages/FibreProducts';
 import UnableToObtainOverrides from './pages/admin/UnableToObtainOverrides';
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, canSwitchBranches, activeBranch } = useAuth();
+  const branchSelectionRequired = user && canSwitchBranches && !activeBranch;
 
   if (loading) {
     return (
@@ -50,7 +52,18 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route
+        path="/login"
+        element={
+          user
+            ? <Navigate to={branchSelectionRequired ? '/select-branch' : '/'} replace />
+            : <Login />
+        }
+      />
+      <Route
+        path="/select-branch"
+        element={user ? <BranchSelect /> : <Navigate to="/login" replace />}
+      />
 
       {/* Main Dashboard - Shows available modules */}
       <Route

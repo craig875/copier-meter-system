@@ -15,11 +15,15 @@ const api = axios.create({
   },
 });
 
-// Add auth token to requests (sessionStorage = logout when tab closes)
+// Add auth token and server-validated active branch to requests.
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const activeBranch = sessionStorage.getItem('activeBranch');
+  if (activeBranch) {
+    config.headers['X-Active-Branch'] = activeBranch;
   }
   return config;
 });
@@ -34,6 +38,7 @@ api.interceptors.response.use(
       if (!isAuthStep) {
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('user');
+        sessionStorage.removeItem('activeBranch');
         window.location.href = '/login';
       }
     }
@@ -46,6 +51,7 @@ export const authApi = {
   login: (data) => api.post('/auth/login', data),
   verify2FA: (data) => api.post('/auth/verify-2fa', data),
   getMe: () => api.get('/auth/me'),
+  switchBranch: (branch) => api.post('/auth/switch-branch', { branch }),
   get2FAStatus: () => api.get('/auth/2fa/status'),
   setup2FA: () => api.post('/auth/2fa/setup'),
   verify2FASetup: (data) => api.post('/auth/2fa/verify-setup', data),

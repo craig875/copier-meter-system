@@ -44,7 +44,7 @@ function machineMatchesSearch(machine, queryLower) {
 const Machines = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isElevated, isMeterUser, selectedBranch, effectiveBranch, user, loading: authLoading } = useAuth();
+  const { isElevated, isMeterUser, effectiveBranch, user, loading: authLoading } = useAuth();
   const location = useLocation();
   const [listTab, setListTab] = useState('active');
   const [search, setSearch] = useState('');

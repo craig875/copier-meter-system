@@ -23,15 +23,25 @@ const Login = () => {
 
   const show2FAStep = !!tempToken;
 
+  const navigateAfterLogin = (loggedInUser) => {
+    const target = getRedirectPath();
+    if ((loggedInUser?.allowedBranches?.length ?? 0) > 1) {
+      sessionStorage.setItem('branchSelectReturn', target);
+      navigate('/select-branch', { replace: true });
+      return;
+    }
+    navigate(target, { replace: true });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (show2FAStep) {
-        await loginWith2FA(tempToken, code);
+        const loggedInUser = await loginWith2FA(tempToken, code);
         toast.success('Login successful');
-        navigate(getRedirectPath(), { replace: true });
+        navigateAfterLogin(loggedInUser);
       } else {
         const result = await login(email, password);
         if (result?.requires2FA && result?.tempToken) {
@@ -40,7 +50,7 @@ const Login = () => {
           toast.success('Enter your 6-digit code');
         } else {
           toast.success('Login successful');
-          navigate(getRedirectPath(), { replace: true });
+          navigateAfterLogin(result);
         }
       }
     } catch (error) {

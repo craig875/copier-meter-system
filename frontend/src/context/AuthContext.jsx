@@ -1,7 +1,9 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../services/api';
 import { MODULE_CONNECTIVITY } from '../constants/modules';
+import { getAllowedBranches, resolveActiveBranch } from '../utils/branchSelection';
 
 const AuthContext = createContext(null);
 
@@ -15,8 +17,21 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [activeBranch, setActiveBranch] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const applyActiveBranch = (userData, candidate = null) => {
+    const resolved = resolveActiveBranch(userData, candidate);
+    setActiveBranch(resolved);
+    if (resolved) {
+      sessionStorage.setItem('activeBranch', resolved);
+    } else {
+      sessionStorage.removeItem('activeBranch');
+    }
+    return resolved;
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -27,10 +42,17 @@ export const AuthProvider = ({ children }) => {
         try {
           const response = await authApi.getMe();
           const userData = response.data.user;
-          setUser({ ...userData, twoFactorEnabled: userData.twoFactorEnabled ?? false });
+          const normalizedUser = {
+            ...userData,
+            twoFactorEnabled: userData.twoFactorEnabled ?? false,
+          };
+          setUser(normalizedUser);
+          applyActiveBranch(normalizedUser, sessionStorage.getItem('activeBranch'));
         } catch (error) {
           sessionStorage.removeItem('token');
           sessionStorage.removeItem('user');
+          sessionStorage.removeItem('activeBranch');
+          setActiveBranch(null);
         }
       }
       setLoading(false);
@@ -44,6 +66,9 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.setItem('token', token);
     sessionStorage.setItem('user', JSON.stringify(userWith2FA));
     setUser(userWith2FA);
+    // A new login starts a fresh branch session. Single-branch users are auto-selected.
+    sessionStorage.removeItem('activeBranch');
+    applyActiveBranch(userWith2FA);
     // Clear legacy soft-tenancy key if present
     localStorage.removeItem('selectedBranch');
     return userWith2FA;
@@ -77,6 +102,7 @@ export const AuthProvider = ({ children }) => {
       const userWith2FA = { ...userData, twoFactorEnabled: userData.twoFactorEnabled ?? false };
       setUser(userWith2FA);
       sessionStorage.setItem('user', JSON.stringify(userWith2FA));
+      applyActiveBranch(userWith2FA, sessionStorage.getItem('activeBranch'));
     } catch {
       // Ignore - user might have logged out
     }
@@ -85,8 +111,11 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');
+    sessionStorage.removeItem('activeBranch');
     localStorage.removeItem('selectedBranch');
     setUser(null);
+    setActiveBranch(null);
+    queryClient.clear();
     navigate('/login');
   };
 
@@ -110,8 +139,19 @@ export const AuthProvider = ({ children }) => {
   const canManageConnectivity =
     isAdmin || (isManager && hasModule(MODULE_CONNECTIVITY));
 
-  /** Always the logged-in user's home branch (hard tenancy). */
-  const effectiveBranch = user?.branch || null;
+  const allowedBranches = getAllowedBranches(user);
+  const canSwitchBranches = allowedBranches.length > 1;
+
+  const switchBranch = async (branch) => {
+    await authApi.switchBranch(branch);
+    sessionStorage.setItem('activeBranch', branch);
+    setActiveBranch(branch);
+    await queryClient.invalidateQueries({ refetchType: 'active' });
+    return branch;
+  };
+
+  /** Compatibility alias used by existing branch-aware pages and query keys. */
+  const effectiveBranch = activeBranch;
 
   return (
     <AuthContext.Provider
@@ -132,6 +172,10 @@ export const AuthProvider = ({ children }) => {
         canAccessConnectivity,
         canManageConnectivity,
         hasModule,
+        allowedBranches,
+        activeBranch,
+        canSwitchBranches,
+        switchBranch,
         effectiveBranch,
       }}
     >
