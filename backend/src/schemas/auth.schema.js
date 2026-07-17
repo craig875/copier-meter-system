@@ -22,6 +22,7 @@ export const createUserSchema = z.object({
   role: z.enum(['admin', 'manager', 'meter_user', 'capturer', 'sales_agent']).default('meter_user'),
   branch: branchEnum,
   modules: z.array(moduleKey).optional(),
+  allowedBranches: z.array(branchEnum).min(1, 'Select at least one branch').optional(),
 });
 
 export const verify2FASchema = z.object({
@@ -45,4 +46,5 @@ export const updateUserSchema = z.object({
   role: z.enum(['admin', 'manager', 'meter_user', 'capturer', 'sales_agent']).optional(),
   branch: branchEnum.optional(),
   modules: z.array(moduleKey).optional(),
+  allowedBranches: z.array(branchEnum).min(1, 'Select at least one branch').optional(),
 });

@@ -17,6 +17,19 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { MODULE_OPTIONS } from '../constants/modules';
+import { branchLabel } from '../utils/branchSelection';
+
+const BRANCH_ACCESS_OPTIONS = [
+  { key: 'JHB', label: 'Johannesburg', description: 'Access Johannesburg (JHB) data and workflows' },
+  { key: 'CT', label: 'Cape Town', description: 'Access Cape Town (CT) data and workflows' },
+];
+
+function normalizeAllowedBranches(user) {
+  if (Array.isArray(user?.allowedBranches) && user.allowedBranches.length > 0) {
+    return [...new Set(user.allowedBranches.filter((b) => b === 'JHB' || b === 'CT'))];
+  }
+  return user?.branch === 'CT' || user?.branch === 'JHB' ? [user.branch] : ['JHB'];
+}
 
 const Users = () => {
   const queryClient = useQueryClient();
@@ -171,14 +184,27 @@ const Users = () => {
                 </span>
               </div>
               {user.branch && (
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                   <span className="text-xs text-gray-500">Branch:</span>
                   <span className={clsx(
                     'inline-flex px-2 py-0.5 rounded-full text-xs font-medium',
                     user.branch === 'JHB' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
                   )}>
-                    {user.branch}
+                    {user.branch} (home)
                   </span>
+                  {normalizeAllowedBranches(user)
+                    .filter((b) => b !== user.branch)
+                    .map((b) => (
+                      <span
+                        key={b}
+                        className={clsx(
+                          'inline-flex px-2 py-0.5 rounded-full text-xs font-medium',
+                          b === 'JHB' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                        )}
+                      >
+                        {b}
+                      </span>
+                    ))}
                 </div>
               )}
               {user.role === 'admin' ? (
@@ -222,6 +248,7 @@ const UserModal = ({ user, onClose }) => {
     password: '',
     role: user?.role || 'meter_user',
     branch: user?.branch || 'JHB',
+    allowedBranches: normalizeAllowedBranches(user),
     modules:
       user?.role === 'admin'
         ? ['copiers', 'connectivity', 'fibre-orders']
@@ -232,7 +259,15 @@ const UserModal = ({ user, onClose }) => {
 
   const validateForm = () => {
     if (!formData.branch || (formData.branch !== 'JHB' && formData.branch !== 'CT')) {
-      toast.error('Branch is required');
+      toast.error('Home branch is required');
+      return false;
+    }
+    if (!Array.isArray(formData.allowedBranches) || formData.allowedBranches.length === 0) {
+      toast.error('Select at least one branch');
+      return false;
+    }
+    if (!formData.allowedBranches.includes(formData.branch)) {
+      toast.error('Home branch must be included in branch access');
       return false;
     }
     return true;
@@ -289,6 +324,11 @@ const UserModal = ({ user, onClose }) => {
       if (name === 'role' && v !== 'admin' && (!next.modules || next.modules.length === 0)) {
         next.modules = ['copiers'];
       }
+      if (name === 'branch' && (v === 'JHB' || v === 'CT')) {
+        const set = new Set(prev.allowedBranches || []);
+        set.add(v);
+        next.allowedBranches = [...set];
+      }
       return next;
     });
   };
@@ -301,6 +341,19 @@ const UserModal = ({ user, onClose }) => {
       if (set.has(key)) set.delete(key);
       else set.add(key);
       return { ...prev, modules: [...set] };
+    });
+  };
+
+  const toggleBranchAccess = (key) => {
+    if (key === formData.branch) {
+      toast.error('Home branch cannot be removed from branch access');
+      return;
+    }
+    setFormData((prev) => {
+      const set = new Set(prev.allowedBranches || []);
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      return { ...prev, allowedBranches: [...set] };
     });
   };
 
@@ -380,7 +433,7 @@ const UserModal = ({ user, onClose }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Branch *
+              Home branch *
             </label>
             <select
               name="branch"
@@ -393,8 +446,46 @@ const UserModal = ({ user, onClose }) => {
               <option value="CT">Cape Town (CT)</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              Every user must belong to exactly one branch.
+              Default / home branch. Must also be included in branch access below.
             </p>
+          </div>
+
+          <div>
+            <span className="block text-sm font-medium text-gray-700 mb-2">Branch access</span>
+            <div className="space-y-2">
+              {BRANCH_ACCESS_OPTIONS.map((opt) => {
+                const isHome = formData.branch === opt.key;
+                const checked = formData.allowedBranches?.includes(opt.key) ?? false;
+                return (
+                  <label
+                    key={opt.key}
+                    className={clsx(
+                      'flex items-start gap-3 p-3 rounded-lg border border-gray-200',
+                      isHome ? 'bg-gray-50 cursor-default' : 'cursor-pointer hover:bg-gray-50'
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={isHome}
+                      onChange={() => toggleBranchAccess(opt.key)}
+                      className="mt-1 rounded border-gray-300 text-red-600 focus:ring-red-500 disabled:opacity-60"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-gray-900">
+                        {opt.label}
+                        {isHome ? ' (home)' : ''}
+                      </span>
+                      <span className="block text-xs text-gray-500">
+                        {isHome
+                          ? `Required because home branch is ${branchLabel(opt.key)}`
+                          : opt.description}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
           <div>

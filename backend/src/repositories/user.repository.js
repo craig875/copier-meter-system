@@ -25,6 +25,10 @@ export class UserRepository extends BaseRepository {
           branch: true,
           modules: true,
           createdAt: true,
+          branchAccess: {
+            select: { branch: true },
+            orderBy: { branch: 'asc' },
+          },
         },
         orderBy: { name: 'asc' },
         ...options,

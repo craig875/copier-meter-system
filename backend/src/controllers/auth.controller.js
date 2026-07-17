@@ -78,14 +78,14 @@ export class AuthController {
   });
 
   createUser = asyncHandler(async (req, res) => {
-    const result = await this.userService.createUser(req.body);
+    const result = await this.userService.createUser(req.body, req.user.id);
     this.auditService.log(req.user.id, 'user_create', 'user', result.user?.id, { email: result.user?.email });
     res.status(201).json(result);
   });
 
   updateUser = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const result = await this.userService.updateUser(id, req.body);
+    const result = await this.userService.updateUser(id, req.body, req.user.id);
     this.auditService.log(req.user.id, 'user_update', 'user', id, { email: result.user?.email });
     res.json(result);
   });

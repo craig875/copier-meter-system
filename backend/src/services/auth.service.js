@@ -4,7 +4,7 @@ import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { config } from '../config/index.js';
 import { repositories } from '../repositories/index.js';
-import { UnauthorizedError, ConflictError, NotFoundError, ForbiddenError } from '../utils/errors.js';
+import { UnauthorizedError, ConflictError, NotFoundError, ForbiddenError, ValidationError } from '../utils/errors.js';
 import { normalizeBranch } from '../middleware/tenant.js';
 import prisma from '../config/database.js';
 import { defaultModulesForRole, sanitizeUserModules } from '../utils/permissions.js';
@@ -35,16 +35,80 @@ function toSessionUser(user, allowedBranches) {
 }
 
 /** Safe user shape for API responses (no password hash) */
-function publicUser(user) {
+function publicUser(user, allowedBranches = null) {
+  const branches =
+    allowedBranches ??
+    (Array.isArray(user.branchAccess)
+      ? user.branchAccess.map((row) => row.branch)
+      : Array.isArray(user.allowedBranches)
+        ? user.allowedBranches
+        : []);
   return {
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
     branch: user.branch,
+    allowedBranches: [...new Set(branches.filter(Boolean))],
     modules: sanitizeUserModules(user.modules ?? []),
     createdAt: user.createdAt,
   };
+}
+
+/**
+ * Resolve allowed branches for create/update.
+ * Defaults to [homeBranch] when omitted. Home branch must always be included.
+ */
+function resolveAllowedBranches(homeBranch, allowedBranches) {
+  const home = normalizeBranch(homeBranch);
+  if (!home) {
+    throw new ValidationError('Home branch is required');
+  }
+
+  const raw = Array.isArray(allowedBranches) ? allowedBranches : [home];
+  const resolved = [...new Set(raw.map(normalizeBranch).filter(Boolean))];
+  if (resolved.length === 0) {
+    throw new ValidationError('Select at least one branch');
+  }
+  if (!resolved.includes(home)) {
+    throw new ValidationError('Home branch must be included in branch access');
+  }
+  return resolved.sort();
+}
+
+async function syncUserBranchAccess(userId, allowedBranches, grantedBy = null) {
+  const existing = await prisma.userBranchAccess.findMany({
+    where: { userId },
+    select: { branch: true },
+  });
+  const current = new Set(existing.map((row) => row.branch));
+  const next = new Set(allowedBranches);
+
+  const toDelete = [...current].filter((branch) => !next.has(branch));
+  const toInsert = [...next].filter((branch) => !current.has(branch));
+
+  if (toDelete.length === 0 && toInsert.length === 0) {
+    return allowedBranches;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (toDelete.length > 0) {
+      await tx.userBranchAccess.deleteMany({
+        where: { userId, branch: { in: toDelete } },
+      });
+    }
+    if (toInsert.length > 0) {
+      await tx.userBranchAccess.createMany({
+        data: toInsert.map((branch) => ({
+          userId,
+          branch,
+          grantedBy: grantedBy || null,
+        })),
+      });
+    }
+  });
+
+  return allowedBranches;
 }
 
 /**
@@ -268,17 +332,25 @@ export class UserService {
    */
   async getUsers() {
     const users = await this.userRepo.findAll();
-    return { users };
+    return {
+      users: users.map((user) => publicUser(user)),
+    };
   }
 
   /**
    * Create a new user
    * @param {Object} data
+   * @param {string} [grantedBy] - admin user id granting branch access
    * @returns {Promise<Object>}
    */
-  async createUser(data) {
-    const { email, password, name, role, branch, modules } = data;
+  async createUser(data, grantedBy = null) {
+    const { email, password, name, role, branch, modules, allowedBranches } = data;
     const resolvedRole = role || 'meter_user';
+    const homeBranch = normalizeBranch(branch);
+    if (!homeBranch) {
+      throw new ValidationError('Home branch is required');
+    }
+    const resolvedBranches = resolveAllowedBranches(homeBranch, allowedBranches);
 
     // Check for duplicate email
     const existing = await this.userRepo.findByEmail(email);
@@ -298,20 +370,23 @@ export class UserService {
       passwordHash,
       name,
       role: resolvedRole,
-      branch: branch,
+      branch: homeBranch,
       modules: resolvedModules,
     });
 
-    return { user: publicUser(user) };
+    await syncUserBranchAccess(user.id, resolvedBranches, grantedBy);
+
+    return { user: publicUser(user, resolvedBranches) };
   }
 
   /**
    * Update a user
    * @param {string} id
    * @param {Object} data
+   * @param {string} [grantedBy] - admin user id granting branch access
    * @returns {Promise<Object>}
    */
-  async updateUser(id, data) {
+  async updateUser(id, data, grantedBy = null) {
     const existing = await this.userRepo.findById(id);
     if (!existing) {
       throw new NotFoundError('User');
@@ -325,7 +400,11 @@ export class UserService {
       updateData.passwordHash = await bcrypt.hash(data.password, 12);
     }
     if (data.branch !== undefined) {
-      updateData.branch = data.branch;
+      const homeBranch = normalizeBranch(data.branch);
+      if (!homeBranch) {
+        throw new ValidationError('Home branch is required');
+      }
+      updateData.branch = homeBranch;
     }
     if (data.modules !== undefined) {
       const r = data.role ?? existing.role;
@@ -335,12 +414,33 @@ export class UserService {
           : defaultModulesForRole(r);
     }
 
-    if (Object.keys(updateData).length === 0) {
-      return { user: publicUser(existing) };
+    const homeBranch = updateData.branch ?? existing.branch;
+    let resolvedBranches = null;
+    if (data.allowedBranches !== undefined || data.branch !== undefined) {
+      // If only home branch changes, ensure it remains in grants (merge with current if allowedBranches omitted).
+      const candidate =
+        data.allowedBranches !== undefined
+          ? data.allowedBranches
+          : [...await loadAllowedBranches(id), homeBranch];
+      resolvedBranches = resolveAllowedBranches(homeBranch, candidate);
     }
 
-    const user = await this.userRepo.update(id, updateData);
-    return { user: publicUser(user) };
+    if (Object.keys(updateData).length === 0 && resolvedBranches == null) {
+      const currentBranches = await loadAllowedBranches(id);
+      return { user: publicUser(existing, currentBranches) };
+    }
+
+    const user =
+      Object.keys(updateData).length > 0
+        ? await this.userRepo.update(id, updateData)
+        : existing;
+
+    if (resolvedBranches) {
+      await syncUserBranchAccess(id, resolvedBranches, grantedBy);
+    }
+
+    const branches = resolvedBranches ?? await loadAllowedBranches(id);
+    return { user: publicUser(user, branches) };
   }
 
   /**
