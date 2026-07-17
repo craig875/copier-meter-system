@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import prisma from '../config/database.js';
+import { computeEffectivePermissions } from '../permissions/effectivePermissions.js';
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -20,8 +21,20 @@ export const authenticate = async (req, res, next) => {
         email: true,
         name: true,
         role: true,
+        roleId: true,
         branch: true,
         modules: true,
+        assignedRole: {
+          select: {
+            id: true,
+            key: true,
+            name: true,
+            permissions: { select: { permissionKey: true } },
+          },
+        },
+        permissionOverrides: {
+          select: { permissionKey: true, effect: true },
+        },
         branchAccess: { select: { branch: true }, orderBy: { branch: 'asc' } },
       },
     });
@@ -30,10 +43,20 @@ export const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    const { branchAccess, ...userFields } = user;
+    const { branchAccess, assignedRole, permissionOverrides, ...userFields } = user;
+    const permissions = computeEffectivePermissions({
+      roleKey: assignedRole?.key,
+      rolePermissionKeys: (assignedRole?.permissions ?? []).map((p) => p.permissionKey),
+      overrides: permissionOverrides ?? [],
+    });
+
     req.user = {
       ...userFields,
       allowedBranches: branchAccess.map((a) => a.branch),
+      assignedRole: assignedRole
+        ? { id: assignedRole.id, key: assignedRole.key, name: assignedRole.name }
+        : null,
+      permissions,
     };
     next();
   } catch (error) {

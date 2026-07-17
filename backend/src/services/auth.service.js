@@ -9,6 +9,7 @@ import { normalizeBranch } from '../middleware/tenant.js';
 import prisma from '../config/database.js';
 import { defaultModulesForRole, sanitizeUserModules } from '../utils/permissions.js';
 import { resolveRoleIdForEnum } from '../permissions/rolePermissionMatrix.js';
+import { resolveUserEffectiveAccess } from '../permissions/effectivePermissions.js';
 
 /** Load allowed branches for a user from UserBranchAccess. */
 async function loadAllowedBranches(userId) {
@@ -21,16 +22,19 @@ async function loadAllowedBranches(userId) {
 }
 
 /** Auth session user shape returned by login, /me, and verify-2fa. */
-function toSessionUser(user, allowedBranches) {
+async function toSessionUser(user, allowedBranches) {
+  const { assignedRole, permissions } = await resolveUserEffectiveAccess(prisma, user.id);
   return {
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
+    assignedRole,
     branch: user.branch,
     defaultBranch: user.branch,
     allowedBranches,
     modules: sanitizeUserModules(user.modules ?? []),
+    permissions,
     twoFactorEnabled: !!user.twoFactorEnabled,
   };
 }
@@ -160,7 +164,7 @@ export class AuthService {
 
     return {
       token,
-      user: toSessionUser(user, allowedBranches),
+      user: await toSessionUser(user, allowedBranches),
     };
   }
 
@@ -200,7 +204,7 @@ export class AuthService {
 
     return {
       token,
-      user: toSessionUser(user, allowedBranches),
+      user: await toSessionUser(user, allowedBranches),
     };
   }
 
@@ -294,7 +298,7 @@ export class AuthService {
     }
     const branches = allowedBranches ?? await loadAllowedBranches(userId);
     return {
-      user: toSessionUser(user, branches),
+      user: await toSessionUser(user, branches),
     };
   }
 
