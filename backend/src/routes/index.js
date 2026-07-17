@@ -13,6 +13,7 @@ import notificationRoutes from './notification.routes.js';
 import connectivityRoutes from '../connectivity/connectivity.routes.js';
 import fibreProductRoutes from './fibre-product.routes.js';
 import fibreOrderRoutes from './fibre-order.routes.js';
+import installRoutes from './install.routes.js';
 
 const router = Router();
 
@@ -55,5 +56,8 @@ if (config.connectivityModuleEnabled) {
 // Fibre order tracker
 router.use('/fibre-products', fibreProductRoutes);
 router.use('/fibre-orders', fibreOrderRoutes);
+
+// Installations tracker (elevated)
+router.use('/installations', installRoutes);
 
 export default router;

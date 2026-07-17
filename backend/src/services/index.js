@@ -9,6 +9,8 @@ import { NotificationService } from './notification.service.js';
 
 import { FibreProductService } from './fibre-product.service.js';
 import { FibreOrderService } from './fibre-order.service.js';
+import { InstallService } from './install.service.js';
+import { InstallTaskService } from './install-task.service.js';
 
 /**
  * Service Factory - Centralized service creation
@@ -28,6 +30,8 @@ export const services = {
   notification: notificationService,
   fibreProduct: new FibreProductService(),
   fibreOrder: new FibreOrderService(),
+  install: new InstallService(),
+  installTask: new InstallTaskService(),
 };
 
 export {

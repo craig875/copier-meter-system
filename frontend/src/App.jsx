@@ -36,6 +36,10 @@ import FibreOrdersCompleted from './pages/FibreOrdersCompleted';
 import FibreOrderDetail from './pages/FibreOrderDetail';
 import FibreOrderForm from './pages/FibreOrderForm';
 import FibreProducts from './pages/FibreProducts';
+import InstallationsList from './pages/InstallationsList';
+import InstallationDetail from './pages/InstallationDetail';
+import InstallationForm from './pages/InstallationForm';
+import MyInstallTasks from './pages/MyInstallTasks';
 import UnableToObtainOverrides from './pages/admin/UnableToObtainOverrides';
 
 function App() {
@@ -322,6 +326,13 @@ function App() {
       <Route path="/fibre-orders/products" element={<ProtectedRoute adminOnly><Layout><FibreProducts /></Layout></ProtectedRoute>} />
       <Route path="/fibre-orders/:id/edit" element={<ProtectedRoute adminOnly><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
       <Route path="/fibre-orders/:id" element={<ProtectedRoute><Layout><FibreOrderDetail /></Layout></ProtectedRoute>} />
+
+      {/* Installations Tracker */}
+      <Route path="/installations" element={<ProtectedRoute adminOnly><Layout><InstallationsList /></Layout></ProtectedRoute>} />
+      <Route path="/installations/my-tasks" element={<ProtectedRoute><Layout><MyInstallTasks /></Layout></ProtectedRoute>} />
+      <Route path="/installations/new" element={<ProtectedRoute adminOnly><Layout><InstallationForm /></Layout></ProtectedRoute>} />
+      <Route path="/installations/:id/edit" element={<ProtectedRoute adminOnly><Layout><InstallationForm /></Layout></ProtectedRoute>} />
+      <Route path="/installations/:id" element={<ProtectedRoute><Layout><InstallationDetail /></Layout></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

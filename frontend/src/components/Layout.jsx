@@ -22,6 +22,8 @@ import {
   Globe,
   Radio,
   ShieldAlert,
+  HardDrive,
+  ListTodo,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -89,12 +91,26 @@ const Layout = ({ children }) => {
     icon: Radio,
     activePaths: ['/fibre-orders/list', '/fibre-orders/completed', '/fibre-orders/new', '/fibre-orders/products'],
   };
+  const installationsNav = {
+    name: 'Installations',
+    href: '/installations',
+    icon: HardDrive,
+    activePaths: ['/installations/new'],
+    excludePaths: ['/installations/my-tasks'],
+  };
+  const myInstallTasksNav = {
+    name: 'My Install Tasks',
+    href: '/installations/my-tasks',
+    icon: ListTodo,
+  };
 
   const navigation = (() => {
     const home = { name: 'Home', href: '/', icon: Home };
     const topLinks = [
       ...(showConnectivity ? [connectivityNav] : []),
       ...(showFibreOrders ? [fibreOrdersNav] : []),
+      ...(isElevated ? [installationsNav] : []),
+      myInstallTasksNav,
     ];
 
     if (!showCopiers && topLinks.length > 0) {
@@ -181,7 +197,12 @@ const Layout = ({ children }) => {
     return item.children.some((c) => isChildActive(c));
   };
 
-  const isItemActive = (item) => isActive(item.href) || hasActiveChild(item);
+  const isItemActive = (item) => {
+    if (item.excludePaths?.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`))) {
+      return false;
+    }
+    return isActive(item.href) || hasActiveChild(item);
+  };
 
   const { data: consumablesMachineData } = useQuery({
     queryKey: ['machine', consumablesMachineId],

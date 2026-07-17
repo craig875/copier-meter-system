@@ -286,4 +286,24 @@ export const fibreOrdersApi = {
     api.get('/fibre-orders/update-requests', { params: fibreBranchParams(branch) }).then((r) => r.data),
 };
 
+/** Installations tracker (elevated CRUD; assignees may update own task status) */
+export const installationsApi = {
+  listTypes: () => api.get('/installations/types').then((r) => r.data),
+  list: (params = {}) => api.get('/installations', { params }).then((r) => r.data),
+  get: (id) => api.get(`/installations/${id}`).then((r) => r.data),
+  getUpdates: (id) => api.get(`/installations/${id}/updates`).then((r) => r.data),
+  create: (data) => api.post('/installations', data).then((r) => r.data),
+  update: (id, data) => api.put(`/installations/${id}`, data).then((r) => r.data),
+  listMyTasks: () => api.get('/installations/my-tasks').then((r) => r.data),
+  listTasks: (installId) => api.get(`/installations/${installId}/tasks`).then((r) => r.data),
+  createTask: (installId, data) =>
+    api.post(`/installations/${installId}/tasks`, data).then((r) => r.data),
+  updateTask: (installId, taskId, data) =>
+    api.put(`/installations/${installId}/tasks/${taskId}`, data).then((r) => r.data),
+  updateTaskStatus: (installId, taskId, status) =>
+    api.patch(`/installations/${installId}/tasks/${taskId}/status`, { status }).then((r) => r.data),
+  deleteTask: (installId, taskId) =>
+    api.delete(`/installations/${installId}/tasks/${taskId}`).then((r) => r.data),
+};
+
 export default api;

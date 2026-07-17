@@ -123,6 +123,13 @@ model User {
   permissionOverridesGranted   UserPermissionOverride[] @relation("UserPermissionOverrideGrantedBy")
   permissionShadowLogs         PermissionShadowLog[]
 
+  installsCreated              Install[]               @relation("InstallCreatedBy")
+  installUpdatesCreated        InstallUpdate[]         @relation("InstallUpdateCreatedBy")
+  installDocumentsCreated      InstallDocument[]       @relation("InstallDocumentCreatedBy")
+  installTasksAssigned         InstallTask[]           @relation("InstallTaskAssignee")
+  installTasksCreated          InstallTask[]           @relation("InstallTaskCreatedBy")
+  appSettingsUpdated           AppSetting[]            @relation("AppSettingUpdatedBy")
+
   @@map("users")
 }
 
@@ -274,6 +281,154 @@ model InstallationProjectAssignment {
   @@unique([projectId, duty])
   @@index([userId])
   @@map("installation_project_assignments")
+}
+
+// =============================================================================
+// Installations tracker (fresh build — not related to InstallationProject above)
+// =============================================================================
+
+enum InstallStatus {
+  active
+  complete
+  on_hold
+  cancelled
+}
+
+enum InstallDocumentKind {
+  LINK
+  FILE
+}
+
+enum InstallTaskStatus {
+  assigned
+  acknowledged
+  complete
+}
+
+/// Hardware kind catalog for Installations (copier, fibre gear, other).
+model InstallType {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  installs Install[]
+
+  @@map("install_types")
+}
+
+/// One installation job (UI: Installations).
+model Install {
+  id                      String        @id @default(uuid())
+  branch                  Branch
+  typeId                  String        @map("type_id")
+  customerName            String        @map("customer_name")
+  siteName                String?       @map("site_name")
+  siteAddress             String?       @map("site_address")
+  salesOrderNumber        String?       @map("sales_order_number")
+  status                  InstallStatus @default(active)
+  /// Free-text current progress (e.g. "awaiting stock").
+  progress                String?
+  scheduledDate           DateTime?     @map("scheduled_date") @db.Date
+  completedDate           DateTime?     @map("completed_date") @db.Date
+  assignedTechnicianName  String?       @map("assigned_technician_name")
+  notes                   String?
+  createdById             String        @map("created_by")
+  createdAt               DateTime      @default(now()) @map("created_at")
+  updatedAt               DateTime      @updatedAt @map("updated_at")
+
+  type      InstallType       @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  createdBy User              @relation("InstallCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updates   InstallUpdate[]
+  documents InstallDocument[]
+  tasks     InstallTask[]
+
+  @@index([branch])
+  @@index([status])
+  @@index([typeId])
+  @@index([createdById])
+  @@map("installs")
+}
+
+/// Sub-task on an installation, assigned to a real User.
+model InstallTask {
+  id             String            @id @default(uuid())
+  installId      String            @map("install_id")
+  title          String
+  description    String?
+  assignedToId   String            @map("assigned_to_id")
+  status         InstallTaskStatus @default(assigned)
+  createdById    String            @map("created_by_id")
+  acknowledgedAt DateTime?         @map("acknowledged_at")
+  completedAt    DateTime?         @map("completed_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  install    Install @relation(fields: [installId], references: [id], onDelete: Cascade)
+  assignedTo User    @relation("InstallTaskAssignee", fields: [assignedToId], references: [id], onDelete: Restrict)
+  createdBy  User    @relation("InstallTaskCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([installId])
+  @@index([assignedToId])
+  @@index([status])
+  @@map("install_tasks")
+}
+
+/// Timeline of status / progress changes.
+model InstallUpdate {
+  id               String         @id @default(uuid())
+  installId        String         @map("install_id")
+  previousStatus   InstallStatus? @map("previous_status")
+  newStatus        InstallStatus? @map("new_status")
+  previousProgress String?        @map("previous_progress")
+  newProgress      String?        @map("new_progress")
+  note             String?
+  createdById      String         @map("created_by")
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  install   Install @relation(fields: [installId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("InstallUpdateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([installId])
+  @@index([createdAt])
+  @@map("install_updates")
+}
+
+/// Documents for an install (LINK now; FILE later).
+model InstallDocument {
+  id          String              @id @default(uuid())
+  installId   String              @map("install_id")
+  kind        InstallDocumentKind @default(LINK)
+  label       String?
+  url         String?
+  storageKey  String?             @map("storage_key")
+  fileName    String?             @map("file_name")
+  contentType String?             @map("content_type")
+  byteSize    Int?                @map("byte_size")
+  createdById String              @map("created_by")
+  createdAt   DateTime            @default(now()) @map("created_at")
+
+  install   Install @relation(fields: [installId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("InstallDocumentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([installId])
+  @@map("install_documents")
+}
+
+/// Key/value app configuration (e.g. sales-order URL template).
+model AppSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedById String?  @map("updated_by")
+
+  updatedBy User? @relation("AppSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("app_settings")
 }
 
 enum FibrePipelineStatus {

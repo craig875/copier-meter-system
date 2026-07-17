@@ -13,6 +13,8 @@ import { FibreOrderRepository } from './fibre-order.repository.js';
 import { OrderUpdateRepository } from './order-update.repository.js';
 import { FibreOrderUpdateRequestRepository } from './fibre-order-update-request.repository.js';
 import { UnableToObtainOverrideRequestRepository } from './unable-to-obtain-override-request.repository.js';
+import { InstallRepository } from './install.repository.js';
+import { InstallTaskRepository } from './install-task.repository.js';
 
 /**
  * Repository Factory - Centralized repository creation
@@ -32,6 +34,8 @@ export const repositories = {
   orderUpdate: new OrderUpdateRepository(prisma),
   fibreOrderUpdateRequest: new FibreOrderUpdateRequestRepository(prisma),
   unableToObtainOverrideRequest: new UnableToObtainOverrideRequestRepository(prisma),
+  install: new InstallRepository(prisma),
+  installTask: new InstallTaskRepository(prisma),
 };
 
 export {
@@ -47,4 +51,6 @@ export {
   OrderUpdateRepository,
   FibreOrderUpdateRequestRepository,
   UnableToObtainOverrideRequestRepository,
+  InstallRepository,
+  InstallTaskRepository,
 };
