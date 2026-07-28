@@ -8,6 +8,7 @@
  * Usage:
  *   node scripts/smoke-test-permissions.mjs
  *   SMOKE_DOMAIN=connectivity node scripts/smoke-test-permissions.mjs
+ *   SMOKE_DOMAIN=fibre_orders node scripts/smoke-test-permissions.mjs
  */
 
 import 'dotenv/config';
@@ -157,7 +158,208 @@ const DOMAIN_CONFIGS = {
     },
   },
 
-  // fibre_orders: { ... },
+  fibre_orders: {
+    title: 'Fibre orders permission smoke',
+    allowModule: 'fibre-orders',
+    /**
+     * Elevated = admin|manager (matches requireAdmin). Module-only = fibre-orders
+     * without elevated role (e.g. sales_agent).
+     */
+    async loadFixtures(ctx) {
+      const { request, mintToken, probe, branch } = ctx;
+      const token0 = mintToken(probe);
+
+      const ordersRes = await request('GET', '/fibre-orders', { token: token0, branch });
+      const orders = ordersRes.data?.orders ?? [];
+      const orderId = Array.isArray(orders) && orders[0]?.id ? orders[0].id : null;
+
+      const productsRes = await request('GET', '/fibre-products', { token: token0, branch });
+      const products = productsRes.data?.products ?? [];
+      const productId = Array.isArray(products) && products[0]?.id ? products[0].id : null;
+
+      // Per sales-agent order so module-only GET /:id is 200 (not agent-scope 404)
+      const db = new PrismaClient();
+      let orderIdByEmail = {};
+      try {
+        const agents = await db.user.findMany({
+          where: { role: 'sales_agent', modules: { has: 'fibre-orders' } },
+          select: { id: true, email: true },
+        });
+        for (const a of agents) {
+          const own = await db.fibreOrder.findFirst({
+            where: { salesAgentId: a.id, branch },
+            select: { id: true },
+            orderBy: { updatedAt: 'desc' },
+          });
+          orderIdByEmail[a.email] = own?.id ?? null;
+        }
+      } finally {
+        await db.$disconnect();
+      }
+
+      return { orderId, productId, orderIdByEmail };
+    },
+    buildAllowCases({ user, branch, fixtures }) {
+      const elevated = user.role === 'admin' || user.role === 'manager';
+      const orderId = elevated
+        ? fixtures.orderId
+        : fixtures.orderIdByEmail?.[user.email] || null;
+      const productId = fixtures.productId;
+
+      /** Elevated write: invalid body → 400 (auth passed). Module-only → 403. */
+      const elevatedWrite = (name, method, path, body) => ({
+        name: elevated
+          ? `${name} (elevated → 400 not 403, no durable write)`
+          : `${name} (module-only → 403)`,
+        method,
+        path,
+        body,
+        expect: elevated ? [400] : [403],
+      });
+
+      const cases = [
+        {
+          name: 'GET /fibre-orders/stats',
+          method: 'GET',
+          path: '/fibre-orders/stats',
+          expect: [200],
+        },
+        {
+          name: elevated
+            ? 'GET /fibre-orders/update-requests (elevated → 200)'
+            : 'GET /fibre-orders/update-requests (module-only → 403)',
+          method: 'GET',
+          path: '/fibre-orders/update-requests',
+          expect: elevated ? [200] : [403],
+        },
+        {
+          name: 'GET /fibre-orders',
+          method: 'GET',
+          path: '/fibre-orders',
+          expect: [200],
+        },
+      ];
+
+      if (orderId) {
+        cases.push(
+          {
+            name: 'GET /fibre-orders/:id/updates',
+            method: 'GET',
+            path: `/fibre-orders/${orderId}/updates`,
+            expect: [200],
+          },
+          {
+            name: 'GET /fibre-orders/:id',
+            method: 'GET',
+            path: `/fibre-orders/${orderId}`,
+            expect: [200],
+          }
+        );
+      } else {
+        cases.push(
+          { name: 'GET /fibre-orders/:id/updates', skip: 'no order fixture for user/branch' },
+          { name: 'GET /fibre-orders/:id', skip: 'no order fixture for user/branch' }
+        );
+      }
+
+      cases.push(
+        elevatedWrite('POST /fibre-orders', 'POST', '/fibre-orders', {}),
+      );
+
+      if (orderId) {
+        // note > 500 chars → validation 400 after permission (avoids creating update-request)
+        const longNote = 'x'.repeat(501);
+        cases.push({
+          name: 'POST /fibre-orders/:id/request-update (invalid note → 400 not 403)',
+          method: 'POST',
+          path: `/fibre-orders/${orderId}/request-update`,
+          body: { note: longNote },
+          expect: [400],
+        });
+        cases.push(
+          elevatedWrite(
+            'PUT /fibre-orders/:id',
+            'PUT',
+            `/fibre-orders/${orderId}`,
+            { pipelineStatus: '__invalid__' }
+          ),
+          elevatedWrite(
+            'POST /fibre-orders/:id/notes',
+            'POST',
+            `/fibre-orders/${orderId}/notes`,
+            {}
+          )
+        );
+      } else {
+        cases.push(
+          { name: 'POST /fibre-orders/:id/request-update', skip: 'no order fixture' },
+          { name: 'PUT /fibre-orders/:id', skip: 'no order fixture' },
+          { name: 'POST /fibre-orders/:id/notes', skip: 'no order fixture' }
+        );
+      }
+
+      cases.push(
+        {
+          name: 'GET /fibre-products',
+          method: 'GET',
+          path: '/fibre-products',
+          expect: [200],
+        },
+        productId
+          ? {
+              name: 'GET /fibre-products/:id',
+              method: 'GET',
+              path: `/fibre-products/${productId}`,
+              expect: [200],
+            }
+          : { name: 'GET /fibre-products/:id', skip: 'no product fixture' },
+        elevatedWrite('POST /fibre-products', 'POST', '/fibre-products', {}),
+        productId
+          ? elevatedWrite(
+              'PUT /fibre-products/:id',
+              'PUT',
+              `/fibre-products/${productId}`,
+              { name: '' }
+            )
+          : { name: 'PUT /fibre-products/:id', skip: 'no product fixture' },
+        {
+          name: 'DELETE /fibre-products/:id',
+          skip: 'skipped — do not delete a real product',
+        }
+      );
+
+      return cases;
+    },
+    buildDenyCases() {
+      return [
+        {
+          name: 'GET /fibre-orders (expect 403)',
+          method: 'GET',
+          path: '/fibre-orders',
+          expect: [403],
+        },
+        {
+          name: 'GET /fibre-products (expect 403)',
+          method: 'GET',
+          path: '/fibre-products',
+          expect: [403],
+        },
+        {
+          name: 'GET /fibre-orders/stats (expect 403)',
+          method: 'GET',
+          path: '/fibre-orders/stats',
+          expect: [403],
+        },
+      ];
+    },
+    formatFixtures(fixtures) {
+      const agents = Object.entries(fixtures.orderIdByEmail || {})
+        .map(([email, id]) => `${email}:${id || 'none'}`)
+        .join(', ');
+      return `orderId=${fixtures.orderId || '(none)'} productId=${fixtures.productId || '(none)'} agentOrders=[${agents}]`;
+    },
+  },
+
   // copiers: { ... },
   // readings: { ... },
 };
