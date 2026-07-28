@@ -26,6 +26,9 @@ echo "==> Fetch and reset to origin/${BRANCH}"
 git fetch origin
 git reset --hard "origin/${BRANCH}"
 
+# Nightly cron invokes this by path; re-assert +x after reset (git mode can be lost)
+chmod +x "$ROOT/scripts/db-backup/backup-db.sh"
+
 echo "==> Backend (install + migrate)"
 (
   cd "$ROOT/backend"
