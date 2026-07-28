@@ -14,8 +14,7 @@ import {
   getTonerAlerts,
   importPartOrders,
 } from '../controllers/consumable.controller.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
-// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
+import { authenticate } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
@@ -40,43 +39,37 @@ router.get(
   getTonerAlerts
 );
 
-// Model part CRUD (admin) - define before /model-parts to avoid :id capturing "all"
+// Model part CRUD - define before /model-parts to avoid :id capturing "all"
 router.get(
   '/model-parts/all',
-  requireAdmin,
   requirePermission('copiers.consumables.parts.manage'),
   getModelPartsAll
 );
 router.post(
   '/model-parts/increase-costs',
-  requireAdmin,
   requirePermission('copiers.consumables.costs.increase'),
   validate(increaseCostsSchema),
   increaseCosts
 );
 router.get(
   '/model-parts/:id',
-  requireAdmin,
   requirePermission('copiers.consumables.parts.manage'),
   getModelPartById
 );
 router.post(
   '/model-parts',
-  requireAdmin,
   requirePermission('copiers.consumables.parts.manage'),
   validate(createModelPartSchema),
   createModelPart
 );
 router.put(
   '/model-parts/:id',
-  requireAdmin,
   requirePermission('copiers.consumables.parts.manage'),
   validate(updateModelPartSchema),
   updateModelPart
 );
 router.delete(
   '/model-parts/:id',
-  requireAdmin,
   requirePermission('copiers.consumables.parts.manage'),
   deleteModelPart
 );
@@ -96,19 +89,15 @@ router.post(
   recordPartOrder
 );
 
-// Import past part orders from CSV (admin only)
 router.post(
   '/orders/import',
-  requireAdmin,
   requirePermission('copiers.consumables.import_orders'),
   validate(importPartOrdersSchema),
   importPartOrders
 );
 
-// Delete a part order record (admin only)
 router.delete(
   '/orders/:id',
-  requireAdmin,
   requirePermission('copiers.consumables.delete_order'),
   deletePartOrder
 );

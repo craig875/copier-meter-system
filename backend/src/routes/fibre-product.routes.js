@@ -6,8 +6,7 @@ import {
   updateProduct,
   deleteProduct,
 } from '../controllers/fibre-product.controller.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
-// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
+import { authenticate } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import { validate } from '../middleware/validate.js';
@@ -25,21 +24,18 @@ router.get('/', requirePermission('fibre_orders.access'), listProducts);
 router.get('/:id', requirePermission('fibre_orders.access'), getProduct);
 router.post(
   '/',
-  requireAdmin,
   requirePermission('fibre_orders.products.manage'),
   validate(createFibreProductSchema),
   createProduct
 );
 router.put(
   '/:id',
-  requireAdmin,
   requirePermission('fibre_orders.products.manage'),
   validate(updateFibreProductSchema),
   updateProduct
 );
 router.delete(
   '/:id',
-  requireAdmin,
   requirePermission('fibre_orders.products.manage'),
   deleteProduct
 );

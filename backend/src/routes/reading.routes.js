@@ -13,8 +13,7 @@ import {
   requestUnableToObtainOverride,
 } from '../controllers/reading.controller.js';
 import { importReadings } from '../controllers/import.controller.js';
-import { authenticate, requireAdmin, requireStrictAdmin } from '../middleware/auth.js';
-// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
+import { authenticate, requireStrictAdmin } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
@@ -46,7 +45,6 @@ router.post(
 );
 router.post(
   '/import',
-  requireAdmin,
   requirePermission('copiers.readings.import'),
   validate(importReadingsSchema),
   importReadings
@@ -85,7 +83,6 @@ router.post(
 );
 router.post(
   '/unable-to-obtain-override-request',
-  requireAdmin,
   requirePermission('copiers.readings.uto_request_override'),
   validate(unableToObtainOverrideRequestSchema),
   requestUnableToObtainOverride
@@ -97,13 +94,11 @@ router.get(
 );
 router.delete(
   '/machine/:machineId',
-  requireAdmin,
   requirePermission('copiers.readings.delete'),
   deleteReading
 );
 router.post(
   '/unlock',
-  requireAdmin,
   requirePermission('copiers.readings.unlock_month'),
   unlockMonth
 );

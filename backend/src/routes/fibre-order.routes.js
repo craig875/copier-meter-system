@@ -10,8 +10,7 @@ import {
   requestOrderUpdate,
   listUpdateRequests,
 } from '../controllers/fibre-order.controller.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
-// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
+import { authenticate } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
@@ -37,7 +36,6 @@ router.get(
 );
 router.get(
   '/update-requests',
-  requireAdmin,
   requirePermission('fibre_orders.update_requests.list'),
   listUpdateRequests
 );
@@ -55,7 +53,6 @@ router.get(
 router.get('/:id', requirePermission('fibre_orders.access'), getOrder);
 router.post(
   '/',
-  requireAdmin,
   requirePermission('fibre_orders.create'),
   validate(createFibreOrderSchema),
   createOrder
@@ -68,14 +65,12 @@ router.post(
 );
 router.put(
   '/:id',
-  requireAdmin,
   requirePermission('fibre_orders.update'),
   validate(updateFibreOrderSchema),
   updateOrder
 );
 router.post(
   '/:id/notes',
-  requireAdmin,
   requirePermission('fibre_orders.notes'),
   validate(addOrderNoteSchema),
   addNote
