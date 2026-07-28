@@ -13,7 +13,6 @@ import {
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 // requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
 import { requireTenantBranch } from '../middleware/tenant.js';
-import { requireFibreOrderAccess } from '../middleware/permissions.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import {
@@ -29,7 +28,6 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireTenantBranch);
-router.use(requireFibreOrderAccess);
 
 router.get(
   '/stats',
