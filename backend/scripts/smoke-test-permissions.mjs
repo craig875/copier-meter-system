@@ -10,6 +10,8 @@
  *   SMOKE_DOMAIN=connectivity node scripts/smoke-test-permissions.mjs
  *   SMOKE_DOMAIN=fibre_orders node scripts/smoke-test-permissions.mjs
  *   SMOKE_DOMAIN=copiers node scripts/smoke-test-permissions.mjs
+ *   SMOKE_GET_ONLY=1 SMOKE_DOMAIN=connectivity node scripts/smoke-test-permissions.mjs
+ *   SMOKE_REQUEST_DELAY_MS=500  # optional pacing (useful under prod 120/min rate limit)
  */
 
 import 'dotenv/config';
@@ -704,6 +706,10 @@ const DOMAIN_CONFIGS = {
 };
 
 const ACTIVE_DOMAIN = process.env.SMOKE_DOMAIN || 'connectivity';
+/** When '1'/'true': skip every non-GET case (no POST/PUT/PATCH/DELETE against the target). */
+const GET_ONLY =
+  process.env.SMOKE_GET_ONLY === '1' || process.env.SMOKE_GET_ONLY === 'true';
+const REQUEST_DELAY_MS = Number(process.env.SMOKE_REQUEST_DELAY_MS || 0) || 0;
 
 // =============================================================================
 // Reusable harness
@@ -719,6 +725,20 @@ function mintToken(user) {
     JWT_SECRET,
     { expiresIn: '30m' }
   );
+}
+
+/** @param {SmokeCase[]} cases */
+function applyGetOnlyFilter(cases) {
+  if (!GET_ONLY) return cases;
+  return cases.map((c) => {
+    if (c.skip) return c;
+    const method = String(c.method || 'GET').toUpperCase();
+    if (method === 'GET') return c;
+    return {
+      ...c,
+      skip: `SMOKE_GET_ONLY — skipped ${method} (read-only probe)`,
+    };
+  });
 }
 
 async function request(method, path, { token, branch, body } = {}) {
@@ -747,12 +767,27 @@ function okStatus(status, allowed) {
   return allowed.includes(status);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function main() {
   const domain = DOMAIN_CONFIGS[ACTIVE_DOMAIN];
   if (!domain) {
     console.error(
       `Unknown SMOKE_DOMAIN="${ACTIVE_DOMAIN}". Known: ${Object.keys(DOMAIN_CONFIGS).join(', ')}`
     );
+    process.exit(2);
+  }
+
+  if (!process.env.JWT_SECRET) {
+    console.error(
+      'JWT_SECRET is not set in the environment (would mint with fallback-secret-key). Aborting.'
+    );
+    process.exit(2);
+  }
+  if (JWT_SECRET === 'fallback-secret-key') {
+    console.error('JWT_SECRET resolved to fallback — aborting.');
     process.exit(2);
   }
 
@@ -784,6 +819,13 @@ async function main() {
   );
 
   console.log(`\n=== ${domain.title} ===\n`);
+  console.log(`SMOKE_API_BASE=${BASE}`);
+  console.log(
+    `SMOKE_GET_ONLY=${GET_ONLY}  SMOKE_REQUEST_DELAY_MS=${REQUEST_DELAY_MS}`
+  );
+  console.log(
+    `JWT_SECRET: set from env (length=${JWT_SECRET.length}, prefix=${JWT_SECRET.slice(0, 4)}…)`
+  );
   console.log(`Users WITH ${domain.allowModule} (${allowUsers.length}):`);
   for (const u of allowUsers) {
     console.log(
@@ -822,11 +864,12 @@ async function main() {
   );
 
   const results = [];
+  let mutatingAttempted = 0;
 
   async function runCase(user, label, cases) {
     const token = mintToken(user);
     const userBranch = user.branchAccess?.[0]?.branch || user.branch || branch;
-    for (const c of cases) {
+    for (const c of applyGetOnlyFilter(cases)) {
       if (c.skip) {
         results.push({
           user: user.email,
@@ -838,6 +881,11 @@ async function main() {
         });
         continue;
       }
+      const method = String(c.method || 'GET').toUpperCase();
+      if (method !== 'GET') {
+        mutatingAttempted += 1;
+      }
+      if (REQUEST_DELAY_MS > 0) await sleep(REQUEST_DELAY_MS);
       const res = await request(c.method, c.path, {
         token,
         branch: userBranch,
@@ -886,8 +934,11 @@ async function main() {
   console.log(
     `\nSummary: ${passN} pass, ${failN} fail, ${skipN} skip (of ${results.length})`
   );
+  console.log(
+    `Write-safety: mutatingAttempted=${mutatingAttempted} (must be 0 when SMOKE_GET_ONLY=1)`
+  );
   await prisma.$disconnect();
-  process.exit(failN > 0 ? 1 : 0);
+  process.exit(failN > 0 || (GET_ONLY && mutatingAttempted > 0) ? 1 : 0);
 }
 
 main().catch(async (e) => {
