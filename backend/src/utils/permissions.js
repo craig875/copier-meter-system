@@ -52,9 +52,6 @@ export const hasAdminAccess = (role) => {
   return role === 'admin' || role === 'manager';
 };
 
-/** Strict administrator only (role === 'admin', excludes manager) */
-export const isStrictAdmin = (role) => role === 'admin';
-
 /**
  * Check if user is a meter user
  * @param {string} role - User role

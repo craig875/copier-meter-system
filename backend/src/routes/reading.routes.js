@@ -13,7 +13,7 @@ import {
   requestUnableToObtainOverride,
 } from '../controllers/reading.controller.js';
 import { importReadings } from '../controllers/import.controller.js';
-import { authenticate, requireStrictAdmin } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
@@ -69,14 +69,12 @@ router.get(
 );
 router.get(
   '/unable-to-obtain-blocked',
-  requireStrictAdmin,
   requirePermission('copiers.readings.uto_list_blocked'),
   validateQuery(readingsQuerySchema),
   listUnableToObtainBlocked
 );
 router.post(
   '/unable-to-obtain-override',
-  requireStrictAdmin,
   requirePermission('copiers.readings.uto_force_override'),
   validate(unableToObtainOverrideSchema),
   forceUnableToObtainOverride

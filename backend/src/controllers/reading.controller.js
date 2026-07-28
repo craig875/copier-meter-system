@@ -1,6 +1,6 @@
 import { services } from '../services/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { hasAdminAccess, isStrictAdmin } from '../utils/permissions.js';
+import { hasAdminAccess } from '../utils/permissions.js';
 import { ForbiddenError, ValidationError } from '../utils/errors.js';
 
 /**
@@ -155,9 +155,6 @@ export class ReadingController {
   });
 
   listUnableToObtainBlocked = asyncHandler(async (req, res) => {
-    if (!isStrictAdmin(req.user.role)) {
-      throw new ForbiddenError('Only administrators can view Unable to obtain overrides');
-    }
     const { year, month } = req.query;
     const result = await this.readingService.listUnableToObtainBlocked(
       year,
@@ -168,9 +165,6 @@ export class ReadingController {
   });
 
   forceUnableToObtainOverride = asyncHandler(async (req, res) => {
-    if (!isStrictAdmin(req.user.role)) {
-      throw new ForbiddenError('Only administrators can force-approve consecutive Unable to obtain');
-    }
     const { year, month, machineId, reason } = req.body;
     const branch = req.tenantBranch;
     const userId = req.user.id;
