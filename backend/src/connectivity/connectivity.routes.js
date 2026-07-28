@@ -20,6 +20,7 @@ import {
 import { authenticate } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireConnectivityAccess, requireConnectivityManage } from '../middleware/permissions.js';
+import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import {
   monitoringTargetSchema,
@@ -39,31 +40,95 @@ router.use(requireTenantBranch);
 router.use(requireConnectivityAccess);
 
 // Dashboard - all connectivity users
-router.get('/dashboard', getDashboard);
-router.get('/summary', getSummary);
+router.get('/dashboard', requirePermission('connectivity.access'), getDashboard);
+router.get('/summary', requirePermission('connectivity.access'), getSummary);
 
 // Targets - list and view
-router.get('/targets', getTargets);
-router.post('/targets/:id/check', requireConnectivityManage, checkTarget);
-router.get('/targets/:id', getTarget);
+router.get('/targets', requirePermission('connectivity.access'), getTargets);
+router.post(
+  '/targets/:id/check',
+  requireConnectivityManage,
+  requirePermission('connectivity.targets.check'),
+  checkTarget
+);
+router.get('/targets/:id', requirePermission('connectivity.access'), getTarget);
 
 // Targets - CRUD (admin only)
-router.post('/targets', requireConnectivityManage, validate(monitoringTargetSchema), createTarget);
-router.put('/targets/:id', requireConnectivityManage, validate(updateMonitoringTargetSchema), updateTarget);
-router.delete('/targets/:id', requireConnectivityManage, deleteTarget);
-router.patch('/targets/:id/status', requireConnectivityManage, validate(targetStatusSchema), setTargetStatus);
+router.post(
+  '/targets',
+  requireConnectivityManage,
+  requirePermission('connectivity.targets.manage'),
+  validate(monitoringTargetSchema),
+  createTarget
+);
+router.put(
+  '/targets/:id',
+  requireConnectivityManage,
+  requirePermission('connectivity.targets.manage'),
+  validate(updateMonitoringTargetSchema),
+  updateTarget
+);
+router.delete(
+  '/targets/:id',
+  requireConnectivityManage,
+  requirePermission('connectivity.targets.manage'),
+  deleteTarget
+);
+router.patch(
+  '/targets/:id/status',
+  requireConnectivityManage,
+  requirePermission('connectivity.targets.manage'),
+  validate(targetStatusSchema),
+  setTargetStatus
+);
 
 // Time windows (admin only)
-router.get('/time-windows', requireConnectivityManage, getTimeWindows);
-router.post('/time-windows', requireConnectivityManage, validate(alertTimeWindowSchema), createOrUpdateTimeWindow);
+router.get(
+  '/time-windows',
+  requireConnectivityManage,
+  requirePermission('connectivity.time_windows.manage'),
+  getTimeWindows
+);
+router.post(
+  '/time-windows',
+  requireConnectivityManage,
+  requirePermission('connectivity.time_windows.manage'),
+  validate(alertTimeWindowSchema),
+  createOrUpdateTimeWindow
+);
 
 // Reports
-router.get('/reports/uptime', validateQuery(uptimeReportQuerySchema), getUptimeReport);
-router.get('/reports/sla', validateQuery(uptimeReportQuerySchema.partial()), getSlaReport);
-router.get('/reports/export', validateQuery(exportReportQuerySchema), exportReport);
+router.get(
+  '/reports/uptime',
+  requirePermission('connectivity.reports.view'),
+  validateQuery(uptimeReportQuerySchema),
+  getUptimeReport
+);
+router.get(
+  '/reports/sla',
+  requirePermission('connectivity.reports.view'),
+  validateQuery(uptimeReportQuerySchema.partial()),
+  getSlaReport
+);
+router.get(
+  '/reports/export',
+  requirePermission('connectivity.reports.view'),
+  validateQuery(exportReportQuerySchema),
+  exportReport
+);
 
 // Outages
-router.get('/outages', validateQuery(outagesQuerySchema.partial()), getOutages);
-router.patch('/outages/:id/note', validate(outageNoteSchema), updateOutageNote);
+router.get(
+  '/outages',
+  requirePermission('connectivity.outages.view'),
+  validateQuery(outagesQuerySchema.partial()),
+  getOutages
+);
+router.patch(
+  '/outages/:id/note',
+  requirePermission('connectivity.outages.view'),
+  validate(outageNoteSchema),
+  updateOutageNote
+);
 
 export default router;
