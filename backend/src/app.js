@@ -19,7 +19,8 @@ if (!trustProxyOff && (config.nodeEnv === 'production' || config.trustProxy)) {
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 120,
+  // Stage D permission smoke (esp. copiers) issues hundreds of requests per minute locally
+  max: config.nodeEnv === 'development' ? 2000 : 120,
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,

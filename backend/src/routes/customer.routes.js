@@ -5,6 +5,7 @@ import { authenticate, requireAdmin, requireMeterOrAdmin } from '../middleware/a
 // requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requireCustomerAccess } from '../middleware/permissions.js';
+import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import { createCustomerSchema, updateCustomerSchema, customerListQuerySchema } from '../schemas/customer.schema.js';
 
@@ -15,14 +16,46 @@ router.use(requireTenantBranch);
 router.use(requireCustomerAccess);
 
 // Bulk customer import CSV (customers only; admin/manager)
-router.post('/import', requireAdmin, importCustomers);
+router.post(
+  '/import',
+  requireAdmin,
+  requirePermission('copiers.customers.import'),
+  importCustomers
+);
 
 // List and view - any user with meter/consumables access
-router.get('/', validateQuery(customerListQuerySchema), getCustomers);
-router.get('/:id', getCustomer);
-router.post('/', requireAdmin, validate(createCustomerSchema), createCustomer);
-router.put('/:id', requireAdmin, validate(updateCustomerSchema), updateCustomer);
-router.patch('/:id/archive', requireMeterOrAdmin, archiveCustomer);
-router.delete('/:id', requireAdmin, deleteCustomer);
+router.get(
+  '/',
+  requirePermission('copiers.customers.view'),
+  validateQuery(customerListQuerySchema),
+  getCustomers
+);
+router.get('/:id', requirePermission('copiers.customers.view'), getCustomer);
+router.post(
+  '/',
+  requireAdmin,
+  requirePermission('copiers.customers.create'),
+  validate(createCustomerSchema),
+  createCustomer
+);
+router.put(
+  '/:id',
+  requireAdmin,
+  requirePermission('copiers.customers.update'),
+  validate(updateCustomerSchema),
+  updateCustomer
+);
+router.patch(
+  '/:id/archive',
+  requireMeterOrAdmin,
+  requirePermission('copiers.customers.archive'),
+  archiveCustomer
+);
+router.delete(
+  '/:id',
+  requireAdmin,
+  requirePermission('copiers.customers.delete'),
+  deleteCustomer
+);
 
 export default router;

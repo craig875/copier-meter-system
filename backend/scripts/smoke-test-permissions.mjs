@@ -9,6 +9,7 @@
  *   node scripts/smoke-test-permissions.mjs
  *   SMOKE_DOMAIN=connectivity node scripts/smoke-test-permissions.mjs
  *   SMOKE_DOMAIN=fibre_orders node scripts/smoke-test-permissions.mjs
+ *   SMOKE_DOMAIN=copiers node scripts/smoke-test-permissions.mjs
  */
 
 import 'dotenv/config';
@@ -360,8 +361,346 @@ const DOMAIN_CONFIGS = {
     },
   },
 
-  // copiers: { ... },
-  // readings: { ... },
+  copiers: {
+    title: 'Copiers + readings/UTO permission smoke',
+    allowModule: 'copiers',
+    /**
+     * Five tiers (legacy middleware ∩ effective permission keys):
+     * 1. module-only (capturer): readings/makes/machines view; blocked from customers/consumables/machine mutate
+     * 2. meterUserOrAdmin (admin|manager|meter_user): machine create/update/decommission/recommission
+     * 3. meterOrAdmin (same set): customer archive
+     * 4. admin (admin|manager): elevated CRUD / import / unlock / uto_request
+     * 5. strictAdmin (role==='admin' only — Craig): uto_list_blocked / uto_force_override
+     */
+    async loadFixtures(ctx) {
+      const { request, mintToken, probe, branch } = ctx;
+      const token0 = mintToken(probe);
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+
+      const db = new PrismaClient();
+      const machineByBranch = {};
+      const customerByBranch = {};
+      const modelPartByBranch = {};
+      let makeId = null;
+      let modelId = null;
+      try {
+        for (const b of ['JHB', 'CT']) {
+          const m = await db.machine.findFirst({
+            where: { branch: b, isDecommissioned: false },
+            select: { id: true },
+            orderBy: { updatedAt: 'desc' },
+          });
+          machineByBranch[b] = m?.id ?? null;
+          const c = await db.customer.findFirst({
+            where: { branch: b },
+            select: { id: true, isArchived: true },
+            orderBy: { updatedAt: 'desc' },
+          });
+          customerByBranch[b] = c ? { id: c.id, isArchived: !!c.isArchived } : null;
+          const mp = await db.modelPart.findFirst({
+            where: { branch: b, isActive: true },
+            select: { id: true },
+            orderBy: { updatedAt: 'desc' },
+          });
+          modelPartByBranch[b] = mp?.id ?? null;
+        }
+        const mk = await db.make.findFirst({ select: { id: true }, orderBy: { name: 'asc' } });
+        makeId = mk?.id ?? null;
+        const md = await db.model.findFirst({ select: { id: true }, orderBy: { name: 'asc' } });
+        modelId = md?.id ?? null;
+      } finally {
+        await db.$disconnect();
+      }
+
+      // Sanity: probe can list machines in fixture branch (permission path warm-up)
+      await request('GET', '/machines?limit=1', { token: token0, branch });
+
+      return {
+        machineByBranch,
+        customerByBranch,
+        modelPartByBranch,
+        makeId,
+        modelId,
+        year,
+        month,
+        /** Nonexistent UUID — 404 after auth (no durable decommission/recommission) */
+        fakeMachineId: '00000000-0000-4000-8000-000000000099',
+      };
+    },
+    buildAllowCases({ user, fixtures }) {
+      const role = user.role;
+      const strictAdmin = role === 'admin';
+      const adminTier = role === 'admin' || role === 'manager';
+      const meterUserOrAdmin = adminTier || role === 'meter_user';
+      const meterOrAdmin = meterUserOrAdmin; // same role set as requireMeterOrAdmin
+      const canReadings = meterUserOrAdmin || role === 'capturer';
+      // capturer: readings + machines.view (legacy capture flow); not customers/consumables/mutate
+      const canMachinesView = meterUserOrAdmin || role === 'capturer';
+      const canCustomers = meterUserOrAdmin;
+      const canConsumables = meterUserOrAdmin;
+
+      const userBranch = user.branchAccess?.[0]?.branch || user.branch || 'JHB';
+      const machineId = fixtures.machineByBranch?.[userBranch] ?? null;
+      const customer = fixtures.customerByBranch?.[userBranch] ?? null;
+      const modelPartId = fixtures.modelPartByBranch?.[userBranch] ?? null;
+      const { makeId, year, month, fakeMachineId } = fixtures;
+      const ym = `year=${year}&month=${month}`;
+
+      /** Allowed → expectOk (usually 400, no durable write); denied → 403 */
+      const tierWrite = (allowed, name, method, path, body, expectOk = [400]) => ({
+        name: allowed
+          ? `${name} (tier → ${expectOk.join('|')} not 403)`
+          : `${name} (denied → 403)`,
+        method,
+        path,
+        body,
+        expect: allowed ? expectOk : [403],
+      });
+
+      const tierGet = (allowed, name, path, expectOk = [200]) => ({
+        name: allowed ? name : `${name} (denied → 403)`,
+        method: 'GET',
+        path,
+        expect: allowed ? expectOk : [403],
+      });
+
+      const cases = [
+        // ----- MACHINES -----
+        tierGet(canMachinesView, 'GET /machines', '/machines?limit=5'),
+        machineId
+          ? tierGet(canMachinesView, 'GET /machines/:id', `/machines/${machineId}`)
+          : { name: 'GET /machines/:id', skip: `no machine fixture for ${userBranch}` },
+        tierWrite(
+          meterUserOrAdmin,
+          'POST /machines',
+          'POST',
+          '/machines',
+          {}
+        ),
+        machineId
+          ? tierWrite(
+              meterUserOrAdmin,
+              'PUT /machines/:id',
+              'PUT',
+              `/machines/${machineId}`,
+              { machineSerialNumber: '' }
+            )
+          : { name: 'PUT /machines/:id', skip: `no machine fixture for ${userBranch}` },
+        // Real decommission avoided — nonexistent id → 404 after gate
+        tierWrite(
+          meterUserOrAdmin,
+          'POST /machines/:id/decommission',
+          'POST',
+          `/machines/${fakeMachineId}/decommission`,
+          undefined,
+          [404]
+        ),
+        tierWrite(
+          meterUserOrAdmin,
+          'POST /machines/:id/recommission',
+          'POST',
+          `/machines/${fakeMachineId}/recommission`,
+          undefined,
+          [404]
+        ),
+        tierWrite(adminTier, 'POST /machines/import', 'POST', '/machines/import', {
+          data: [],
+        }),
+        {
+          name: 'DELETE /machines/:id',
+          skip: 'skipped — do not delete a real machine',
+        },
+
+        // ----- CUSTOMERS -----
+        tierGet(canCustomers, 'GET /customers', '/customers'),
+        customer
+          ? tierGet(canCustomers, 'GET /customers/:id', `/customers/${customer.id}`)
+          : { name: 'GET /customers/:id', skip: `no customer fixture for ${userBranch}` },
+        tierWrite(adminTier, 'POST /customers', 'POST', '/customers', {}),
+        customer
+          ? tierWrite(
+              adminTier,
+              'PUT /customers/:id',
+              'PUT',
+              `/customers/${customer.id}`,
+              { name: '' }
+            )
+          : { name: 'PUT /customers/:id', skip: `no customer fixture for ${userBranch}` },
+        customer
+          ? {
+              // Idempotent same-state write (flagged: real PATCH, same isArchived value)
+              name: meterOrAdmin
+                ? 'PATCH /customers/:id/archive (same isArchived — real write, idempotent)'
+                : 'PATCH /customers/:id/archive (denied → 403)',
+              method: 'PATCH',
+              path: `/customers/${customer.id}/archive`,
+              body: { isArchived: customer.isArchived },
+              expect: meterOrAdmin ? [200] : [403],
+            }
+          : { name: 'PATCH /customers/:id/archive', skip: `no customer fixture for ${userBranch}` },
+        {
+          name: 'DELETE /customers/:id',
+          skip: 'skipped — do not delete a real customer',
+        },
+        tierWrite(adminTier, 'POST /customers/import', 'POST', '/customers/import', {
+          data: [],
+        }),
+
+        // ----- CONSUMABLES -----
+        tierGet(canReadings, 'GET /consumables/toner-alerts', '/consumables/toner-alerts'),
+        tierGet(canConsumables, 'GET /consumables/model-parts', '/consumables/model-parts'),
+        modelPartId
+          ? tierGet(
+              adminTier,
+              'GET /consumables/model-parts/:id',
+              `/consumables/model-parts/${modelPartId}`
+            )
+          : { name: 'GET /consumables/model-parts/:id', skip: 'no modelPart fixture' },
+        tierGet(canConsumables, 'GET /consumables/summary', '/consumables/summary'),
+        machineId
+          ? tierGet(
+              canConsumables,
+              'GET /consumables/machines/:machineId/history',
+              `/consumables/machines/${machineId}/history`
+            )
+          : {
+              name: 'GET /consumables/machines/:machineId/history',
+              skip: `no machine fixture for ${userBranch}`,
+            },
+        tierWrite(canConsumables, 'POST /consumables/orders', 'POST', '/consumables/orders', {}),
+        tierWrite(
+          adminTier,
+          'POST /consumables/model-parts',
+          'POST',
+          '/consumables/model-parts',
+          {}
+        ),
+        modelPartId
+          ? tierWrite(
+              adminTier,
+              'PUT /consumables/model-parts/:id',
+              'PUT',
+              `/consumables/model-parts/${modelPartId}`,
+              { partName: '' }
+            )
+          : { name: 'PUT /consumables/model-parts/:id', skip: 'no modelPart fixture' },
+        {
+          name: 'DELETE consumable routes',
+          skip: 'skipped — do not delete model-parts/orders',
+        },
+
+        // ----- MAKES / MODELS -----
+        // GET requires only auth + copiers.access (all copiers allow roles have it)
+        { name: 'GET /makes', method: 'GET', path: '/makes', expect: [200] },
+        { name: 'GET /models', method: 'GET', path: '/models', expect: [200] },
+        tierWrite(adminTier, 'POST /makes', 'POST', '/makes', {}),
+        makeId
+          ? tierWrite(adminTier, 'PUT /makes/:id', 'PUT', `/makes/${makeId}`, { name: '' })
+          : { name: 'PUT /makes/:id', skip: 'no make fixture' },
+        {
+          name: 'DELETE /makes|models',
+          skip: 'skipped — do not delete catalog rows',
+        },
+
+        // ----- READINGS / UTO -----
+        tierGet(canReadings, 'GET /readings', `/readings?${ym}`),
+        tierWrite(canReadings, 'POST /readings', 'POST', '/readings', {}),
+        // Missing query → 400 after permission (export locks month if called with valid ym)
+        tierWrite(
+          canReadings,
+          'GET /readings/export (no query → 400, avoids month lock)',
+          'GET',
+          '/readings/export',
+          undefined,
+          [400]
+        ),
+        // Hard tenancy disables cross-branch split views for everyone (not a permission gate)
+        {
+          name: 'GET /readings/split-by-branch',
+          skip: 'hard tenancy — Cross-branch reading views are disabled (403 for all)',
+        },
+        machineId
+          ? tierGet(
+              canReadings,
+              'GET /readings/history/:machineId',
+              `/readings/history/${machineId}`
+            )
+          : {
+              name: 'GET /readings/history/:machineId',
+              skip: `no machine fixture for ${userBranch}`,
+            },
+        // unlock reads query; omit year/month → 400 (no real unlock)
+        {
+          name: adminTier
+            ? 'POST /readings/unlock (no query → 400 not 403)'
+            : 'POST /readings/unlock (denied → 403)',
+          method: 'POST',
+          path: '/readings/unlock',
+          expect: adminTier ? [400] : [403],
+        },
+        {
+          name: strictAdmin
+            ? 'GET /readings/unable-to-obtain-blocked (strictAdmin → 200)'
+            : 'GET /readings/unable-to-obtain-blocked (non-strict → 403)',
+          method: 'GET',
+          path: `/readings/unable-to-obtain-blocked?${ym}`,
+          expect: strictAdmin ? [200] : [403],
+        },
+        {
+          name: strictAdmin
+            ? 'POST /readings/unable-to-obtain-override (strictAdmin → 400 not 403)'
+            : 'POST /readings/unable-to-obtain-override (non-strict → 403)',
+          method: 'POST',
+          path: '/readings/unable-to-obtain-override',
+          body: {},
+          expect: strictAdmin ? [400] : [403],
+        },
+        tierWrite(
+          adminTier,
+          'POST /readings/unable-to-obtain-override-request',
+          'POST',
+          '/readings/unable-to-obtain-override-request',
+          {}
+        ),
+      ];
+
+      return cases;
+    },
+    buildDenyCases() {
+      const now = new Date();
+      const ym = `year=${now.getFullYear()}&month=${now.getMonth() + 1}`;
+      return [
+        {
+          name: 'GET /machines (expect 403)',
+          method: 'GET',
+          path: '/machines',
+          expect: [403],
+        },
+        {
+          name: 'GET /customers (expect 403)',
+          method: 'GET',
+          path: '/customers',
+          expect: [403],
+        },
+        {
+          name: 'GET /readings (expect 403)',
+          method: 'GET',
+          path: `/readings?${ym}`,
+          expect: [403],
+        },
+      ];
+    },
+    formatFixtures(fixtures) {
+      return (
+        `machines JHB=${fixtures.machineByBranch?.JHB || '(none)'} CT=${fixtures.machineByBranch?.CT || '(none)'} ` +
+        `customers JHB=${fixtures.customerByBranch?.JHB?.id || '(none)'} CT=${fixtures.customerByBranch?.CT?.id || '(none)'} ` +
+        `modelParts JHB=${fixtures.modelPartByBranch?.JHB || '(none)'} CT=${fixtures.modelPartByBranch?.CT || '(none)'} ` +
+        `make=${fixtures.makeId || '(none)'} ym=${fixtures.year}-${fixtures.month}`
+      );
+    },
+  },
 };
 
 const ACTIVE_DOMAIN = process.env.SMOKE_DOMAIN || 'connectivity';
