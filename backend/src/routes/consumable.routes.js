@@ -17,7 +17,6 @@ import {
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 // requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
 import { requireTenantBranch } from '../middleware/tenant.js';
-import { requireMeterReadingAccess, requireConsumableAccess } from '../middleware/permissions.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import {
@@ -34,17 +33,12 @@ const router = Router();
 router.use(authenticate);
 router.use(requireTenantBranch);
 
-// Toner alerts are used in the meter-reading capture flow (capturers included),
-// but should not grant access to the full consumables module.
+// Toner alerts are used in the meter-reading capture flow (capturers included).
 router.get(
   '/toner-alerts',
-  requireMeterReadingAccess,
   requirePermission('copiers.readings.view'),
   getTonerAlerts
 );
-
-// Everything else in this router is the Consumables module (excludes capturers)
-router.use(requireConsumableAccess);
 
 // Model part CRUD (admin) - define before /model-parts to avoid :id capturing "all"
 router.get(

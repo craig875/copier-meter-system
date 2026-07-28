@@ -4,7 +4,6 @@ import { importCustomers } from '../controllers/import.controller.js';
 import { authenticate, requireAdmin, requireMeterOrAdmin } from '../middleware/auth.js';
 // requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
 import { requireTenantBranch } from '../middleware/tenant.js';
-import { requireCustomerAccess } from '../middleware/permissions.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import { createCustomerSchema, updateCustomerSchema, customerListQuerySchema } from '../schemas/customer.schema.js';
@@ -13,7 +12,6 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireTenantBranch);
-router.use(requireCustomerAccess);
 
 // Bulk customer import CSV (customers only; admin/manager)
 router.post(
