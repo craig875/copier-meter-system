@@ -19,7 +19,6 @@ import {
 } from './connectivity.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
-import { requireConnectivityAccess, requireConnectivityManage } from '../middleware/permissions.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import {
@@ -37,7 +36,6 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireTenantBranch);
-router.use(requireConnectivityAccess);
 
 // Dashboard - all connectivity users
 router.get('/dashboard', requirePermission('connectivity.access'), getDashboard);
@@ -47,51 +45,44 @@ router.get('/summary', requirePermission('connectivity.access'), getSummary);
 router.get('/targets', requirePermission('connectivity.access'), getTargets);
 router.post(
   '/targets/:id/check',
-  requireConnectivityManage,
   requirePermission('connectivity.targets.check'),
   checkTarget
 );
 router.get('/targets/:id', requirePermission('connectivity.access'), getTarget);
 
-// Targets - CRUD (admin only)
+// Targets - CRUD
 router.post(
   '/targets',
-  requireConnectivityManage,
   requirePermission('connectivity.targets.manage'),
   validate(monitoringTargetSchema),
   createTarget
 );
 router.put(
   '/targets/:id',
-  requireConnectivityManage,
   requirePermission('connectivity.targets.manage'),
   validate(updateMonitoringTargetSchema),
   updateTarget
 );
 router.delete(
   '/targets/:id',
-  requireConnectivityManage,
   requirePermission('connectivity.targets.manage'),
   deleteTarget
 );
 router.patch(
   '/targets/:id/status',
-  requireConnectivityManage,
   requirePermission('connectivity.targets.manage'),
   validate(targetStatusSchema),
   setTargetStatus
 );
 
-// Time windows (admin only)
+// Time windows
 router.get(
   '/time-windows',
-  requireConnectivityManage,
   requirePermission('connectivity.time_windows.manage'),
   getTimeWindows
 );
 router.post(
   '/time-windows',
-  requireConnectivityManage,
   requirePermission('connectivity.time_windows.manage'),
   validate(alertTimeWindowSchema),
   createOrUpdateTimeWindow

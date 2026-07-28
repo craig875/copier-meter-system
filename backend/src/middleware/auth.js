@@ -48,6 +48,7 @@ export const authenticate = async (req, res, next) => {
       roleKey: assignedRole?.key,
       rolePermissionKeys: (assignedRole?.permissions ?? []).map((p) => p.permissionKey),
       overrides: permissionOverrides ?? [],
+      modules: user.modules ?? [],
     });
 
     req.user = {
