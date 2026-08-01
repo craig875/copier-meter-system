@@ -30,7 +30,7 @@ import logo from '../assets/logo.png';
 import Setup2FAPrompt from './Setup2FAPrompt';
 import ConnectivityAlertBanner from './connectivity/ConnectivityAlertBanner';
 import { notificationsApi, machinesApi } from '../services/api';
-import { MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS } from '../constants/modules';
+import { MODULE_COPERS, MODULE_FIBRE_ORDERS } from '../constants/modules';
 import { useBackNavigation } from '../hooks/useBackNavigation';
 
 const Layout = ({ children }) => {
@@ -46,7 +46,7 @@ const Layout = ({ children }) => {
     canSwitchBranches,
   } = useAuth();
   const showCopiers = hasModule(MODULE_COPERS);
-  const showConnectivity = hasModule(MODULE_CONNECTIVITY);
+  const showConnectivity = can('connectivity.access');
   const showFibreOrders = hasModule(MODULE_FIBRE_ORDERS);
   const branchCityLabel =
     effectiveBranch === 'CT' ? 'Cape Town' : effectiveBranch === 'JHB' ? 'Johannesburg' : null;
