@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Bell, Loader2 } from 'lucide-react';
 import { fibreOrdersApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { MODULE_FIBRE_ORDERS } from '../../constants/modules';
 import FibreStatusBadge from './FibreStatusBadge';
 
 function formatWhen(d) {
@@ -14,16 +13,17 @@ function formatWhen(d) {
 
 export default function FibreOrderUpdateRequestsPanel() {
   const location = useLocation();
-  const { isElevated, hasModule, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canListUpdateRequests = can('fibre_orders.update_requests.list');
 
   const { data, isLoading } = useQuery({
     queryKey: ['fibre-orders', 'update-requests', effectiveBranch],
     queryFn: () => fibreOrdersApi.listUpdateRequests(effectiveBranch),
-    enabled: isElevated && hasModule(MODULE_FIBRE_ORDERS),
+    enabled: canListUpdateRequests,
     refetchInterval: 60_000,
   });
 
-  if (!isElevated || !hasModule(MODULE_FIBRE_ORDERS)) {
+  if (!canListUpdateRequests) {
     return null;
   }
 

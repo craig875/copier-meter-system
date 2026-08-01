@@ -45,6 +45,9 @@ export default function FibreOrderDetail() {
   const canAccess = can('fibre_orders.access');
   const canManageTargets = can('connectivity.targets.manage');
   const canUpdateOrder = can('fibre_orders.update');
+  const canRequestOrderUpdate =
+    can('fibre_orders.update_requests.create')
+    && !can('fibre_orders.update_requests.list');
   const [newPipelineStatus, setNewPipelineStatus] = useState('');
   const [newOverlayStatus, setNewOverlayStatus] = useState('');
   const [noteText, setNoteText] = useState('');
@@ -380,7 +383,7 @@ export default function FibreOrderDetail() {
           </div>
         )}
 
-        {isSalesAgent && (
+        {canRequestOrderUpdate && (
           <div className="tile-card p-6 space-y-4">
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />

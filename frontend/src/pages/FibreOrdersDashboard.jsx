@@ -16,6 +16,7 @@ export default function FibreOrdersDashboard() {
   const canAccess = can('fibre_orders.access');
   const canManageProducts = can('fibre_orders.products.manage');
   const canCreateOrder = can('fibre_orders.create');
+  const canListUpdateRequests = can('fibre_orders.update_requests.list');
 
   const branchScope = { effectiveBranch, isSalesAgent };
 
@@ -116,7 +117,7 @@ export default function FibreOrdersDashboard() {
             ))
           ) : (
             <>
-              {(stats?.pendingUpdateRequests ?? 0) > 0 && isElevated && (
+              {(stats?.pendingUpdateRequests ?? 0) > 0 && canListUpdateRequests && (
                 <div className="sm:col-span-3 tile-card p-4 border-l-4 border-l-amber-500 bg-amber-50/50 flex items-center justify-between gap-3">
                   <p className="text-sm text-amber-900">
                     <span className="font-semibold">{stats.pendingUpdateRequests}</span> sales agent update
