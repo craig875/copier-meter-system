@@ -189,7 +189,7 @@ function App() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute requirePermission="copiers.config.machines">
             <Layout>
               <MachineConfiguration />
             </Layout>
@@ -199,7 +199,7 @@ function App() {
       <Route
         path="/admin/parts-pricing"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute requirePermission="copiers.config.pricing">
             <Layout>
               <PartsPricing />
             </Layout>
@@ -209,7 +209,7 @@ function App() {
       <Route
         path="/admin/machine-configuration"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute requirePermission="copiers.config.machines">
             <Layout>
               <MachineConfiguration />
             </Layout>

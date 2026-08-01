@@ -1,13 +1,20 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const ProtectedRoute = ({ children, adminOnly = false, strictAdminOnly = false, requireModule = null }) => {
+const ProtectedRoute = ({
+  children,
+  adminOnly = false,
+  strictAdminOnly = false,
+  requireModule = null,
+  requirePermission = null,
+}) => {
   const {
     user,
     loading,
     isElevated,
     isAdmin,
     hasModule,
+    can,
     canSwitchBranches,
     activeBranch,
   } = useAuth();
@@ -40,6 +47,10 @@ const ProtectedRoute = ({ children, adminOnly = false, strictAdminOnly = false, 
   }
 
   if (requireModule && !hasModule(requireModule)) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requirePermission && !can(requirePermission)) {
     return <Navigate to="/" replace />;
   }
 
