@@ -135,6 +135,13 @@ export const AuthProvider = ({ children }) => {
     return Array.isArray(list) && list.includes(moduleKey);
   };
 
+  /** Stage E: permission-key check against effective `user.permissions` from login/me.
+   *  Will gradually replace role/module flags (isElevated, hasModule, etc.). */
+  const can = (permissionKey) => {
+    const list = user?.permissions;
+    return Array.isArray(list) && list.includes(permissionKey);
+  };
+
   const canAccessConnectivity = hasModule(MODULE_CONNECTIVITY);
   const canManageConnectivity =
     isAdmin || (isManager && hasModule(MODULE_CONNECTIVITY));
@@ -172,6 +179,7 @@ export const AuthProvider = ({ children }) => {
         canAccessConnectivity,
         canManageConnectivity,
         hasModule,
+        can,
         allowedBranches,
         activeBranch,
         canSwitchBranches,

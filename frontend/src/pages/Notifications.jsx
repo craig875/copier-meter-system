@@ -17,12 +17,12 @@ const Notifications = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isElevated, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
 
   const { data, isLoading, error, isError } = useQuery({
     queryKey: ['notifications', effectiveBranch],
     queryFn: () => notificationsApi.getAll(),
-    enabled: !!isElevated && effectiveBranch != null,
+    enabled: can('notifications.access') && effectiveBranch != null,
   });
 
   const markReadMutation = useMutation({
@@ -72,7 +72,7 @@ const Notifications = () => {
     }
   };
 
-  if (!isElevated) {
+  if (!can('notifications.access')) {
     return (
       <div className="liquid-glass rounded-xl p-6">
         <p className="text-red-600">Access denied. Notifications are for administrators only.</p>

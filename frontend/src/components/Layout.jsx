@@ -41,6 +41,7 @@ const Layout = ({ children }) => {
     isAdmin,
     isCapturer,
     hasModule,
+    can,
     effectiveBranch,
     canSwitchBranches,
   } = useAuth();
@@ -67,7 +68,7 @@ const Layout = ({ children }) => {
   const { data: unreadData } = useQuery({
     queryKey: ['notifications', 'unread-count', effectiveBranch],
     queryFn: () => notificationsApi.getUnreadCount(),
-    enabled: Boolean(user) && isElevated && effectiveBranch != null,
+    enabled: Boolean(user) && can('notifications.access') && effectiveBranch != null,
     refetchInterval: 60000, // refresh every 60s
     staleTime: 0, // always consider stale so invalidations trigger refetch
   });
@@ -131,8 +132,10 @@ const Layout = ({ children }) => {
         ],
       });
     }
-    if (isElevated) {
+    if (can('notifications.access')) {
       nav.push({ name: 'Notifications', href: '/notifications', icon: Bell });
+    }
+    if (isElevated) {
       nav.push({
         name: 'Admin Tools',
         href: '/admin',
