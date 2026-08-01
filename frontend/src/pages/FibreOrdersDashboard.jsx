@@ -14,23 +14,24 @@ export default function FibreOrdersDashboard() {
   const location = useLocation();
   const { can, isElevated, isSalesAgent, effectiveBranch } = useAuth();
   const canAccess = can('fibre_orders.access');
+  const canViewAll = can('fibre_orders.view_all');
   const canManageProducts = can('fibre_orders.products.manage');
   const canCreateOrder = can('fibre_orders.create');
   const canListUpdateRequests = can('fibre_orders.update_requests.list');
 
-  const branchScope = { effectiveBranch, isSalesAgent };
+  const branchScope = { effectiveBranch, canViewAll };
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['fibre-orders', 'stats', effectiveBranch, isSalesAgent],
+    queryKey: ['fibre-orders', 'stats', effectiveBranch, canViewAll],
     queryFn: () => fibreOrdersApi.getStats(
-      isSalesAgent ? undefined : effectiveBranch
+      canViewAll ? effectiveBranch : undefined
     ),
     enabled: canAccess,
   });
 
   const listParams = useMemo(
     () => fibreOrderQueryParams(branchScope, { activeOnly: 'true' }),
-    [effectiveBranch, isSalesAgent]
+    [effectiveBranch, canViewAll]
   );
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
@@ -61,9 +62,9 @@ export default function FibreOrdersDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Fibre Orders</h1>
           <p className="text-gray-500 mt-1">
-            {isSalesAgent
-              ? 'View fibre orders assigned to you (read-only)'
-              : 'Track customer fibre orders, ETAs, and installation progress'}
+            {canViewAll
+              ? 'Track customer fibre orders, ETAs, and installation progress'
+              : 'View fibre orders assigned to you (read-only)'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -126,7 +127,7 @@ export default function FibreOrdersDashboard() {
                 </div>
               )}
               <div className="tile-card p-5">
-                <p className="text-sm text-gray-500">{isSalesAgent ? 'My Active Orders' : 'Active Orders'}</p>
+                <p className="text-sm text-gray-500">{canViewAll ? 'Active Orders' : 'My Active Orders'}</p>
                 <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.total ?? 0}</p>
               </div>
               <div className="tile-card p-5 border-l-4 border-l-amber-500">

@@ -17,8 +17,9 @@ function formatDate(d) {
 
 export default function FibreOrdersList() {
   const location = useLocation();
-  const { can, isSalesAgent, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
   const canAccess = can('fibre_orders.access');
+  const canViewAll = can('fibre_orders.view_all');
   const canCreateOrder = can('fibre_orders.create');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -30,8 +31,8 @@ export default function FibreOrdersList() {
       delete extra.activeOnly;
     }
     if (search.trim()) extra.search = search.trim();
-    return fibreOrderQueryParams({ effectiveBranch, isSalesAgent }, extra);
-  }, [effectiveBranch, isSalesAgent, statusFilter, search]);
+    return fibreOrderQueryParams({ effectiveBranch, canViewAll }, extra);
+  }, [effectiveBranch, canViewAll, statusFilter, search]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['fibre-orders', 'list', params],
@@ -54,7 +55,7 @@ export default function FibreOrdersList() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {isSalesAgent ? 'My Active Fibre Orders' : 'Active Fibre Orders'}
+            {canViewAll ? 'Active Fibre Orders' : 'My Active Fibre Orders'}
           </h1>
           <p className="text-gray-500 mt-1">{orders.length} active order(s)</p>
         </div>

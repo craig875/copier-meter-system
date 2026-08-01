@@ -15,19 +15,20 @@ function formatDate(d) {
 
 export default function FibreOrdersCompleted() {
   const location = useLocation();
-  const { can, isSalesAgent, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
   const canAccess = can('fibre_orders.access');
+  const canViewAll = can('fibre_orders.view_all');
   const [search, setSearch] = useState('');
 
   const params = useMemo(
     () => fibreOrderQueryParams(
-      { effectiveBranch, isSalesAgent },
+      { effectiveBranch, canViewAll },
       {
         completedOnly: 'true',
         ...(search.trim() ? { search: search.trim() } : {}),
       }
     ),
-    [effectiveBranch, isSalesAgent, search]
+    [effectiveBranch, canViewAll, search]
   );
 
   const { data, isLoading, error } = useQuery({
@@ -55,7 +56,7 @@ export default function FibreOrdersCompleted() {
             Completed Installs
           </h1>
           <p className="text-gray-500 mt-1">
-            {isSalesAgent ? 'Your ' : ''}{orders.length} completed install(s)
+            {canViewAll ? '' : 'Your '}{orders.length} completed install(s)
           </p>
         </div>
         <Link
