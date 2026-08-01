@@ -48,6 +48,7 @@ export default function ConnectivityTargetDetail() {
   const queryClient = useQueryClient();
   const { canManageConnectivity, can, effectiveBranch } = useAuth();
   const canAccess = can('connectivity.access');
+  const canManageTargets = can('connectivity.targets.manage');
   const getTodayLocal = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -259,7 +260,7 @@ export default function ConnectivityTargetDetail() {
             )}
           </div>
         </div>
-        {canManageConnectivity && (
+        {canManageTargets && (
           <Link
             to={`/connectivity/targets/${id}/edit`}
             state={buildFromState(location)}

@@ -8,13 +8,14 @@ import StatusBadge from '../components/connectivity/StatusBadge';
 
 export default function ConnectivityTargets() {
   const location = useLocation();
-  const { canManageConnectivity, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canManageTargets = can('connectivity.targets.manage');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['connectivity', 'targets', effectiveBranch],
     queryFn: () => connectivityApi.getTargets({ branch: effectiveBranch }),
-    enabled: !!canManageConnectivity,
+    enabled: !!canManageTargets,
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => connectivityApi.deleteTarget(id, effectiveBranch),
@@ -25,7 +26,7 @@ export default function ConnectivityTargets() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectivity'] }),
   });
 
-  if (!canManageConnectivity) {
+  if (!canManageTargets) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">Admin access required to manage targets.</div>
     );

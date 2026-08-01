@@ -13,7 +13,8 @@ export default function ConnectivityTargetForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { canManageConnectivity, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canManageTargets = can('connectivity.targets.manage');
   const isEdit = !!id;
   const fromFibreOrder = !isEdit ? location.state?.fromFibreOrder : null;
 
@@ -36,7 +37,7 @@ export default function ConnectivityTargetForm() {
   const { data } = useQuery({
     queryKey: ['connectivity', 'target', id, effectiveBranch],
     queryFn: () => connectivityApi.getTarget(id, { branch: effectiveBranch }),
-    enabled: isEdit && !!canManageConnectivity,
+    enabled: isEdit && !!canManageTargets,
   });
 
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function ConnectivityTargetForm() {
     }
   };
 
-  if (!canManageConnectivity) {
+  if (!canManageTargets) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         Admin access required.

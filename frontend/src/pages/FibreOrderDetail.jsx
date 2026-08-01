@@ -42,7 +42,8 @@ export default function FibreOrderDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { hasModule, isElevated, isSalesAgent, canManageConnectivity } = useAuth();
+  const { hasModule, isElevated, isSalesAgent, can } = useAuth();
+  const canManageTargets = can('connectivity.targets.manage');
   const [newPipelineStatus, setNewPipelineStatus] = useState('');
   const [newOverlayStatus, setNewOverlayStatus] = useState('');
   const [noteText, setNoteText] = useState('');
@@ -166,12 +167,12 @@ export default function FibreOrderDetail() {
       {completeModalOrder && (
         <FibreOrderCompleteModal
           order={completeModalOrder}
-          canAddConnectivity={canManageConnectivity}
+          canAddConnectivity={canManageTargets}
           onClose={() => setCompleteModalOrder(null)}
         />
       )}
 
-      {showInstalledBanner && canManageConnectivity && (
+      {showInstalledBanner && canManageTargets && (
         <div className="tile-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-l-4 border-green-400 bg-green-50/80">
           <div>
             <p className="font-medium text-gray-900">This order is complete</p>
