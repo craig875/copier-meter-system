@@ -7,13 +7,13 @@ import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
 import { ALMOST_COMPLETE_STATUSES, formatWeeksRemaining } from '../constants/fibreOrders';
-import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderUpdateRequestsPanel from '../components/fibre/FibreOrderUpdateRequestsPanel';
 
 export default function FibreOrdersDashboard() {
   const location = useLocation();
-  const { hasModule, isElevated, isSalesAgent, effectiveBranch } = useAuth();
+  const { can, isElevated, isSalesAgent, effectiveBranch } = useAuth();
+  const canAccess = can('fibre_orders.access');
 
   const branchScope = { effectiveBranch, isSalesAgent };
 
@@ -22,7 +22,7 @@ export default function FibreOrdersDashboard() {
     queryFn: () => fibreOrdersApi.getStats(
       isSalesAgent ? undefined : effectiveBranch
     ),
-    enabled: hasModule(MODULE_FIBRE_ORDERS),
+    enabled: canAccess,
   });
 
   const listParams = useMemo(
@@ -33,10 +33,10 @@ export default function FibreOrdersDashboard() {
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['fibre-orders', 'list', 'active', listParams],
     queryFn: () => fibreOrdersApi.list(listParams),
-    enabled: hasModule(MODULE_FIBRE_ORDERS),
+    enabled: canAccess,
   });
 
-  if (!hasModule(MODULE_FIBRE_ORDERS)) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to the Fibre Orders module.

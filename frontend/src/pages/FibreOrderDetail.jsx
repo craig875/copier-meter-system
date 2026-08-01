@@ -18,7 +18,6 @@ import {
   pipelineStatusLabel,
   overlayStatusLabel,
 } from '../constants/fibreOrders';
-import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderCompleteModal from '../components/fibre/FibreOrderCompleteModal';
 import {
@@ -42,7 +41,8 @@ export default function FibreOrderDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { hasModule, isElevated, isSalesAgent, can } = useAuth();
+  const { isElevated, isSalesAgent, can } = useAuth();
+  const canAccess = can('fibre_orders.access');
   const canManageTargets = can('connectivity.targets.manage');
   const [newPipelineStatus, setNewPipelineStatus] = useState('');
   const [newOverlayStatus, setNewOverlayStatus] = useState('');
@@ -54,13 +54,13 @@ export default function FibreOrderDetail() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['fibre-orders', id],
     queryFn: () => fibreOrdersApi.get(id),
-    enabled: hasModule(MODULE_FIBRE_ORDERS) && !!id,
+    enabled: canAccess && !!id,
   });
 
   const { data: updatesData } = useQuery({
     queryKey: ['fibre-orders', id, 'updates'],
     queryFn: () => fibreOrdersApi.getUpdates(id),
-    enabled: hasModule(MODULE_FIBRE_ORDERS) && !!id,
+    enabled: canAccess && !!id,
   });
 
   const updateMutation = useMutation({
@@ -104,7 +104,7 @@ export default function FibreOrderDetail() {
     }
   }, [order?.pipelineStatus, order?.id]);
 
-  if (!hasModule(MODULE_FIBRE_ORDERS)) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to the Fibre Orders module.

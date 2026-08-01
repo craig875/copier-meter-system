@@ -7,7 +7,6 @@ import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
 import { ACTIVE_PIPELINE_STATUSES, formatWeeksRemaining, isActiveFibreOrder } from '../constants/fibreOrders';
-import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderProgressBar from '../components/fibre/FibreOrderProgressBar';
 
@@ -18,7 +17,8 @@ function formatDate(d) {
 
 export default function FibreOrdersList() {
   const location = useLocation();
-  const { hasModule, isElevated, isSalesAgent, effectiveBranch } = useAuth();
+  const { can, isElevated, isSalesAgent, effectiveBranch } = useAuth();
+  const canAccess = can('fibre_orders.access');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -35,10 +35,10 @@ export default function FibreOrdersList() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['fibre-orders', 'list', params],
     queryFn: () => fibreOrdersApi.list(params),
-    enabled: hasModule(MODULE_FIBRE_ORDERS),
+    enabled: canAccess,
   });
 
-  if (!hasModule(MODULE_FIBRE_ORDERS)) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to the Fibre Orders module.

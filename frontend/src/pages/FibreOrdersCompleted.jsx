@@ -6,7 +6,6 @@ import { Search, CheckCircle } from 'lucide-react';
 import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
-import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 
 function formatDate(d) {
@@ -16,7 +15,8 @@ function formatDate(d) {
 
 export default function FibreOrdersCompleted() {
   const location = useLocation();
-  const { hasModule, isSalesAgent, effectiveBranch } = useAuth();
+  const { can, isSalesAgent, effectiveBranch } = useAuth();
+  const canAccess = can('fibre_orders.access');
   const [search, setSearch] = useState('');
 
   const params = useMemo(
@@ -33,10 +33,10 @@ export default function FibreOrdersCompleted() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['fibre-orders', 'completed', params],
     queryFn: () => fibreOrdersApi.list(params),
-    enabled: hasModule(MODULE_FIBRE_ORDERS),
+    enabled: canAccess,
   });
 
-  if (!hasModule(MODULE_FIBRE_ORDERS)) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to the Fibre Orders module.
