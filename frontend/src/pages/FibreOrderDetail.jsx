@@ -44,6 +44,7 @@ export default function FibreOrderDetail() {
   const { isElevated, isSalesAgent, can } = useAuth();
   const canAccess = can('fibre_orders.access');
   const canManageTargets = can('connectivity.targets.manage');
+  const canUpdateOrder = can('fibre_orders.update');
   const [newPipelineStatus, setNewPipelineStatus] = useState('');
   const [newOverlayStatus, setNewOverlayStatus] = useState('');
   const [noteText, setNoteText] = useState('');
@@ -215,7 +216,7 @@ export default function FibreOrderDetail() {
           overlayStatus={order.overlayStatus}
           className="text-sm"
         />
-        {isElevated && (
+        {canUpdateOrder && (
           <Link
             to={`/fibre-orders/${id}/edit`}
             state={buildFromState(location)}

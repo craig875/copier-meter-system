@@ -15,6 +15,7 @@ export default function FibreOrdersDashboard() {
   const { can, isElevated, isSalesAgent, effectiveBranch } = useAuth();
   const canAccess = can('fibre_orders.access');
   const canManageProducts = can('fibre_orders.products.manage');
+  const canCreateOrder = can('fibre_orders.create');
 
   const branchScope = { effectiveBranch, isSalesAgent };
 
@@ -93,7 +94,7 @@ export default function FibreOrdersDashboard() {
               Products
             </Link>
           )}
-          {isElevated && (
+          {canCreateOrder && (
             <Link
               to="/fibre-orders/new" state={buildFromState(location)}
               className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"

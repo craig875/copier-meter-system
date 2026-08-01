@@ -17,8 +17,9 @@ function formatDate(d) {
 
 export default function FibreOrdersList() {
   const location = useLocation();
-  const { can, isElevated, isSalesAgent, effectiveBranch } = useAuth();
+  const { can, isSalesAgent, effectiveBranch } = useAuth();
   const canAccess = can('fibre_orders.access');
+  const canCreateOrder = can('fibre_orders.create');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -64,7 +65,7 @@ export default function FibreOrdersList() {
           >
             Completed Installs
           </Link>
-          {isElevated && (
+          {canCreateOrder && (
           <Link
             to="/fibre-orders/new" state={buildFromState(location)}
             className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
