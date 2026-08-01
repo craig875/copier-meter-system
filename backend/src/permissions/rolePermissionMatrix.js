@@ -89,6 +89,8 @@ const READINGS_ELEVATED = [
   'copiers.readings.import',
   'copiers.readings.delete',
   'copiers.readings.unlock_month',
+  'copiers.readings.min_bill',
+  'copiers.readings.export_incomplete',
   'copiers.readings.uto_mark',
   'copiers.readings.uto_request_override',
 ];

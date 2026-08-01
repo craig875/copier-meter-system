@@ -375,6 +375,8 @@ const Capture = () => {
   const { isElevated, can, effectiveBranch } = useAuth();
   const canDeleteReading = can('copiers.readings.delete');
   const canUnlockMonth = can('copiers.readings.unlock_month');
+  const canMinBillAction = can('copiers.readings.min_bill');
+  const canExportIncomplete = can('copiers.readings.export_incomplete');
   const canUtoMark = can('copiers.readings.uto_mark');
   const canUtoRequestOverride = can('copiers.readings.uto_request_override');
   const canUtoListBlocked = can('copiers.readings.uto_list_blocked');
@@ -750,7 +752,7 @@ const Capture = () => {
   }, [unchangedModal]);
 
   const handleMinBill = useCallback((machineId) => {
-    if (!isElevated) return;
+    if (!canMinBillAction) return;
 
     if (isLocked) {
       toast.error('This month has been submitted and is locked for editing');
@@ -858,7 +860,7 @@ const Capture = () => {
         });
       },
     });
-  }, [isElevated, isLocked]);
+  }, [canMinBillAction, isLocked]);
 
   const handleSave = () => {
     // Prevent saving if month is locked
@@ -1192,7 +1194,7 @@ const Capture = () => {
 
           {/* Submit & Export Button - Show when 100% complete OR if admin (even if not complete), but hide if locked */}
           {/* Regular users can only export when 100% complete. Admins can export anytime. */}
-          {!isLocked && (isComplete || isElevated) ? (
+          {!isLocked && (isComplete || canExportIncomplete) ? (
             <div data-tour="submit-buttons" className="flex items-center gap-2">
               {isComplete ? (
                 // Show export buttons for all users when 100% complete
@@ -1213,7 +1215,7 @@ const Capture = () => {
                   </button>
                 </div>
               ) : (
-                // Show export buttons only for admins when not complete
+                // Show export buttons only when export_incomplete is granted and month not complete
                 <>
                   <div className="flex items-center gap-2">
                     <button
@@ -1367,7 +1369,7 @@ const Capture = () => {
                   onSaveSingle={handleSaveSingle}
                   onMinBill={handleMinBill}
                   canMinBill={
-                    isElevated
+                    canMinBillAction
                     && !currentReading
                     && !!buildMinBillFieldUpdates(machine, previousReading)
                   }
