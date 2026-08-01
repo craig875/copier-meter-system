@@ -265,7 +265,7 @@ function App() {
       <Route
         path="/users"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute requirePermission="users.view">
             <Layout>
               <Users />
             </Layout>

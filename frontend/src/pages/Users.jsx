@@ -33,7 +33,10 @@ function normalizeAllowedBranches(user) {
 
 const Users = () => {
   const queryClient = useQueryClient();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, can } = useAuth();
+  const canCreate = can('users.create');
+  const canUpdate = can('users.update');
+  const canDelete = can('users.delete');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
@@ -91,13 +94,15 @@ const Users = () => {
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-gray-500">Manage system users and permissions</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add User
-        </button>
+        {canCreate ? (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add User
+          </button>
+        ) : null}
       </div>
 
       {/* Users Grid */}
@@ -142,21 +147,25 @@ const Users = () => {
                 </div>
               </div>
               <div className="flex gap-1">
-                <button
-                  onClick={() => handleEdit(user)}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                  title="Edit"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(user)}
-                  disabled={user.id === currentUser.id}
-                  className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  title="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                {canUpdate ? (
+                  <button
+                    onClick={() => handleEdit(user)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    title="Edit"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                ) : null}
+                {canDelete ? (
+                  <button
+                    onClick={() => handleDelete(user)}
+                    disabled={user.id === currentUser.id}
+                    className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                ) : null}
               </div>
             </div>
             <div className="mt-3 pt-3 border-t space-y-2">
