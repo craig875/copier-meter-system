@@ -59,7 +59,8 @@ function compareValues(aVal, bVal, sortDir) {
 
 export default function ConnectivityDashboard() {
   const location = useLocation();
-  const { canAccessConnectivity, canManageConnectivity, effectiveBranch } = useAuth();
+  const { can, canManageConnectivity, effectiveBranch } = useAuth();
+  const canAccess = can('connectivity.access');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const statusFromUrl = searchParams.get('status') || '';
@@ -95,7 +96,7 @@ export default function ConnectivityDashboard() {
     queryKey: ['connectivity', 'dashboard', effectiveBranch],
     queryFn: () => connectivityApi.getDashboard(effectiveBranch),
     refetchInterval: 30000,
-    enabled: !!canAccessConnectivity,
+    enabled: !!canAccess,
   });
 
   const headers = useMemo(() => {
@@ -126,7 +127,7 @@ export default function ConnectivityDashboard() {
     return list;
   }, [data?.targets, search, statusFilter, sortBy, sortDir]);
 
-  if (!canAccessConnectivity) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to connectivity monitoring.

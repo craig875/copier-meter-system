@@ -19,7 +19,8 @@ function formatDate(d) {
 }
 
 export default function ConnectivityOutages() {
-  const { canAccessConnectivity, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canAccess = can('connectivity.access');
   const [targetId, setTargetId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -32,10 +33,10 @@ export default function ConnectivityOutages() {
   const { data, isLoading } = useQuery({
     queryKey: ['connectivity', 'outages', effectiveBranch, params],
     queryFn: () => connectivityApi.getOutages(params),
-    enabled: !!canAccessConnectivity,
+    enabled: !!canAccess,
   });
 
-  if (!canAccessConnectivity) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to outage logs.
