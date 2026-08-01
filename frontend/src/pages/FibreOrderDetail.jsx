@@ -41,7 +41,7 @@ export default function FibreOrderDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { isElevated, isSalesAgent, can } = useAuth();
+  const { isSalesAgent, can } = useAuth();
   const canAccess = can('fibre_orders.access');
   const canManageTargets = can('connectivity.targets.manage');
   const canUpdateOrder = can('fibre_orders.update');
@@ -320,7 +320,7 @@ export default function FibreOrderDetail() {
           </div>
         </div>
 
-        {isElevated && (
+        {canUpdateOrder && (
           <div className="tile-card p-6 space-y-4">
             <h2 className="font-semibold text-gray-900">Update Order</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
