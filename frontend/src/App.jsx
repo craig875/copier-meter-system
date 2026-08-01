@@ -219,7 +219,7 @@ function App() {
       <Route
         path="/admin/unable-to-obtain-overrides"
         element={
-          <ProtectedRoute strictAdminOnly>
+          <ProtectedRoute requirePermission="copiers.readings.uto_list_blocked">
             <Layout>
               <UnableToObtainOverrides />
             </Layout>
