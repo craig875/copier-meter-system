@@ -15,8 +15,9 @@ const emptyForm = {
 
 export default function FibreProducts() {
   const queryClient = useQueryClient();
-  const { can, isElevated } = useAuth();
+  const { can } = useAuth();
   const canAccess = can('fibre_orders.access');
+  const canManageProducts = can('fibre_orders.products.manage');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -24,7 +25,7 @@ export default function FibreProducts() {
   const { data, isLoading } = useQuery({
     queryKey: ['fibre-products', 'all'],
     queryFn: () => fibreProductsApi.list(true),
-    enabled: canAccess && isElevated,
+    enabled: canManageProducts,
   });
 
   const saveMutation = useMutation({
@@ -78,7 +79,7 @@ export default function FibreProducts() {
     );
   }
 
-  if (!isElevated) {
+  if (!canManageProducts) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         Administrator or manager access is required to manage products.

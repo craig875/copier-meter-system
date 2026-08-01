@@ -319,7 +319,7 @@ function App() {
       <Route path="/fibre-orders/list" element={<ProtectedRoute><Layout><FibreOrdersList /></Layout></ProtectedRoute>} />
       <Route path="/fibre-orders/completed" element={<ProtectedRoute><Layout><FibreOrdersCompleted /></Layout></ProtectedRoute>} />
       <Route path="/fibre-orders/new" element={<ProtectedRoute adminOnly><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
-      <Route path="/fibre-orders/products" element={<ProtectedRoute adminOnly><Layout><FibreProducts /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/products" element={<ProtectedRoute requirePermission="fibre_orders.products.manage"><Layout><FibreProducts /></Layout></ProtectedRoute>} />
       <Route path="/fibre-orders/:id/edit" element={<ProtectedRoute adminOnly><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
       <Route path="/fibre-orders/:id" element={<ProtectedRoute><Layout><FibreOrderDetail /></Layout></ProtectedRoute>} />
 

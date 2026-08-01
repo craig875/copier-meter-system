@@ -14,6 +14,7 @@ export default function FibreOrdersDashboard() {
   const location = useLocation();
   const { can, isElevated, isSalesAgent, effectiveBranch } = useAuth();
   const canAccess = can('fibre_orders.access');
+  const canManageProducts = can('fibre_orders.products.manage');
 
   const branchScope = { effectiveBranch, isSalesAgent };
 
@@ -83,23 +84,23 @@ export default function FibreOrdersDashboard() {
               </span>
             )}
           </Link>
+          {canManageProducts && (
+            <Link
+              to="/fibre-orders/products" state={buildFromState(location)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Products
+            </Link>
+          )}
           {isElevated && (
-            <>
-              <Link
-                to="/fibre-orders/products" state={buildFromState(location)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Products
-              </Link>
-              <Link
-                to="/fibre-orders/new" state={buildFromState(location)}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Order
-              </Link>
-            </>
+            <Link
+              to="/fibre-orders/new" state={buildFromState(location)}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Order
+            </Link>
           )}
         </div>
       </div>
