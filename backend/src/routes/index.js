@@ -13,6 +13,9 @@ import notificationRoutes from './notification.routes.js';
 import connectivityRoutes from '../connectivity/connectivity.routes.js';
 import fibreProductRoutes from './fibre-product.routes.js';
 import fibreOrderRoutes from './fibre-order.routes.js';
+import roleRoutes from './role.routes.js';
+import permissionOverrideRoutes from './permissionOverride.routes.js';
+import permissionPreviewRoutes from './permissionPreview.routes.js';
 
 const router = Router();
 
@@ -43,6 +46,11 @@ router.use('/audit', auditRoutes);
 
 // User management
 router.use('/users', userRoutes);
+router.use('/users/:userId/permission-overrides', permissionOverrideRoutes);
+
+// Roles & permission preview (Stage F)
+router.use('/roles', roleRoutes);
+router.use('/permissions', permissionPreviewRoutes);
 
 // Notifications (admin only)
 router.use('/notifications', notificationRoutes);

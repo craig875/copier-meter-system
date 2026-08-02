@@ -9,6 +9,9 @@ import { NotificationService } from './notification.service.js';
 
 import { FibreProductService } from './fibre-product.service.js';
 import { FibreOrderService } from './fibre-order.service.js';
+import { RoleService } from './role.service.js';
+import { PermissionOverrideService } from './permissionOverride.service.js';
+import { PermissionPreviewService } from './permissionPreview.service.js';
 
 /**
  * Service Factory - Centralized service creation
@@ -28,6 +31,9 @@ export const services = {
   notification: notificationService,
   fibreProduct: new FibreProductService(),
   fibreOrder: new FibreOrderService(),
+  role: new RoleService(),
+  permissionOverride: new PermissionOverrideService(),
+  permissionPreview: new PermissionPreviewService(),
 };
 
 export {
@@ -36,4 +42,7 @@ export {
   AuthService,
   UserService,
   ImportService,
+  RoleService,
+  PermissionOverrideService,
+  PermissionPreviewService,
 };
