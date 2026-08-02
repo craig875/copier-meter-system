@@ -241,24 +241,20 @@ function App() {
       <Route
         path="/customers"
         element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <Customers />
-              </Layout>
-            </CapturerRestrict>
+          <ProtectedRoute requirePermission="copiers.customers.view">
+            <Layout>
+              <Customers />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/customers/:customerId"
         element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <CustomerDetail />
-              </Layout>
-            </CapturerRestrict>
+          <ProtectedRoute requirePermission="copiers.customers.view">
+            <Layout>
+              <CustomerDetail />
+            </Layout>
           </ProtectedRoute>
         }
       />
