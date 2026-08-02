@@ -478,13 +478,15 @@ export default function InstallationDetail() {
               </form>
             </div>
 
-            <button
-              type="button"
-              onClick={openScheduleModal}
-              className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              {isScheduled ? 'Reschedule' : 'Schedule Installation'}
-            </button>
+            <div className="tile-card p-6 space-y-4">
+              <button
+                type="button"
+                onClick={openScheduleModal}
+                className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                {isScheduled ? 'Reschedule' : 'Schedule Installation'}
+              </button>
+            </div>
           </div>
         )}
       </div>
