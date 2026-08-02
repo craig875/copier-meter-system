@@ -99,7 +99,7 @@ export const PERMISSION_CATALOG = [
 
 export const ALL_PERMISSION_KEYS = PERMISSION_CATALOG.map((p) => p.key);
 
-/** Keys that map to today's requireStrictAdmin surfaces. */
+/** Keys that map to today's admin-only (role === admin, excludes manager) surfaces. */
 export const STRICT_ADMIN_ONLY_KEYS = [
   'copiers.readings.uto_force_override',
   'copiers.readings.uto_list_blocked',

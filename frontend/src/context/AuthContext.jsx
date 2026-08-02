@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../services/api';
-import { MODULE_CONNECTIVITY } from '../constants/modules';
 import { getAllowedBranches, resolveActiveBranch } from '../utils/branchSelection';
 
 const AuthContext = createContext(null);
@@ -127,7 +126,6 @@ export const AuthProvider = ({ children }) => {
 
   const isMeterUser = user?.role === 'meter_user';
   const isCapturer = user?.role === 'capturer';
-  const isViewer = user?.role === 'viewer';
 
   const hasModule = (moduleKey) => {
     if (user?.role === 'admin') return true;
@@ -141,10 +139,6 @@ export const AuthProvider = ({ children }) => {
     const list = user?.permissions;
     return Array.isArray(list) && list.includes(permissionKey);
   };
-
-  const canAccessConnectivity = hasModule(MODULE_CONNECTIVITY);
-  const canManageConnectivity =
-    isAdmin || (isManager && hasModule(MODULE_CONNECTIVITY));
 
   const allowedBranches = getAllowedBranches(user);
   const canSwitchBranches = allowedBranches.length > 1;
@@ -175,9 +169,6 @@ export const AuthProvider = ({ children }) => {
         isElevated,
         isMeterUser,
         isCapturer,
-        isViewer,
-        canAccessConnectivity,
-        canManageConnectivity,
         hasModule,
         can,
         allowedBranches,

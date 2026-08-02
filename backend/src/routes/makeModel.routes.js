@@ -11,7 +11,7 @@ import {
 } from '../controllers/makeModel.controller.js';
 import { importMakeModelParts } from '../controllers/import.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
-// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
+// requireAdmin = admin OR manager (elevated).
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import { validate } from '../middleware/validate.js';
