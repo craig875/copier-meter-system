@@ -89,6 +89,8 @@ const READINGS_ELEVATED = [
   'copiers.readings.import',
   'copiers.readings.delete',
   'copiers.readings.unlock_month',
+  'copiers.readings.min_bill',
+  'copiers.readings.export_incomplete',
   'copiers.readings.uto_mark',
   'copiers.readings.uto_request_override',
 ];
@@ -201,7 +203,7 @@ const METER_USER_KEYS = uniqueKeys(
   CONSUMABLES_USE
 );
 
-const CAPTURER_KEYS = uniqueKeys(DASH, BRANCH, COPIERS_ACCESS, READINGS_BASE);
+const CAPTURER_KEYS = uniqueKeys(DASH, BRANCH, COPIERS_ACCESS, READINGS_BASE, MACHINES_VIEW);
 
 const SALES_AGENT_KEYS = uniqueKeys(DASH, BRANCH, FIBRE_ACCESS, FIBRE_AGENT);
 

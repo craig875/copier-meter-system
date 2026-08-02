@@ -7,36 +7,40 @@ import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
 import { ALMOST_COMPLETE_STATUSES, formatWeeksRemaining } from '../constants/fibreOrders';
-import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderUpdateRequestsPanel from '../components/fibre/FibreOrderUpdateRequestsPanel';
 
 export default function FibreOrdersDashboard() {
   const location = useLocation();
-  const { hasModule, isElevated, isSalesAgent, effectiveBranch } = useAuth();
+  const { can, isElevated, isSalesAgent, effectiveBranch } = useAuth();
+  const canAccess = can('fibre_orders.access');
+  const canViewAll = can('fibre_orders.view_all');
+  const canManageProducts = can('fibre_orders.products.manage');
+  const canCreateOrder = can('fibre_orders.create');
+  const canListUpdateRequests = can('fibre_orders.update_requests.list');
 
-  const branchScope = { effectiveBranch, isSalesAgent };
+  const branchScope = { effectiveBranch, canViewAll };
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['fibre-orders', 'stats', effectiveBranch, isSalesAgent],
+    queryKey: ['fibre-orders', 'stats', effectiveBranch, canViewAll],
     queryFn: () => fibreOrdersApi.getStats(
-      isSalesAgent ? undefined : effectiveBranch
+      canViewAll ? effectiveBranch : undefined
     ),
-    enabled: hasModule(MODULE_FIBRE_ORDERS),
+    enabled: canAccess,
   });
 
   const listParams = useMemo(
     () => fibreOrderQueryParams(branchScope, { activeOnly: 'true' }),
-    [effectiveBranch, isSalesAgent]
+    [effectiveBranch, canViewAll]
   );
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['fibre-orders', 'list', 'active', listParams],
     queryFn: () => fibreOrdersApi.list(listParams),
-    enabled: hasModule(MODULE_FIBRE_ORDERS),
+    enabled: canAccess,
   });
 
-  if (!hasModule(MODULE_FIBRE_ORDERS)) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to the Fibre Orders module.
@@ -58,9 +62,9 @@ export default function FibreOrdersDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Fibre Orders</h1>
           <p className="text-gray-500 mt-1">
-            {isSalesAgent
-              ? 'View fibre orders assigned to you (read-only)'
-              : 'Track customer fibre orders, ETAs, and installation progress'}
+            {canViewAll
+              ? 'Track customer fibre orders, ETAs, and installation progress'
+              : 'View fibre orders assigned to you (read-only)'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -83,23 +87,23 @@ export default function FibreOrdersDashboard() {
               </span>
             )}
           </Link>
-          {isElevated && (
-            <>
-              <Link
-                to="/fibre-orders/products" state={buildFromState(location)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Products
-              </Link>
-              <Link
-                to="/fibre-orders/new" state={buildFromState(location)}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Order
-              </Link>
-            </>
+          {canManageProducts && (
+            <Link
+              to="/fibre-orders/products" state={buildFromState(location)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Products
+            </Link>
+          )}
+          {canCreateOrder && (
+            <Link
+              to="/fibre-orders/new" state={buildFromState(location)}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Order
+            </Link>
           )}
         </div>
       </div>
@@ -114,7 +118,7 @@ export default function FibreOrdersDashboard() {
             ))
           ) : (
             <>
-              {(stats?.pendingUpdateRequests ?? 0) > 0 && isElevated && (
+              {(stats?.pendingUpdateRequests ?? 0) > 0 && canListUpdateRequests && (
                 <div className="sm:col-span-3 tile-card p-4 border-l-4 border-l-amber-500 bg-amber-50/50 flex items-center justify-between gap-3">
                   <p className="text-sm text-amber-900">
                     <span className="font-semibold">{stats.pendingUpdateRequests}</span> sales agent update
@@ -123,7 +127,7 @@ export default function FibreOrdersDashboard() {
                 </div>
               )}
               <div className="tile-card p-5">
-                <p className="text-sm text-gray-500">{isSalesAgent ? 'My Active Orders' : 'Active Orders'}</p>
+                <p className="text-sm text-gray-500">{canViewAll ? 'Active Orders' : 'My Active Orders'}</p>
                 <p className="text-3xl font-bold text-gray-900 mt-1">{stats?.total ?? 0}</p>
               </div>
               <div className="tile-card p-5 border-l-4 border-l-amber-500">

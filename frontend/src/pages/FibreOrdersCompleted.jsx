@@ -6,7 +6,6 @@ import { Search, CheckCircle } from 'lucide-react';
 import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
-import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 
 function formatDate(d) {
@@ -16,27 +15,29 @@ function formatDate(d) {
 
 export default function FibreOrdersCompleted() {
   const location = useLocation();
-  const { hasModule, isSalesAgent, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canAccess = can('fibre_orders.access');
+  const canViewAll = can('fibre_orders.view_all');
   const [search, setSearch] = useState('');
 
   const params = useMemo(
     () => fibreOrderQueryParams(
-      { effectiveBranch, isSalesAgent },
+      { effectiveBranch, canViewAll },
       {
         completedOnly: 'true',
         ...(search.trim() ? { search: search.trim() } : {}),
       }
     ),
-    [effectiveBranch, isSalesAgent, search]
+    [effectiveBranch, canViewAll, search]
   );
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['fibre-orders', 'completed', params],
     queryFn: () => fibreOrdersApi.list(params),
-    enabled: hasModule(MODULE_FIBRE_ORDERS),
+    enabled: canAccess,
   });
 
-  if (!hasModule(MODULE_FIBRE_ORDERS)) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to the Fibre Orders module.
@@ -55,7 +56,7 @@ export default function FibreOrdersCompleted() {
             Completed Installs
           </h1>
           <p className="text-gray-500 mt-1">
-            {isSalesAgent ? 'Your ' : ''}{orders.length} completed install(s)
+            {canViewAll ? '' : 'Your '}{orders.length} completed install(s)
           </p>
         </div>
         <Link

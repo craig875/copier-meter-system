@@ -5,7 +5,6 @@ import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fibreOrdersApi, fibreProductsApi, usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import { trimLeading } from '../utils/string';
 
 function todayISO() {
@@ -17,7 +16,10 @@ export default function FibreOrderForm() {
   const isEditing = Boolean(id);
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasModule, isElevated, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canCreate = can('fibre_orders.create');
+  const canUpdate = can('fibre_orders.update');
+  const canUseForm = isEditing ? canUpdate : canCreate;
 
   const [form, setForm] = useState({
     branch: effectiveBranch || 'JHB',
@@ -40,19 +42,19 @@ export default function FibreOrderForm() {
   const { data: productsData } = useQuery({
     queryKey: ['fibre-products'],
     queryFn: () => fibreProductsApi.list(false),
-    enabled: hasModule(MODULE_FIBRE_ORDERS) && isElevated,
+    enabled: canUseForm,
   });
 
   const { data: usersData } = useQuery({
     queryKey: ['users'],
     queryFn: () => usersApi.getAll(),
-    enabled: hasModule(MODULE_FIBRE_ORDERS) && isElevated,
+    enabled: canUseForm,
   });
 
   const { data: orderData, isLoading: orderLoading } = useQuery({
     queryKey: ['fibre-orders', id],
     queryFn: () => fibreOrdersApi.get(id),
-    enabled: isEditing && hasModule(MODULE_FIBRE_ORDERS),
+    enabled: isEditing && canUpdate,
   });
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export default function FibreOrderForm() {
     },
   });
 
-  if (!hasModule(MODULE_FIBRE_ORDERS) || !isElevated) {
+  if (!canUseForm) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have permission to manage fibre orders.

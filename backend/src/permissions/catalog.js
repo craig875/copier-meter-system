@@ -30,9 +30,11 @@ export const PERMISSION_CATALOG = [
   { key: 'copiers.readings.view', group: 'copiers_readings', label: 'View meter readings' },
   { key: 'copiers.readings.submit', group: 'copiers_readings', label: 'Submit / capture readings' },
   { key: 'copiers.readings.export', group: 'copiers_readings', label: 'Export readings' },
+  { key: 'copiers.readings.export_incomplete', group: 'copiers_readings', label: 'Export readings for incomplete month' },
   { key: 'copiers.readings.import', group: 'copiers_readings', label: 'Import readings' },
   { key: 'copiers.readings.delete', group: 'copiers_readings', label: 'Delete readings' },
   { key: 'copiers.readings.unlock_month', group: 'copiers_readings', label: 'Unlock submitted month' },
+  { key: 'copiers.readings.min_bill', group: 'copiers_readings', label: 'Submit minimum bill reading' },
   { key: 'copiers.readings.uto_mark', group: 'copiers_readings', label: 'Mark Unable to obtain' },
   { key: 'copiers.readings.uto_request_override', group: 'copiers_readings', label: 'Request UTO override' },
   { key: 'copiers.readings.uto_force_override', group: 'copiers_readings', label: 'Force-approve UTO override' },
@@ -97,7 +99,7 @@ export const PERMISSION_CATALOG = [
 
 export const ALL_PERMISSION_KEYS = PERMISSION_CATALOG.map((p) => p.key);
 
-/** Keys that map to today's requireStrictAdmin surfaces. */
+/** Keys that map to today's admin-only (role === admin, excludes manager) surfaces. */
 export const STRICT_ADMIN_ONLY_KEYS = [
   'copiers.readings.uto_force_override',
   'copiers.readings.uto_list_blocked',
@@ -106,8 +108,29 @@ export const STRICT_ADMIN_ONLY_KEYS = [
 /** Keys reserved for the immutable Owner role. */
 export const OWNER_ONLY_KEYS = ['users.assign_owner'];
 
-if (ALL_PERMISSION_KEYS.length !== 60) {
+if (ALL_PERMISSION_KEYS.length !== 62) {
   throw new Error(
-    `PERMISSION_CATALOG must have exactly 60 keys (found ${ALL_PERMISSION_KEYS.length})`
+    `PERMISSION_CATALOG must have exactly 62 keys (found ${ALL_PERMISSION_KEYS.length})`
   );
+}
+
+/**
+ * Grouped catalog for admin UI checkbox editors (Stage F).
+ * Only includes fields that exist on each PermissionDef — no invented copy.
+ * @returns {{ groups: Array<{ id: string, label: string, keys: Array<{ key: string, label: string, description?: string }> }> }}
+ */
+export function getPermissionCatalogGrouped() {
+  return {
+    groups: PERMISSION_GROUPS.map((group) => ({
+      id: group.id,
+      label: group.label,
+      keys: PERMISSION_CATALOG.filter((p) => p.group === group.id).map((p) => {
+        const entry = { key: p.key, label: p.label };
+        if (p.description != null && p.description !== '') {
+          entry.description = p.description;
+        }
+        return entry;
+      }),
+    })),
+  };
 }

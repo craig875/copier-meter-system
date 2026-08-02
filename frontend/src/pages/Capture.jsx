@@ -124,7 +124,7 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
   scanError,
   noteError,
   isLocked,
-  isElevated,
+  canDeleteReading,
   savePending,
   onReadingChange,
   onUnableToObtain,
@@ -350,7 +350,7 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
               Cancel
             </button>
           )}
-          {isElevated && currentReading && (
+          {canDeleteReading && currentReading && (
             <button
               type="button"
               onClick={() => onDeleteReading(mid)}
@@ -372,7 +372,14 @@ const CaptureMachineRow = memo(function CaptureMachineRow({
 const Capture = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isElevated, isAdmin, effectiveBranch } = useAuth();
+  const { isElevated, can, effectiveBranch } = useAuth();
+  const canDeleteReading = can('copiers.readings.delete');
+  const canUnlockMonth = can('copiers.readings.unlock_month');
+  const canMinBillAction = can('copiers.readings.min_bill');
+  const canExportIncomplete = can('copiers.readings.export_incomplete');
+  const canUtoMark = can('copiers.readings.uto_mark');
+  const canUtoRequestOverride = can('copiers.readings.uto_request_override');
+  const canUtoListBlocked = can('copiers.readings.uto_list_blocked');
   const now = new Date();
   const urlYear = searchParams.get('year');
   const urlMonth = searchParams.get('month');
@@ -534,7 +541,7 @@ const Capture = () => {
   }, [isLocked]);
 
   const handleUnableToObtainClick = useCallback((machineId) => {
-    if (!isElevated) return;
+    if (!canUtoMark) return;
 
     if (isLocked) {
       toast.error('This month has been submitted and is locked for editing');
@@ -550,10 +557,10 @@ const Capture = () => {
     }
 
     setUnableToObtainModal({ entry });
-  }, [isElevated, isLocked]);
+  }, [canUtoMark, isLocked]);
 
   const handleRequestUnableToObtainOverride = useCallback(async (machineId) => {
-    if (!isElevated || isLocked) return;
+    if (!canUtoRequestOverride || isLocked) return;
     const entry = machinesRef.current.find((m) => m.machine.id === machineId);
     if (!entry || entry.currentReading || entry.pendingUnableToObtainOverrideRequest) return;
     if (!isConsecutiveUnableToReadBlocked(entry.previousReading)) return;
@@ -574,7 +581,7 @@ const Capture = () => {
     } finally {
       setRequestOverrideMachineId(null);
     }
-  }, [isElevated, isLocked, year, month, queryBranch, queryClient]);
+  }, [canUtoRequestOverride, isLocked, year, month, queryBranch, queryClient]);
 
   const handleUnableToObtainCancel = useCallback(() => {
     if (unableToObtainSubmitting) return;
@@ -650,7 +657,7 @@ const Capture = () => {
       if (!entry) continue;
       if (!applyValidationErrors(
         validateReadingForSubmit(reading, entry.machine, {
-          canUseUnableToObtain: isElevated,
+          canUseUnableToObtain: canUtoMark,
           previousReading: entry.previousReading,
         }),
         reading.machineId,
@@ -662,7 +669,7 @@ const Capture = () => {
       toast.error('Validation errors - check highlighted fields');
     }
     return ok;
-  }, [applyValidationErrors, isElevated]);
+  }, [applyValidationErrors, canUtoMark]);
 
   const buildReadingsToSubmit = useCallback(() => {
     const readingsToSubmit = [];
@@ -745,7 +752,7 @@ const Capture = () => {
   }, [unchangedModal]);
 
   const handleMinBill = useCallback((machineId) => {
-    if (!isElevated) return;
+    if (!canMinBillAction) return;
 
     if (isLocked) {
       toast.error('This month has been submitted and is locked for editing');
@@ -853,7 +860,7 @@ const Capture = () => {
         });
       },
     });
-  }, [isElevated, isLocked]);
+  }, [canMinBillAction, isLocked]);
 
   const handleSave = () => {
     // Prevent saving if month is locked
@@ -890,7 +897,7 @@ const Capture = () => {
 
       const reading = buildReadingPayload(machineId, entry, editedValues);
       const submitOptions = {
-        canUseUnableToObtain: isElevated,
+        canUseUnableToObtain: canUtoMark,
         previousReading: entry.previousReading,
       };
 
@@ -975,7 +982,7 @@ const Capture = () => {
         }
       }
     },
-  [isLocked, isElevated, year, month, queryBranch, queryClient, applyValidationErrors]
+  [isLocked, isElevated, canUtoMark, year, month, queryBranch, queryClient, applyValidationErrors]
 );
 
   const handleCancelMachine = useCallback((machineId) => {
@@ -1147,7 +1154,7 @@ const Capture = () => {
                   {new Date(submission.submittedAt).toLocaleDateString()}
                 </span>
               </div>
-              {isElevated && queryBranch && (
+              {canUnlockMonth && queryBranch && (
                 <button
                   onClick={() => {
                     if (window.confirm('Unlock this month for editing? Anyone will be able to modify the readings.')) {
@@ -1187,7 +1194,7 @@ const Capture = () => {
 
           {/* Submit & Export Button - Show when 100% complete OR if admin (even if not complete), but hide if locked */}
           {/* Regular users can only export when 100% complete. Admins can export anytime. */}
-          {!isLocked && (isComplete || isElevated) ? (
+          {!isLocked && (isComplete || canExportIncomplete) ? (
             <div data-tour="submit-buttons" className="flex items-center gap-2">
               {isComplete ? (
                 // Show export buttons for all users when 100% complete
@@ -1208,7 +1215,7 @@ const Capture = () => {
                   </button>
                 </div>
               ) : (
-                // Show export buttons only for admins when not complete
+                // Show export buttons only when export_incomplete is granted and month not complete
                 <>
                   <div className="flex items-center gap-2">
                     <button
@@ -1355,36 +1362,36 @@ const Capture = () => {
                   scanError={errors[`${machine.id}-scanReading`]}
                   noteError={errors[`${machine.id}-note`]}
                   isLocked={isLocked}
-                  isElevated={isElevated}
+                  canDeleteReading={canDeleteReading}
                   savePending={submitMutation.isPending || unableToObtainSubmitting}
                   onReadingChange={handleReadingChange}
                   onUnableToObtain={handleUnableToObtainClick}
                   onSaveSingle={handleSaveSingle}
                   onMinBill={handleMinBill}
                   canMinBill={
-                    isElevated
+                    canMinBillAction
                     && !currentReading
                     && !!buildMinBillFieldUpdates(machine, previousReading)
                   }
                   canUnableToObtain={
-                    isElevated
+                    canUtoMark
                     && !currentReading
                     && !isConsecutiveUnableToReadBlocked(previousReading)
                   }
                   consecutiveUnableBlocked={
-                    isElevated
+                    canUtoMark
                     && !currentReading
                     && isConsecutiveUnableToReadBlocked(previousReading)
                   }
                   unableToObtainOverridesHref={
-                    isAdmin
+                    canUtoListBlocked
                       ? `/admin/unable-to-obtain-overrides?year=${year}&month=${month}&machineId=${machine.id}`
                       : null
                   }
                   consecutiveBlockHint="Ask an administrator to force-approve."
                   pendingUnableToObtainOverrideRequest={pendingUnableToObtainOverrideRequest}
                   canRequestUnableToObtainOverride={
-                    isElevated
+                    canUtoRequestOverride
                     && !pendingUnableToObtainOverrideRequest
                   }
                   onRequestUnableToObtainOverride={handleRequestUnableToObtainOverride}

@@ -14,6 +14,9 @@ import connectivityRoutes from '../connectivity/connectivity.routes.js';
 import fibreProductRoutes from './fibre-product.routes.js';
 import fibreOrderRoutes from './fibre-order.routes.js';
 import installRoutes from './install.routes.js';
+import roleRoutes from './role.routes.js';
+import permissionOverrideRoutes from './permissionOverride.routes.js';
+import permissionPreviewRoutes from './permissionPreview.routes.js';
 
 const router = Router();
 
@@ -31,12 +34,13 @@ router.use('/readings', readingRoutes);
 // Consumable Tracker
 router.use('/consumables', consumableRoutes);
 
-// Public health (before makeModel mount, which applies auth to /api/*)
+// Public health (no auth)
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Makes & Models (read for forms; CRUD via makeModel routes)
+// Makes & Models at /makes and /models (auth+tenant are per-route, not pathless —
+// mounting at `/` must not gate unrelated routers registered below).
 router.use('/', makeModelRoutes);
 
 // Audit / Transaction history (admin only)
@@ -44,6 +48,11 @@ router.use('/audit', auditRoutes);
 
 // User management
 router.use('/users', userRoutes);
+router.use('/users/:userId/permission-overrides', permissionOverrideRoutes);
+
+// Roles & permission preview (Stage F)
+router.use('/roles', roleRoutes);
+router.use('/permissions', permissionPreviewRoutes);
 
 // Notifications (admin only)
 router.use('/notifications', notificationRoutes);

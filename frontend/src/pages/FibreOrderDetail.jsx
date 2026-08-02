@@ -18,7 +18,6 @@ import {
   pipelineStatusLabel,
   overlayStatusLabel,
 } from '../constants/fibreOrders';
-import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderCompleteModal from '../components/fibre/FibreOrderCompleteModal';
 import {
@@ -42,7 +41,13 @@ export default function FibreOrderDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { hasModule, isElevated, isSalesAgent, canManageConnectivity } = useAuth();
+  const { isSalesAgent, can } = useAuth();
+  const canAccess = can('fibre_orders.access');
+  const canManageTargets = can('connectivity.targets.manage');
+  const canUpdateOrder = can('fibre_orders.update');
+  const canRequestOrderUpdate =
+    can('fibre_orders.update_requests.create')
+    && !can('fibre_orders.update_requests.list');
   const [newPipelineStatus, setNewPipelineStatus] = useState('');
   const [newOverlayStatus, setNewOverlayStatus] = useState('');
   const [noteText, setNoteText] = useState('');
@@ -53,13 +58,13 @@ export default function FibreOrderDetail() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['fibre-orders', id],
     queryFn: () => fibreOrdersApi.get(id),
-    enabled: hasModule(MODULE_FIBRE_ORDERS) && !!id,
+    enabled: canAccess && !!id,
   });
 
   const { data: updatesData } = useQuery({
     queryKey: ['fibre-orders', id, 'updates'],
     queryFn: () => fibreOrdersApi.getUpdates(id),
-    enabled: hasModule(MODULE_FIBRE_ORDERS) && !!id,
+    enabled: canAccess && !!id,
   });
 
   const updateMutation = useMutation({
@@ -103,7 +108,7 @@ export default function FibreOrderDetail() {
     }
   }, [order?.pipelineStatus, order?.id]);
 
-  if (!hasModule(MODULE_FIBRE_ORDERS)) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to the Fibre Orders module.
@@ -166,12 +171,12 @@ export default function FibreOrderDetail() {
       {completeModalOrder && (
         <FibreOrderCompleteModal
           order={completeModalOrder}
-          canAddConnectivity={canManageConnectivity}
+          canAddConnectivity={canManageTargets}
           onClose={() => setCompleteModalOrder(null)}
         />
       )}
 
-      {showInstalledBanner && canManageConnectivity && (
+      {showInstalledBanner && canManageTargets && (
         <div className="tile-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-l-4 border-green-400 bg-green-50/80">
           <div>
             <p className="font-medium text-gray-900">This order is complete</p>
@@ -214,7 +219,7 @@ export default function FibreOrderDetail() {
           overlayStatus={order.overlayStatus}
           className="text-sm"
         />
-        {isElevated && (
+        {canUpdateOrder && (
           <Link
             to={`/fibre-orders/${id}/edit`}
             state={buildFromState(location)}
@@ -315,7 +320,7 @@ export default function FibreOrderDetail() {
           </div>
         </div>
 
-        {isElevated && (
+        {canUpdateOrder && (
           <div className="tile-card p-6 space-y-4">
             <h2 className="font-semibold text-gray-900">Update Order</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -378,7 +383,7 @@ export default function FibreOrderDetail() {
           </div>
         )}
 
-        {isSalesAgent && (
+        {canRequestOrderUpdate && (
           <div className="tile-card p-6 space-y-4">
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />

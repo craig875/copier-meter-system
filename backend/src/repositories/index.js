@@ -15,6 +15,8 @@ import { FibreOrderUpdateRequestRepository } from './fibre-order-update-request.
 import { UnableToObtainOverrideRequestRepository } from './unable-to-obtain-override-request.repository.js';
 import { InstallRepository } from './install.repository.js';
 import { InstallTaskRepository } from './install-task.repository.js';
+import { RoleRepository } from './role.repository.js';
+import { UserPermissionOverrideRepository } from './userPermissionOverride.repository.js';
 
 /**
  * Repository Factory - Centralized repository creation
@@ -36,6 +38,8 @@ export const repositories = {
   unableToObtainOverrideRequest: new UnableToObtainOverrideRequestRepository(prisma),
   install: new InstallRepository(prisma),
   installTask: new InstallTaskRepository(prisma),
+  role: new RoleRepository(prisma),
+  userPermissionOverride: new UserPermissionOverrideRepository(prisma),
 };
 
 export {
@@ -53,4 +57,6 @@ export {
   UnableToObtainOverrideRequestRepository,
   InstallRepository,
   InstallTaskRepository,
+  RoleRepository,
+  UserPermissionOverrideRepository,
 };

@@ -9,31 +9,57 @@ import {
   recommissionMachine,
 } from '../controllers/machine.controller.js';
 import { importMachines } from '../controllers/import.controller.js';
-import { authenticate, requireAdmin, requireMeterUserOrAdmin } from '../middleware/auth.js';
-// requireAdmin = admin OR manager (elevated). Prefer requireStrictAdmin for admin-only.
+import { authenticate } from '../middleware/auth.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
-import { requireMeterReadingAccess } from '../middleware/permissions.js';
+import { requirePermission } from '../middleware/requirePermission.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import { createMachineSchema, updateMachineSchema, machineQuerySchema } from '../schemas/machine.schema.js';
 
 const router = Router();
 
-// All machine routes require authentication and meter reading access
 router.use(authenticate);
 router.use(requireTenantBranch);
-router.use(requireMeterReadingAccess);
 
-router.get('/', validateQuery(machineQuerySchema), getMachines);
-router.get('/:id', getMachine);
+router.get(
+  '/',
+  requirePermission('copiers.machines.view'),
+  validateQuery(machineQuerySchema),
+  getMachines
+);
+router.get('/:id', requirePermission('copiers.machines.view'), getMachine);
 
-// Create / update / archive - meter user or admin (capturer can only read)
-router.post('/', requireMeterUserOrAdmin, validate(createMachineSchema), createMachine);
-router.put('/:id', requireMeterUserOrAdmin, validate(updateMachineSchema), updateMachine);
-router.post('/:id/decommission', requireMeterUserOrAdmin, decommissionMachine);
+router.post(
+  '/',
+  requirePermission('copiers.machines.create'),
+  validate(createMachineSchema),
+  createMachine
+);
+router.put(
+  '/:id',
+  requirePermission('copiers.machines.update'),
+  validate(updateMachineSchema),
+  updateMachine
+);
+router.post(
+  '/:id/decommission',
+  requirePermission('copiers.machines.decommission'),
+  decommissionMachine
+);
 
-// Admin only routes
-router.post('/import', requireAdmin, importMachines);
-router.post('/:id/recommission', requireMeterUserOrAdmin, recommissionMachine);
-router.delete('/:id', requireAdmin, deleteMachine);
+router.post(
+  '/import',
+  requirePermission('copiers.machines.import'),
+  importMachines
+);
+router.post(
+  '/:id/recommission',
+  requirePermission('copiers.machines.recommission'),
+  recommissionMachine
+);
+router.delete(
+  '/:id',
+  requirePermission('copiers.machines.delete'),
+  deleteMachine
+);
 
 export default router;

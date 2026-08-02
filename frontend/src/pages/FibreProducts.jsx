@@ -4,7 +4,6 @@ import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fibreProductsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import { trimLeading } from '../utils/string';
 
 const emptyForm = {
@@ -16,7 +15,9 @@ const emptyForm = {
 
 export default function FibreProducts() {
   const queryClient = useQueryClient();
-  const { hasModule, isElevated } = useAuth();
+  const { can } = useAuth();
+  const canAccess = can('fibre_orders.access');
+  const canManageProducts = can('fibre_orders.products.manage');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -24,7 +25,7 @@ export default function FibreProducts() {
   const { data, isLoading } = useQuery({
     queryKey: ['fibre-products', 'all'],
     queryFn: () => fibreProductsApi.list(true),
-    enabled: hasModule(MODULE_FIBRE_ORDERS) && isElevated,
+    enabled: canManageProducts,
   });
 
   const saveMutation = useMutation({
@@ -70,7 +71,7 @@ export default function FibreProducts() {
     setForm(emptyForm);
   };
 
-  if (!hasModule(MODULE_FIBRE_ORDERS)) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to the Fibre Orders module.
@@ -78,7 +79,7 @@ export default function FibreProducts() {
     );
   }
 
-  if (!isElevated) {
+  if (!canManageProducts) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         Administrator or manager access is required to manage products.

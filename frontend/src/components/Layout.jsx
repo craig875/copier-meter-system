@@ -32,7 +32,6 @@ import logo from '../assets/logo.png';
 import Setup2FAPrompt from './Setup2FAPrompt';
 import ConnectivityAlertBanner from './connectivity/ConnectivityAlertBanner';
 import { notificationsApi, machinesApi } from '../services/api';
-import { MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS } from '../constants/modules';
 import { useBackNavigation } from '../hooks/useBackNavigation';
 
 const Layout = ({ children }) => {
@@ -42,13 +41,13 @@ const Layout = ({ children }) => {
     isElevated,
     isAdmin,
     isCapturer,
-    hasModule,
+    can,
     effectiveBranch,
     canSwitchBranches,
   } = useAuth();
-  const showCopiers = hasModule(MODULE_COPERS);
-  const showConnectivity = hasModule(MODULE_CONNECTIVITY);
-  const showFibreOrders = hasModule(MODULE_FIBRE_ORDERS);
+  const showCopiers = can('copiers.access');
+  const showConnectivity = can('connectivity.access');
+  const showFibreOrders = can('fibre_orders.access');
   const branchCityLabel =
     effectiveBranch === 'CT' ? 'Cape Town' : effectiveBranch === 'JHB' ? 'Johannesburg' : null;
   const location = useLocation();
@@ -69,7 +68,7 @@ const Layout = ({ children }) => {
   const { data: unreadData } = useQuery({
     queryKey: ['notifications', 'unread-count', effectiveBranch],
     queryFn: () => notificationsApi.getUnreadCount(),
-    enabled: Boolean(user) && isElevated && effectiveBranch != null,
+    enabled: Boolean(user) && can('notifications.access') && effectiveBranch != null,
     refetchInterval: 60000, // refresh every 60s
     staleTime: 0, // always consider stale so invalidations trigger refetch
   });
@@ -113,12 +112,11 @@ const Layout = ({ children }) => {
       myInstallTasksNav,
     ];
 
+    let nav;
     if (!showCopiers && topLinks.length > 0) {
-      return [home, ...topLinks];
-    }
-
-    if (isCapturer && showCopiers) {
-      return [
+      nav = [home, ...topLinks];
+    } else if (isCapturer && showCopiers) {
+      nav = [
         home,
         ...topLinks,
         {
@@ -131,39 +129,57 @@ const Layout = ({ children }) => {
           ],
         },
       ];
+    } else {
+      nav = [home, ...topLinks];
+      if (showCopiers) {
+        nav.push({
+          name: 'Copier Service',
+          href: '/copier-service',
+          icon: Printer,
+          children: [
+            { name: 'Customers', href: '/customers', icon: Building2 },
+            { name: 'Meter Readings', href: '/meter-readings', icon: LayoutDashboard, activePaths: ['/capture', '/history', '/import-readings'] },
+            { name: 'Machines', href: '/machines', icon: Printer },
+            { name: 'Consumable Summary', href: '/consumables/summary', icon: Package, activePaths: ['/consumables/summary'] },
+          ],
+        });
+      }
     }
 
-    const nav = [home, ...topLinks];
-    if (showCopiers) {
-      nav.push({
-        name: 'Copier Service',
-        href: '/copier-service',
-        icon: Printer,
-        children: [
-          { name: 'Customers', href: '/customers', icon: Building2 },
-          { name: 'Meter Readings', href: '/meter-readings', icon: LayoutDashboard, activePaths: ['/capture', '/history', '/import-readings'] },
-          { name: 'Machines', href: '/machines', icon: Printer },
-          { name: 'Consumable Summary', href: '/consumables/summary', icon: Package, activePaths: ['/consumables/summary'] },
-        ],
-      });
-    }
-    if (isElevated) {
+    if (can('notifications.access')) {
       nav.push({ name: 'Notifications', href: '/notifications', icon: Bell });
+    }
+
+    const adminChildren = [
+      can('copiers.config.machines')
+        ? { name: 'Machine Configuration', href: '/admin/machine-configuration', icon: Cog }
+        : null,
+      can('copiers.config.pricing')
+        ? { name: 'Parts & Pricing', href: '/admin/parts-pricing', icon: Package }
+        : null,
+      can('copiers.readings.uto_list_blocked')
+        ? { name: 'Unable to Obtain Overrides', href: '/admin/unable-to-obtain-overrides', icon: ShieldAlert }
+        : null,
+      can('users.view')
+        ? { name: 'Users', href: '/users', icon: Users }
+        : null,
+      can('users.manage_roles')
+        ? { name: 'Roles & Permissions', href: '/admin/roles', icon: Shield }
+        : null,
+      can('audit.view')
+        ? { name: 'Transaction History', href: '/transaction-history', icon: ScrollText }
+        : null,
+    ].filter(Boolean);
+
+    if (adminChildren.length > 0) {
       nav.push({
         name: 'Admin Tools',
-        href: '/admin',
+        href: adminChildren[0].href,
         icon: Wrench,
-        children: [
-          { name: 'Machine Configuration', href: '/admin/machine-configuration', icon: Cog },
-          { name: 'Parts & Pricing', href: '/admin/parts-pricing', icon: Package },
-          ...(isAdmin
-            ? [{ name: 'Unable to Obtain Overrides', href: '/admin/unable-to-obtain-overrides', icon: ShieldAlert }]
-            : []),
-          { name: 'Users', href: '/users', icon: Users },
-          { name: 'Transaction History', href: '/transaction-history', icon: ScrollText },
-        ],
+        children: adminChildren,
       });
     }
+
     return nav;
   })();
 

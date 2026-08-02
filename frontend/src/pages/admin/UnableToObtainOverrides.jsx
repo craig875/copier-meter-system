@@ -119,7 +119,8 @@ function ForceApproveModal({ entry, isSubmitting, onConfirm, onCancel }) {
 
 export default function UnableToObtainOverrides() {
   const queryClient = useQueryClient();
-  const { effectiveBranch } = useAuth();
+  const { effectiveBranch, can } = useAuth();
+  const canForceOverride = can('copiers.readings.uto_force_override');
   const [searchParams, setSearchParams] = useSearchParams();
   const now = new Date();
   const urlYear = searchParams.get('year');
@@ -336,14 +337,16 @@ export default function UnableToObtainOverrides() {
                   </div>
                   <div className="shrink-0">
                     {req.isStillBlocked ? (
-                      <button
-                        type="button"
-                        disabled={isLocked || overrideMutation.isPending}
-                        onClick={() => openForceApprove(req.machine.id)}
-                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-violet-700 rounded-lg hover:bg-violet-800 disabled:opacity-50"
-                      >
-                        Force-approve
-                      </button>
+                      canForceOverride ? (
+                        <button
+                          type="button"
+                          disabled={isLocked || overrideMutation.isPending}
+                          onClick={() => openForceApprove(req.machine.id)}
+                          className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-violet-700 rounded-lg hover:bg-violet-800 disabled:opacity-50"
+                        >
+                          Force-approve
+                        </button>
+                      ) : null
                     ) : (
                       <span className="text-xs text-gray-500">Already captured</span>
                     )}
@@ -419,14 +422,18 @@ export default function UnableToObtainOverrides() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button
-                        type="button"
-                        disabled={isLocked || overrideMutation.isPending}
-                        onClick={() => setModalEntry(entry)}
-                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-violet-700 rounded-lg hover:bg-violet-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Force-approve
-                      </button>
+                      {canForceOverride ? (
+                        <button
+                          type="button"
+                          disabled={isLocked || overrideMutation.isPending}
+                          onClick={() => setModalEntry(entry)}
+                          className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-violet-700 rounded-lg hover:bg-violet-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Force-approve
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

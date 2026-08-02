@@ -327,8 +327,12 @@ const CustomerBulkImportModal = ({ onClose }) => {
 const Customers = ({ title = 'Customers' }) => {
   const queryClient = useQueryClient();
   const location = useLocation();
-  const { effectiveBranch, isElevated, isMeterUser } = useAuth();
-  const canArchive = isElevated || isMeterUser;
+  const { effectiveBranch, can } = useAuth();
+  const canArchive = can('copiers.customers.archive');
+  const canCreateCustomer = can('copiers.customers.create');
+  const canUpdateCustomer = can('copiers.customers.update');
+  const canDeleteCustomer = can('copiers.customers.delete');
+  const canImportCustomers = can('copiers.customers.import');
   const [listTab, setListTab] = useState('active');
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -400,16 +404,19 @@ const Customers = ({ title = 'Customers' }) => {
   );
 
   const handleEdit = (customer) => {
+    if (!canUpdateCustomer) return;
     setEditingCustomer(customer);
     setShowModal(true);
   };
 
   const handleArchive = (customer) => {
+    if (!canArchive) return;
     const willArchive = listTab === 'active';
     archiveMutation.mutate({ id: customer.id, isArchived: willArchive });
   };
 
   const handleDelete = (customer) => {
+    if (!canDeleteCustomer) return;
     const machineCount = customer._count?.machines ?? 0;
     if (machineCount > 0) {
       toast.error(`Cannot delete: ${machineCount} machine(s) are linked to this customer. Unlink them first.`);
@@ -448,24 +455,28 @@ const Customers = ({ title = 'Customers' }) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {isElevated && listTab === 'active' && (
+          {listTab === 'active' && (
             <>
-              <button
-                type="button"
-                onClick={() => setShowImportModal(true)}
-                className="flex items-center px-4 py-2 border border-gray-300 text-gray-800 bg-white rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Import
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowModal(true)}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Customer
-              </button>
+              {canImportCustomers && (
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(true)}
+                  className="flex items-center px-4 py-2 border border-gray-300 text-gray-800 bg-white rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import
+                </button>
+              )}
+              {canCreateCustomer && (
+                <button
+                  type="button"
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Customer
+                </button>
+              )}
             </>
           )}
         </div>
@@ -546,7 +557,7 @@ const Customers = ({ title = 'Customers' }) => {
                 </p>
               </div>
             </Link>
-            {(isElevated || canArchive) && (
+            {(canDeleteCustomer || canArchive || canUpdateCustomer) && (
               <div
                 ref={openMenuId === customer.id ? menuRef : null}
                 className="absolute top-2 right-2"
@@ -565,7 +576,7 @@ const Customers = ({ title = 'Customers' }) => {
                 </button>
                 {openMenuId === customer.id && (
                   <div className="absolute right-0 top-full mt-1 py-1 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[140px] z-10">
-                    {isElevated && (
+                    {canUpdateCustomer && (
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -598,7 +609,7 @@ const Customers = ({ title = 'Customers' }) => {
                         {listTab === 'archived' ? 'Unarchive' : 'Archive'}
                       </button>
                     )}
-                    {isElevated && (
+                    {canDeleteCustomer && (
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -620,14 +631,14 @@ const Customers = ({ title = 'Customers' }) => {
         ))}
       </div>
 
-      {showModal && (
+      {showModal && (editingCustomer ? canUpdateCustomer : canCreateCustomer) && (
         <CustomerModal
           customer={editingCustomer}
           onClose={handleCloseModal}
         />
       )}
 
-      {isElevated && showImportModal && (
+      {canImportCustomers && showImportModal && (
         <CustomerBulkImportModal onClose={() => setShowImportModal(false)} />
       )}
     </div>

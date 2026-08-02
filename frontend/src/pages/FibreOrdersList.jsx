@@ -7,7 +7,6 @@ import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
 import { ACTIVE_PIPELINE_STATUSES, formatWeeksRemaining, isActiveFibreOrder } from '../constants/fibreOrders';
-import { MODULE_FIBRE_ORDERS } from '../constants/modules';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderProgressBar from '../components/fibre/FibreOrderProgressBar';
 
@@ -18,7 +17,10 @@ function formatDate(d) {
 
 export default function FibreOrdersList() {
   const location = useLocation();
-  const { hasModule, isElevated, isSalesAgent, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canAccess = can('fibre_orders.access');
+  const canViewAll = can('fibre_orders.view_all');
+  const canCreateOrder = can('fibre_orders.create');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -29,16 +31,16 @@ export default function FibreOrdersList() {
       delete extra.activeOnly;
     }
     if (search.trim()) extra.search = search.trim();
-    return fibreOrderQueryParams({ effectiveBranch, isSalesAgent }, extra);
-  }, [effectiveBranch, isSalesAgent, statusFilter, search]);
+    return fibreOrderQueryParams({ effectiveBranch, canViewAll }, extra);
+  }, [effectiveBranch, canViewAll, statusFilter, search]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['fibre-orders', 'list', params],
     queryFn: () => fibreOrdersApi.list(params),
-    enabled: hasModule(MODULE_FIBRE_ORDERS),
+    enabled: canAccess,
   });
 
-  if (!hasModule(MODULE_FIBRE_ORDERS)) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to the Fibre Orders module.
@@ -53,7 +55,7 @@ export default function FibreOrdersList() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {isSalesAgent ? 'My Active Fibre Orders' : 'Active Fibre Orders'}
+            {canViewAll ? 'Active Fibre Orders' : 'My Active Fibre Orders'}
           </h1>
           <p className="text-gray-500 mt-1">{orders.length} active order(s)</p>
         </div>
@@ -64,7 +66,7 @@ export default function FibreOrdersList() {
           >
             Completed Installs
           </Link>
-          {isElevated && (
+          {canCreateOrder && (
           <Link
             to="/fibre-orders/new" state={buildFromState(location)}
             className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"

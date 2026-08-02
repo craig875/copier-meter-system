@@ -51,3 +51,13 @@ export function requirePermission(permissionKey) {
     next();
   };
 }
+
+/** Allow if the caller has any one of the given permission keys. */
+export function requireAnyPermission(...permissionKeys) {
+  return (req, res, next) => {
+    if (permissionKeys.some((key) => userHasPermission(req.user, key))) {
+      return next();
+    }
+    return res.status(403).json({ error: 'Permission denied' });
+  };
+}

@@ -16,8 +16,10 @@ function pdfBaseName(name) {
 const CustomerDetail = () => {
   const { customerId } = useParams();
   const queryClient = useQueryClient();
-  const { effectiveBranch, isElevated, isMeterUser } = useAuth();
-  const canManageMachines = isElevated || isMeterUser;
+  const { effectiveBranch, can } = useAuth();
+  const canCreateMachine = can('copiers.machines.create');
+  const canDecommissionMachine = can('copiers.machines.decommission');
+  const canRecommissionMachine = can('copiers.machines.recommission');
   const pdfCaptureRef = useRef(null);
   const [showAddMachine, setShowAddMachine] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -92,11 +94,13 @@ const CustomerDetail = () => {
   };
 
   const handleDecommission = (machine) => {
+    if (!canDecommissionMachine) return;
     if (!window.confirm(`Decommission machine ${machine.machineSerialNumber}?`)) return;
     decommissionMutation.mutate(machine.id);
   };
 
   const handleRecommission = (machine) => {
+    if (!canRecommissionMachine) return;
     if (!window.confirm(`Restore machine ${machine.machineSerialNumber} to active service?`)) return;
     recommissionMutation.mutate(machine.id);
   };
@@ -165,7 +169,7 @@ const CustomerDetail = () => {
                 )}
                 Export PDF
               </button>
-              {canManageMachines && !customer.isArchived && (
+              {canCreateMachine && !customer.isArchived && (
                 <button
                   type="button"
                   onClick={() => setShowAddMachine(true)}
@@ -203,7 +207,7 @@ const CustomerDetail = () => {
             </button>
           </div>
 
-          {customer.isArchived && canManageMachines && (
+          {customer.isArchived && canCreateMachine && (
             <p className="text-sm text-gray-500 mb-4" data-pdf-exclude>
               Unarchive this customer before adding new machines.
             </p>
@@ -224,7 +228,8 @@ const CustomerDetail = () => {
                     partsDue={partsDueByMachine[machine.id] || []}
                     effectiveBranch={effectiveBranch}
                   />
-                  {canManageMachines && (
+                  {((machine.isDecommissioned && canRecommissionMachine) ||
+                    (!machine.isDecommissioned && canDecommissionMachine)) && (
                     <div className="flex justify-end pb-4 -mt-2" data-pdf-exclude>
                       {machine.isDecommissioned ? (
                         <button
@@ -256,7 +261,7 @@ const CustomerDetail = () => {
         </div>
       </div>
 
-      {showAddMachine && !customer.isArchived && (
+      {showAddMachine && canCreateMachine && !customer.isArchived && (
         <MachineModal
           machine={null}
           onClose={() => setShowAddMachine(false)}

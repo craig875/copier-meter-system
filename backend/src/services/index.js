@@ -11,6 +11,9 @@ import { FibreProductService } from './fibre-product.service.js';
 import { FibreOrderService } from './fibre-order.service.js';
 import { InstallService } from './install.service.js';
 import { InstallTaskService } from './install-task.service.js';
+import { RoleService } from './role.service.js';
+import { PermissionOverrideService } from './permissionOverride.service.js';
+import { PermissionPreviewService } from './permissionPreview.service.js';
 
 /**
  * Service Factory - Centralized service creation
@@ -32,6 +35,9 @@ export const services = {
   fibreOrder: new FibreOrderService(),
   install: new InstallService(),
   installTask: new InstallTaskService(),
+  role: new RoleService(),
+  permissionOverride: new PermissionOverrideService(),
+  permissionPreview: new PermissionPreviewService(),
 };
 
 export {
@@ -40,4 +46,7 @@ export {
   AuthService,
   UserService,
   ImportService,
+  RoleService,
+  PermissionOverrideService,
+  PermissionPreviewService,
 };

@@ -46,7 +46,10 @@ export default function ConnectivityTargetDetail() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { canManageConnectivity, canAccessConnectivity, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canAccess = can('connectivity.access');
+  const canManageTargets = can('connectivity.targets.manage');
+  const canCheckTarget = can('connectivity.targets.check');
   const getTodayLocal = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -67,7 +70,7 @@ export default function ConnectivityTargetDetail() {
         startDate: appliedRange.start,
         endDate: appliedRange.end,
       }),
-    enabled: !!canAccessConnectivity && !!id,
+    enabled: !!canAccess && !!id,
   });
 
   const { data: uptimeData } = useQuery({
@@ -79,7 +82,7 @@ export default function ConnectivityTargetDetail() {
         startDate: appliedRange.start,
         endDate: appliedRange.end,
       }),
-    enabled: !!canAccessConnectivity && !!id,
+    enabled: !!canAccess && !!id,
   });
 
   const { data: outagesData } = useQuery({
@@ -92,7 +95,7 @@ export default function ConnectivityTargetDetail() {
         endDate: appliedRange.end,
         limit: 20,
       }),
-    enabled: !!canAccessConnectivity && !!id,
+    enabled: !!canAccess && !!id,
   });
 
   const checkMutation = useMutation({
@@ -105,7 +108,7 @@ export default function ConnectivityTargetDetail() {
     },
   });
 
-  if (!canAccessConnectivity) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to connectivity monitoring.
@@ -258,7 +261,7 @@ export default function ConnectivityTargetDetail() {
             )}
           </div>
         </div>
-        {canManageConnectivity && (
+        {canManageTargets && (
           <Link
             to={`/connectivity/targets/${id}/edit`}
             state={buildFromState(location)}
@@ -292,7 +295,7 @@ export default function ConnectivityTargetDetail() {
               <p className="text-sm text-gray-500">Last check: {formatDate(target.lastCheckAt)}</p>
             </div>
           </div>
-          {canManageConnectivity && (
+          {canCheckTarget && (
             <button
               onClick={() => checkMutation.mutate()}
               disabled={checkMutation.isPending}

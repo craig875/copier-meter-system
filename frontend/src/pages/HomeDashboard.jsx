@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Printer, LayoutDashboard, Globe, Radio } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS } from '../constants/modules';
 
 const copierModules = [
   {
@@ -48,15 +47,15 @@ const fibreOrdersModule = {
 };
 
 const HomeDashboard = () => {
-  const { user, isCapturer, hasModule } = useAuth();
+  const { user, isCapturer, can } = useAuth();
   const tiles = [];
-  if (hasModule(MODULE_COPERS)) {
+  if (can('copiers.access')) {
     tiles.push(...(isCapturer ? capturerModules : copierModules));
   }
-  if (hasModule(MODULE_CONNECTIVITY)) {
+  if (can('connectivity.access')) {
     tiles.push(connectivityModule);
   }
-  if (hasModule(MODULE_FIBRE_ORDERS)) {
+  if (can('fibre_orders.access')) {
     tiles.push(fibreOrdersModule);
   }
 

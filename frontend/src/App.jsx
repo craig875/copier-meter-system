@@ -41,6 +41,7 @@ import InstallationDetail from './pages/InstallationDetail';
 import InstallationForm from './pages/InstallationForm';
 import MyInstallTasks from './pages/MyInstallTasks';
 import UnableToObtainOverrides from './pages/admin/UnableToObtainOverrides';
+import Roles from './pages/Roles';
 
 function App() {
   const { user, loading, canSwitchBranches, activeBranch } = useAuth();
@@ -95,7 +96,7 @@ function App() {
       <Route
         path="/capture"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requirePermission="copiers.readings.view">
             <Layout>
               <Capture />
             </Layout>
@@ -115,7 +116,7 @@ function App() {
       <Route
         path="/machines"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requirePermission="copiers.machines.view">
             <CapturerRestrict>
               <Layout>
                 <Machines />
@@ -151,36 +152,30 @@ function App() {
       <Route
         path="/consumables/summary"
         element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <ConsumablesSummary />
-              </Layout>
-            </CapturerRestrict>
+          <ProtectedRoute requirePermission="copiers.consumables.view">
+            <Layout>
+              <ConsumablesSummary />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/consumables/machines/:machineId"
         element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <ConsumableMachineDetail />
-              </Layout>
-            </CapturerRestrict>
+          <ProtectedRoute requirePermission="copiers.consumables.view">
+            <Layout>
+              <ConsumableMachineDetail />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/consumables/machines/:machineId/readings"
         element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <MachineReadingsHistory />
-              </Layout>
-            </CapturerRestrict>
+          <ProtectedRoute requirePermission="copiers.consumables.view">
+            <Layout>
+              <MachineReadingsHistory />
+            </Layout>
           </ProtectedRoute>
         }
       />
@@ -193,7 +188,7 @@ function App() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute requirePermission="copiers.config.machines">
             <Layout>
               <MachineConfiguration />
             </Layout>
@@ -203,7 +198,7 @@ function App() {
       <Route
         path="/admin/parts-pricing"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute requirePermission="copiers.config.pricing">
             <Layout>
               <PartsPricing />
             </Layout>
@@ -213,7 +208,7 @@ function App() {
       <Route
         path="/admin/machine-configuration"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute requirePermission="copiers.config.machines">
             <Layout>
               <MachineConfiguration />
             </Layout>
@@ -223,9 +218,19 @@ function App() {
       <Route
         path="/admin/unable-to-obtain-overrides"
         element={
-          <ProtectedRoute strictAdminOnly>
+          <ProtectedRoute requirePermission="copiers.readings.uto_list_blocked">
             <Layout>
               <UnableToObtainOverrides />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/roles"
+        element={
+          <ProtectedRoute requirePermission="users.manage_roles">
+            <Layout>
+              <Roles />
             </Layout>
           </ProtectedRoute>
         }
@@ -245,31 +250,27 @@ function App() {
       <Route
         path="/customers"
         element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <Customers />
-              </Layout>
-            </CapturerRestrict>
+          <ProtectedRoute requirePermission="copiers.customers.view">
+            <Layout>
+              <Customers />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/customers/:customerId"
         element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <CustomerDetail />
-              </Layout>
-            </CapturerRestrict>
+          <ProtectedRoute requirePermission="copiers.customers.view">
+            <Layout>
+              <CustomerDetail />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/users"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute requirePermission="users.view">
             <Layout>
               <Users />
             </Layout>
@@ -309,23 +310,23 @@ function App() {
       />
 
       {/* Connectivity Monitoring Module */}
-      <Route path="/connectivity" element={<ProtectedRoute><Layout><ConnectivityDashboard /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/targets" element={<ProtectedRoute><Layout><ConnectivityTargets /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/targets/new" element={<ProtectedRoute><Layout><ConnectivityTargetForm /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/targets/:id/edit" element={<ProtectedRoute><Layout><ConnectivityTargetForm /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/targets/:id" element={<ProtectedRoute><Layout><ConnectivityTargetDetail /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/time-windows" element={<ProtectedRoute><Layout><ConnectivityTimeWindows /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/reports" element={<ProtectedRoute><Layout><ConnectivityReports /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/outages" element={<ProtectedRoute><Layout><ConnectivityOutages /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityDashboard /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityTargets /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets/new" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityTargetForm /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets/:id/edit" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityTargetForm /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets/:id" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityTargetDetail /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/time-windows" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityTimeWindows /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/reports" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityReports /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/outages" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityOutages /></Layout></ProtectedRoute>} />
 
       {/* Fibre Orders Module */}
-      <Route path="/fibre-orders" element={<ProtectedRoute><Layout><FibreOrdersDashboard /></Layout></ProtectedRoute>} />
-      <Route path="/fibre-orders/list" element={<ProtectedRoute><Layout><FibreOrdersList /></Layout></ProtectedRoute>} />
-      <Route path="/fibre-orders/completed" element={<ProtectedRoute><Layout><FibreOrdersCompleted /></Layout></ProtectedRoute>} />
-      <Route path="/fibre-orders/new" element={<ProtectedRoute adminOnly><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
-      <Route path="/fibre-orders/products" element={<ProtectedRoute adminOnly><Layout><FibreProducts /></Layout></ProtectedRoute>} />
-      <Route path="/fibre-orders/:id/edit" element={<ProtectedRoute adminOnly><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
-      <Route path="/fibre-orders/:id" element={<ProtectedRoute><Layout><FibreOrderDetail /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders" element={<ProtectedRoute requirePermission="fibre_orders.access"><Layout><FibreOrdersDashboard /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/list" element={<ProtectedRoute requirePermission="fibre_orders.access"><Layout><FibreOrdersList /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/completed" element={<ProtectedRoute requirePermission="fibre_orders.access"><Layout><FibreOrdersCompleted /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/new" element={<ProtectedRoute requirePermission="fibre_orders.create"><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/products" element={<ProtectedRoute requirePermission="fibre_orders.products.manage"><Layout><FibreProducts /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/:id/edit" element={<ProtectedRoute requirePermission="fibre_orders.update"><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/:id" element={<ProtectedRoute requirePermission="fibre_orders.access"><Layout><FibreOrderDetail /></Layout></ProtectedRoute>} />
 
       {/* Installations Tracker */}
       <Route path="/installations" element={<ProtectedRoute adminOnly><Layout><InstallationsList /></Layout></ProtectedRoute>} />

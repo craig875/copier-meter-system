@@ -5,15 +5,16 @@ import { useAuth } from '../context/AuthContext';
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function ConnectivityTimeWindows() {
-  const { canManageConnectivity, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canManageTimeWindows = can('connectivity.time_windows.manage');
 
   const { data, isLoading } = useQuery({
     queryKey: ['connectivity', 'time-windows', effectiveBranch],
     queryFn: () => connectivityApi.getTimeWindows(effectiveBranch),
-    enabled: !!canManageConnectivity,
+    enabled: !!canManageTimeWindows,
   });
 
-  if (!canManageConnectivity) {
+  if (!canManageTimeWindows) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         Admin access required to manage alert time windows.

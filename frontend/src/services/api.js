@@ -64,6 +64,30 @@ export const usersApi = {
   create: (data) => api.post('/users', data).then(res => res.data),
   update: (id, data) => api.put(`/users/${id}`, data).then(res => res.data),
   delete: (id) => api.delete(`/users/${id}`).then(res => res.data),
+  listPermissionOverrides: (userId) =>
+    api.get(`/users/${userId}/permission-overrides`).then((res) => res.data),
+  upsertPermissionOverride: (userId, body) =>
+    api.put(`/users/${userId}/permission-overrides`, body).then((res) => res.data),
+  deletePermissionOverride: (userId, permissionKey) =>
+    api
+      .delete(
+        `/users/${userId}/permission-overrides/${encodeURIComponent(permissionKey)}`
+      )
+      .then((res) => res.data),
+};
+
+// Roles API (Stage F — role matrix editing)
+export const rolesApi = {
+  getAll: () => api.get('/roles').then((res) => res.data),
+  getOne: (id) => api.get(`/roles/${id}`).then((res) => res.data),
+  update: (id, body) => api.put(`/roles/${id}`, body).then((res) => res.data),
+};
+
+// Permissions catalog + preview (Stage F admin)
+export const permissionsApi = {
+  getCatalog: () => api.get('/permissions/catalog').then((res) => res.data),
+  preview: (body, config) =>
+    api.post('/permissions/preview', body, config).then((res) => res.data),
 };
 
 // Machines API

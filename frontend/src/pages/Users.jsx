@@ -3,11 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
+import UserOverridesPanel from '../components/UserOverridesPanel';
 import toast from 'react-hot-toast';
-import { 
-  Plus, 
-  Pencil, 
-  Trash2, 
+import {
+  Plus,
+  Pencil,
+  Trash2,
   X,
   Check,
   Shield,
@@ -33,7 +34,12 @@ function normalizeAllowedBranches(user) {
 
 const Users = () => {
   const queryClient = useQueryClient();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, can } = useAuth();
+  const canCreate = can('users.create');
+  const canUpdate = can('users.update');
+  const canDelete = can('users.delete');
+  const canManageOverrides = can('users.manage_overrides');
+  const canOpenEdit = canUpdate || canManageOverrides;
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
@@ -85,26 +91,26 @@ const Users = () => {
 
   return (
     <div data-tour="users-content" className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-gray-500">Manage system users and permissions</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add User
-        </button>
+        {canCreate ? (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add User
+          </button>
+        ) : null}
       </div>
 
-      {/* Users Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {users.map((user) => (
-          <div 
-            key={user.id} 
+          <div
+            key={user.id}
             className={clsx(
               'bg-white rounded-lg shadow-sm p-4 border-2',
               user.id === currentUser.id ? 'border-red-200' : 'border-transparent'
@@ -142,21 +148,25 @@ const Users = () => {
                 </div>
               </div>
               <div className="flex gap-1">
-                <button
-                  onClick={() => handleEdit(user)}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                  title="Edit"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(user)}
-                  disabled={user.id === currentUser.id}
-                  className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  title="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                {canOpenEdit ? (
+                  <button
+                    onClick={() => handleEdit(user)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    title="Edit"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                ) : null}
+                {canDelete ? (
+                  <button
+                    onClick={() => handleDelete(user)}
+                    disabled={user.id === currentUser.id}
+                    className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                ) : null}
               </div>
             </div>
             <div className="mt-3 pt-3 border-t space-y-2">
@@ -227,10 +237,11 @@ const Users = () => {
         ))}
       </div>
 
-      {/* Modal */}
       {showModal && (
         <UserModal
           user={editingUser}
+          canUpdate={canUpdate}
+          canManageOverrides={canManageOverrides}
           onClose={handleCloseModal}
         />
       )}
@@ -238,9 +249,14 @@ const Users = () => {
   );
 };
 
-const UserModal = ({ user, onClose }) => {
+const UserModal = ({ user, canUpdate, canManageOverrides, onClose }) => {
   const queryClient = useQueryClient();
   const isEditing = !!user;
+  const showOverridesTab = isEditing && canManageOverrides;
+  const detailsEditable = canUpdate || !isEditing;
+  const defaultTab =
+    isEditing && !canUpdate && canManageOverrides ? 'overrides' : 'details';
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -280,13 +296,17 @@ const UserModal = ({ user, onClose }) => {
       if (payload.role === 'admin') {
         delete payload.modules;
       }
-      return isEditing 
+      return isEditing
         ? usersApi.update(user.id, payload)
         : usersApi.create(payload);
     },
     onSuccess: () => {
       toast.success(isEditing ? 'User updated' : 'User created');
       queryClient.invalidateQueries(['users']);
+      if (isEditing && user?.id) {
+        queryClient.invalidateQueries({ queryKey: ['permission-preview-user', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['user-permission-overrides', user.id] });
+      }
       onClose();
     },
     onError: (error) => {
@@ -296,6 +316,7 @@ const UserModal = ({ user, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!detailsEditable) return;
     if (!isEditing && !formData.password) {
       toast.error('Password is required for new users');
       return;
@@ -311,6 +332,7 @@ const UserModal = ({ user, onClose }) => {
   };
 
   const handleChange = (e) => {
+    if (!detailsEditable) return;
     const { name, value, tagName } = e.target;
     const v = tagName === 'SELECT' ? value : (typeof value === 'string' ? trimLeading(value) : value);
     setFormData((prev) => {
@@ -334,6 +356,7 @@ const UserModal = ({ user, onClose }) => {
   };
 
   const toggleModule = (key) => {
+    if (!detailsEditable) return;
     if (formData.role === 'admin') return;
     if (formData.role === 'sales_agent') return;
     setFormData((prev) => {
@@ -345,6 +368,7 @@ const UserModal = ({ user, onClose }) => {
   };
 
   const toggleBranchAccess = (key) => {
+    if (!detailsEditable) return;
     if (key === formData.branch) {
       toast.error('Home branch cannot be removed from branch access');
       return;
@@ -357,189 +381,271 @@ const UserModal = ({ user, onClose }) => {
     });
   };
 
+  const fieldClass = clsx(
+    'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+    !detailsEditable && 'bg-gray-50 disabled:opacity-80'
+  );
+
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-        <div className="flex items-center justify-between p-4 border-b">
+      <div
+        className={clsx(
+          'bg-white rounded-xl shadow-xl w-full max-h-[90vh] flex flex-col',
+          showOverridesTab ? 'max-w-3xl' : 'max-w-md'
+        )}
+      >
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold">
             {isEditing ? 'Edit User' : 'Add User'}
           </h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+          <button type="button" onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[85vh] overflow-y-auto">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email *
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password {isEditing ? '(leave blank to keep current)' : '*'}
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required={!isEditing}
-              minLength={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Role *
-            </label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="meter_user">Meter User</option>
-              <option value="capturer">Capturer</option>
-              <option value="sales_agent">Sales Agent</option>
-              <option value="manager">Manager</option>
-              <option value="admin">Administrator</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Home branch *
-            </label>
-            <select
-              name="branch"
-              value={formData.branch}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="JHB">Johannesburg (JHB)</option>
-              <option value="CT">Cape Town (CT)</option>
-            </select>
-            <p className="mt-1 text-xs text-gray-500">
-              Default / home branch. Must also be included in branch access below.
-            </p>
-          </div>
-
-          <div>
-            <span className="block text-sm font-medium text-gray-700 mb-2">Branch access</span>
-            <div className="space-y-2">
-              {BRANCH_ACCESS_OPTIONS.map((opt) => {
-                const isHome = formData.branch === opt.key;
-                const checked = formData.allowedBranches?.includes(opt.key) ?? false;
-                return (
-                  <label
-                    key={opt.key}
-                    className={clsx(
-                      'flex items-start gap-3 p-3 rounded-lg border border-gray-200',
-                      isHome ? 'bg-gray-50 cursor-default' : 'cursor-pointer hover:bg-gray-50'
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={isHome}
-                      onChange={() => toggleBranchAccess(opt.key)}
-                      className="mt-1 rounded border-gray-300 text-red-600 focus:ring-red-500 disabled:opacity-60"
-                    />
-                    <span>
-                      <span className="block text-sm font-medium text-gray-900">
-                        {opt.label}
-                        {isHome ? ' (home)' : ''}
-                      </span>
-                      <span className="block text-xs text-gray-500">
-                        {isHome
-                          ? `Required because home branch is ${branchLabel(opt.key)}`
-                          : opt.description}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <span className="block text-sm font-medium text-gray-700 mb-2">Module access</span>
-            {formData.role === 'admin' ? (
-              <p className="text-sm text-gray-500">
-                Administrators have access to all modules (Copiers and Connectivity).
-              </p>
-            ) : formData.role === 'sales_agent' ? (
-              <p className="text-sm text-gray-600 p-3 rounded-lg bg-gray-50 border border-gray-200">
-                <strong>Fibre Orders</strong> — read-only access to orders assigned to this sales agent.
-                Administrators create orders and allocate them via the Sales Agent field.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {MODULE_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.key}
-                    className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.modules?.includes(opt.key) ?? false}
-                      onChange={() => toggleModule(opt.key)}
-                      className="mt-1 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                    />
-                    <span>
-                      <span className="block text-sm font-medium text-gray-900">{opt.label}</span>
-                      <span className="block text-xs text-gray-500">{opt.description}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t">
+        {showOverridesTab ? (
+          <div className="flex gap-1 px-4 pt-3 border-b shrink-0">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              onClick={() => setActiveTab('details')}
+              className={clsx(
+                'px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                activeTab === 'details'
+                  ? 'border-red-600 text-red-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              )}
             >
-              Cancel
+              Details
             </button>
             <button
-              type="submit"
-              disabled={mutation.isPending}
-              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+              type="button"
+              onClick={() => setActiveTab('overrides')}
+              className={clsx(
+                'px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                activeTab === 'overrides'
+                  ? 'border-red-600 text-red-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              )}
             >
-              <Check className="h-4 w-4 mr-2" />
-              {mutation.isPending ? 'Saving...' : 'Save'}
+              Overrides
             </button>
           </div>
-        </form>
+        ) : null}
+
+        {activeTab === 'details' || !showOverridesTab ? (
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col flex-1 min-h-0"
+          >
+            <div className="p-4 space-y-4 overflow-y-auto flex-1">
+              {!detailsEditable ? (
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-700">
+                  You can view this user’s details but need <span className="font-mono text-xs">users.update</span> to
+                  change them. Use the Overrides tab to manage permission overrides.
+                </div>
+              ) : null}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  disabled={!detailsEditable}
+                  className={fieldClass}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  disabled={!detailsEditable}
+                  className={fieldClass}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password {isEditing ? '(leave blank to keep current)' : '*'}
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required={!isEditing && detailsEditable}
+                  minLength={6}
+                  disabled={!detailsEditable}
+                  className={fieldClass}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Role *
+                </label>
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  disabled={!detailsEditable}
+                  className={fieldClass}
+                >
+                  <option value="meter_user">Meter User</option>
+                  <option value="capturer">Capturer</option>
+                  <option value="sales_agent">Sales Agent</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Home branch *
+                </label>
+                <select
+                  name="branch"
+                  value={formData.branch}
+                  onChange={handleChange}
+                  required
+                  disabled={!detailsEditable}
+                  className={fieldClass}
+                >
+                  <option value="JHB">Johannesburg (JHB)</option>
+                  <option value="CT">Cape Town (CT)</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Default / home branch. Must also be included in branch access below.
+                </p>
+              </div>
+
+              <div>
+                <span className="block text-sm font-medium text-gray-700 mb-2">Branch access</span>
+                <div className="space-y-2">
+                  {BRANCH_ACCESS_OPTIONS.map((opt) => {
+                    const isHome = formData.branch === opt.key;
+                    const checked = formData.allowedBranches?.includes(opt.key) ?? false;
+                    return (
+                      <label
+                        key={opt.key}
+                        className={clsx(
+                          'flex items-start gap-3 p-3 rounded-lg border border-gray-200',
+                          isHome || !detailsEditable
+                            ? 'bg-gray-50 cursor-default'
+                            : 'cursor-pointer hover:bg-gray-50'
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={isHome || !detailsEditable}
+                          onChange={() => toggleBranchAccess(opt.key)}
+                          className="mt-1 rounded border-gray-300 text-red-600 focus:ring-red-500 disabled:opacity-60"
+                        />
+                        <span>
+                          <span className="block text-sm font-medium text-gray-900">
+                            {opt.label}
+                            {isHome ? ' (home)' : ''}
+                          </span>
+                          <span className="block text-xs text-gray-500">
+                            {isHome
+                              ? `Required because home branch is ${branchLabel(opt.key)}`
+                              : opt.description}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <span className="block text-sm font-medium text-gray-700 mb-2">Module access</span>
+                {formData.role === 'admin' ? (
+                  <p className="text-sm text-gray-500">
+                    Administrators have access to all modules (Copiers and Connectivity).
+                  </p>
+                ) : formData.role === 'sales_agent' ? (
+                  <p className="text-sm text-gray-600 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                    <strong>Fibre Orders</strong> — read-only access to orders assigned to this sales agent.
+                    Administrators create orders and allocate them via the Sales Agent field.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {MODULE_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.key}
+                        className={clsx(
+                          'flex items-start gap-3 p-3 rounded-lg border border-gray-200',
+                          detailsEditable ? 'cursor-pointer hover:bg-gray-50' : 'bg-gray-50 cursor-default'
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.modules?.includes(opt.key) ?? false}
+                          disabled={!detailsEditable}
+                          onChange={() => toggleModule(opt.key)}
+                          className="mt-1 rounded border-gray-300 text-red-600 focus:ring-red-500 disabled:opacity-60"
+                        />
+                        <span>
+                          <span className="block text-sm font-medium text-gray-900">{opt.label}</span>
+                          <span className="block text-xs text-gray-500">{opt.description}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              {detailsEditable ? (
+                <button
+                  type="submit"
+                  disabled={mutation.isPending}
+                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  {mutation.isPending ? 'Saving...' : 'Save'}
+                </button>
+              ) : null}
+            </div>
+          </form>
+        ) : (
+          <>
+            <UserOverridesPanel
+              userId={user.id}
+              isOwnerProtected={!!user.isOwnerProtected}
+            />
+            <div className="flex justify-end gap-3 p-4 border-t shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

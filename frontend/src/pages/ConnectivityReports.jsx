@@ -14,7 +14,8 @@ function formatDate(d) {
 
 export default function ConnectivityReports() {
   const location = useLocation();
-  const { canAccessConnectivity, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canAccess = can('connectivity.access');
   const navigate = useNavigate();
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -26,13 +27,13 @@ export default function ConnectivityReports() {
   const { data: uptimeData, isLoading: uptimeLoading } = useQuery({
     queryKey: ['connectivity', 'uptime', effectiveBranch, startDate, endDate],
     queryFn: () => connectivityApi.getUptimeReport({ branch: effectiveBranch, startDate, endDate }),
-    enabled: !!canAccessConnectivity,
+    enabled: !!canAccess,
   });
 
   const { data: slaData, isLoading: slaLoading } = useQuery({
     queryKey: ['connectivity', 'sla', effectiveBranch, startDate, endDate],
     queryFn: () => connectivityApi.getSlaReport({ branch: effectiveBranch, startDate, endDate }),
-    enabled: !!canAccessConnectivity,
+    enabled: !!canAccess,
   });
 
   const handleExport = async () => {
@@ -51,7 +52,7 @@ export default function ConnectivityReports() {
     }
   };
 
-  if (!canAccessConnectivity) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to reports.

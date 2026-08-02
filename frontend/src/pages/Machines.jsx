@@ -44,7 +44,13 @@ function machineMatchesSearch(machine, queryLower) {
 const Machines = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isElevated, isMeterUser, effectiveBranch, user, loading: authLoading } = useAuth();
+  const { can, effectiveBranch, user, loading: authLoading } = useAuth();
+  const canCreateMachine = can('copiers.machines.create');
+  const canUpdateMachine = can('copiers.machines.update');
+  const canDecommissionMachine = can('copiers.machines.decommission');
+  const canRecommissionMachine = can('copiers.machines.recommission');
+  const canDeleteMachine = can('copiers.machines.delete');
+  const canImportMachines = can('copiers.machines.import');
   const location = useLocation();
   const [listTab, setListTab] = useState('active');
   const [search, setSearch] = useState('');
@@ -150,38 +156,40 @@ const Machines = () => {
   // Open edit modal when ?edit=<machineId> in URL (e.g. from Customer Detail)
   useEffect(() => {
     const editId = searchParams.get('edit');
-    if (editId && allMachines.length > 0) {
-      const machine = allMachines.find((m) => m.id === editId);
-      if (machine) {
-        setEditingMachine(machine);
-        setShowModal(true);
-        // Preserve model param so user stays in list view for that model
-        const modelParam = searchParams.get('model');
-        const nextParams = modelParam ? { model: modelParam } : {};
-        setSearchParams(nextParams, { replace: true });
-      }
+    if (!canUpdateMachine || !editId || allMachines.length === 0) return;
+    const machine = allMachines.find((m) => m.id === editId);
+    if (machine) {
+      setEditingMachine(machine);
+      setShowModal(true);
+      // Preserve model param so user stays in list view for that model
+      const modelParam = searchParams.get('model');
+      const nextParams = modelParam ? { model: modelParam } : {};
+      setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams, allMachines, setSearchParams]);
+  }, [searchParams, allMachines, setSearchParams, canUpdateMachine]);
 
   const handleEdit = (machine) => {
+    if (!canUpdateMachine) return;
     setEditingMachine(machine);
     setShowModal(true);
   };
 
   const handleDelete = (machine) => {
+    if (!canDeleteMachine) return;
     if (window.confirm(`Delete machine ${machine.machineSerialNumber}? This will permanently remove the machine and all its readings.`)) {
       deleteMutation.mutate(machine.id);
     }
   };
 
   const handleDecommission = (machine) => {
+    if (!canDecommissionMachine) return;
     if (window.confirm(`Decommission machine ${machine.machineSerialNumber}? It will be removed from capture lists but history will remain accessible.`)) {
       decommissionMutation.mutate(machine.id);
     }
   };
 
   const handleRecommission = (machine) => {
-    if (!(isElevated || isMeterUser)) return;
+    if (!canRecommissionMachine) return;
     if (window.confirm(`Recommission machine ${machine.machineSerialNumber}? It will be added back to capture lists.`)) {
       recommissionMutation.mutate(machine.id);
     }
@@ -272,7 +280,7 @@ const Machines = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          {isElevated && listTab === 'active' && (
+          {canImportMachines && listTab === 'active' && (
             <button
               onClick={() => setShowImportModal(true)}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -281,7 +289,7 @@ const Machines = () => {
               Import
             </button>
           )}
-          {listTab === 'active' && (
+          {listTab === 'active' && canCreateMachine && (
             <button
               data-tour="add-machine"
               onClick={() => setShowModal(true)}
@@ -373,7 +381,7 @@ const Machines = () => {
                     ? 'No decommissioned machines found.'
                     : 'No machines found. Add a machine or try another branch.'}
               </p>
-              {data && listTab === 'active' && (
+              {data && listTab === 'active' && canCreateMachine && (
                 <button
                   onClick={() => setShowModal(true)}
                   className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
@@ -503,16 +511,18 @@ const Machines = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleEdit(machine)}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="Edit machine"
-                    >
-                      <Pencil className="h-4 w-4" />
-                      <span>Edit</span>
-                    </button>
+                    {canUpdateMachine && (
+                      <button
+                        onClick={() => handleEdit(machine)}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit machine"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span>Edit</span>
+                      </button>
+                    )}
                     {listTab === 'decommissioned' || machine.isDecommissioned ? (
-                      (isElevated || isMeterUser) ? (
+                      canRecommissionMachine ? (
                         <button
                           onClick={() => handleRecommission(machine)}
                           disabled={recommissionMutation.isPending}
@@ -524,15 +534,17 @@ const Machines = () => {
                         </button>
                       ) : null
                     ) : (
-                      <button
-                        onClick={() => handleDecommission(machine)}
-                        className="p-1 text-gray-500 hover:text-orange-600 transition-colors ml-2"
-                        title="Decommission"
-                      >
-                        <Archive className="h-4 w-4" />
-                      </button>
+                      canDecommissionMachine ? (
+                        <button
+                          onClick={() => handleDecommission(machine)}
+                          className="p-1 text-gray-500 hover:text-orange-600 transition-colors ml-2"
+                          title="Decommission"
+                        >
+                          <Archive className="h-4 w-4" />
+                        </button>
+                      ) : null
                     )}
-                    {isElevated && (
+                    {canDeleteMachine && (
                       <button
                         onClick={() => handleDelete(machine)}
                         className="p-1 text-gray-500 hover:text-gray-900 transition-colors ml-2"
@@ -554,7 +566,7 @@ const Machines = () => {
       )}
 
       {/* Modal */}
-      {showModal && (
+      {showModal && (editingMachine ? canUpdateMachine : canCreateMachine) && (
         <MachineModal
           machine={editingMachine}
           onClose={handleCloseModal}
@@ -562,7 +574,7 @@ const Machines = () => {
       )}
 
       {/* Import Modal */}
-      {isElevated && showImportModal && (
+      {canImportMachines && showImportModal && (
         <ImportModal
           onClose={() => setShowImportModal(false)}
         />

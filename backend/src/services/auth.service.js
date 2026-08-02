@@ -10,6 +10,7 @@ import prisma from '../config/database.js';
 import { defaultModulesForRole, sanitizeUserModules } from '../utils/permissions.js';
 import { resolveRoleIdForEnum } from '../permissions/rolePermissionMatrix.js';
 import { resolveUserEffectiveAccess } from '../permissions/effectivePermissions.js';
+import { isOwnerProtected } from '../permissions/ownerProtection.js';
 
 /** Load allowed branches for a user from UserBranchAccess. */
 async function loadAllowedBranches(userId) {
@@ -57,6 +58,7 @@ function publicUser(user, allowedBranches = null) {
     allowedBranches: [...new Set(branches.filter(Boolean))],
     modules: sanitizeUserModules(user.modules ?? []),
     createdAt: user.createdAt,
+    isOwnerProtected: isOwnerProtected(user),
   };
 }
 

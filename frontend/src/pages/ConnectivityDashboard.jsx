@@ -59,7 +59,9 @@ function compareValues(aVal, bVal, sortDir) {
 
 export default function ConnectivityDashboard() {
   const location = useLocation();
-  const { canAccessConnectivity, canManageConnectivity, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canAccess = can('connectivity.access');
+  const canManageTargets = can('connectivity.targets.manage');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const statusFromUrl = searchParams.get('status') || '';
@@ -95,7 +97,7 @@ export default function ConnectivityDashboard() {
     queryKey: ['connectivity', 'dashboard', effectiveBranch],
     queryFn: () => connectivityApi.getDashboard(effectiveBranch),
     refetchInterval: 30000,
-    enabled: !!canAccessConnectivity,
+    enabled: !!canAccess,
   });
 
   const headers = useMemo(() => {
@@ -126,7 +128,7 @@ export default function ConnectivityDashboard() {
     return list;
   }, [data?.targets, search, statusFilter, sortBy, sortDir]);
 
-  if (!canAccessConnectivity) {
+  if (!canAccess) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to connectivity monitoring.
@@ -170,7 +172,7 @@ export default function ConnectivityDashboard() {
             <AlertTriangle className="h-4 w-4" />
             Outages
           </Link>
-          {canManageConnectivity && (
+          {canManageTargets && (
             <>
               <Link
                 to="/connectivity/targets" state={buildFromState(location)}
@@ -242,7 +244,7 @@ export default function ConnectivityDashboard() {
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={headers.length} className="px-4 py-8 text-center text-gray-500">
-                    No monitoring targets. {canManageConnectivity && 'Add a target to get started.'}
+                    No monitoring targets. {canManageTargets && 'Add a target to get started.'}
                   </td>
                 </tr>
               ) : (
