@@ -37,6 +37,7 @@ import FibreOrderDetail from './pages/FibreOrderDetail';
 import FibreOrderForm from './pages/FibreOrderForm';
 import FibreProducts from './pages/FibreProducts';
 import UnableToObtainOverrides from './pages/admin/UnableToObtainOverrides';
+import Roles from './pages/Roles';
 
 function App() {
   const { user, loading, canSwitchBranches, activeBranch } = useAuth();
@@ -216,6 +217,16 @@ function App() {
           <ProtectedRoute requirePermission="copiers.readings.uto_list_blocked">
             <Layout>
               <UnableToObtainOverrides />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/roles"
+        element={
+          <ProtectedRoute requirePermission="users.manage_roles">
+            <Layout>
+              <Roles />
             </Layout>
           </ProtectedRoute>
         }

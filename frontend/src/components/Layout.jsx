@@ -147,6 +147,9 @@ const Layout = ({ children }) => {
       can('users.view')
         ? { name: 'Users', href: '/users', icon: Users }
         : null,
+      can('users.manage_roles')
+        ? { name: 'Roles & Permissions', href: '/admin/roles', icon: Shield }
+        : null,
       can('audit.view')
         ? { name: 'Transaction History', href: '/transaction-history', icon: ScrollText }
         : null,

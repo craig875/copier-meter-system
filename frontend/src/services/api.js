@@ -66,6 +66,20 @@ export const usersApi = {
   delete: (id) => api.delete(`/users/${id}`).then(res => res.data),
 };
 
+// Roles API (Stage F — role matrix editing)
+export const rolesApi = {
+  getAll: () => api.get('/roles').then((res) => res.data),
+  getOne: (id) => api.get(`/roles/${id}`).then((res) => res.data),
+  update: (id, body) => api.put(`/roles/${id}`, body).then((res) => res.data),
+};
+
+// Permissions catalog + preview (Stage F admin)
+export const permissionsApi = {
+  getCatalog: () => api.get('/permissions/catalog').then((res) => res.data),
+  preview: (body, config) =>
+    api.post('/permissions/preview', body, config).then((res) => res.data),
+};
+
 // Machines API
 export const machinesApi = {
   getAll: (params) => {
