@@ -46,6 +46,7 @@ const Machines = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isElevated, isMeterUser, can, effectiveBranch, user, loading: authLoading } = useAuth();
   const canCreateMachine = can('copiers.machines.create');
+  const canUpdateMachine = can('copiers.machines.update');
   const location = useLocation();
   const [listTab, setListTab] = useState('active');
   const [search, setSearch] = useState('');
@@ -151,20 +152,20 @@ const Machines = () => {
   // Open edit modal when ?edit=<machineId> in URL (e.g. from Customer Detail)
   useEffect(() => {
     const editId = searchParams.get('edit');
-    if (editId && allMachines.length > 0) {
-      const machine = allMachines.find((m) => m.id === editId);
-      if (machine) {
-        setEditingMachine(machine);
-        setShowModal(true);
-        // Preserve model param so user stays in list view for that model
-        const modelParam = searchParams.get('model');
-        const nextParams = modelParam ? { model: modelParam } : {};
-        setSearchParams(nextParams, { replace: true });
-      }
+    if (!canUpdateMachine || !editId || allMachines.length === 0) return;
+    const machine = allMachines.find((m) => m.id === editId);
+    if (machine) {
+      setEditingMachine(machine);
+      setShowModal(true);
+      // Preserve model param so user stays in list view for that model
+      const modelParam = searchParams.get('model');
+      const nextParams = modelParam ? { model: modelParam } : {};
+      setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams, allMachines, setSearchParams]);
+  }, [searchParams, allMachines, setSearchParams, canUpdateMachine]);
 
   const handleEdit = (machine) => {
+    if (!canUpdateMachine) return;
     setEditingMachine(machine);
     setShowModal(true);
   };
@@ -504,14 +505,16 @@ const Machines = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleEdit(machine)}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="Edit machine"
-                    >
-                      <Pencil className="h-4 w-4" />
-                      <span>Edit</span>
-                    </button>
+                    {canUpdateMachine && (
+                      <button
+                        onClick={() => handleEdit(machine)}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit machine"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span>Edit</span>
+                      </button>
+                    )}
                     {listTab === 'decommissioned' || machine.isDecommissioned ? (
                       (isElevated || isMeterUser) ? (
                         <button
@@ -555,7 +558,7 @@ const Machines = () => {
       )}
 
       {/* Modal */}
-      {showModal && (
+      {showModal && (editingMachine ? canUpdateMachine : canCreateMachine) && (
         <MachineModal
           machine={editingMachine}
           onClose={handleCloseModal}
