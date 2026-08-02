@@ -16,8 +16,9 @@ function pdfBaseName(name) {
 const CustomerDetail = () => {
   const { customerId } = useParams();
   const queryClient = useQueryClient();
-  const { effectiveBranch, isElevated, isMeterUser } = useAuth();
+  const { effectiveBranch, isElevated, isMeterUser, can } = useAuth();
   const canManageMachines = isElevated || isMeterUser;
+  const canCreateMachine = can('copiers.machines.create');
   const pdfCaptureRef = useRef(null);
   const [showAddMachine, setShowAddMachine] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -165,7 +166,7 @@ const CustomerDetail = () => {
                 )}
                 Export PDF
               </button>
-              {canManageMachines && !customer.isArchived && (
+              {canCreateMachine && !customer.isArchived && (
                 <button
                   type="button"
                   onClick={() => setShowAddMachine(true)}
@@ -203,7 +204,7 @@ const CustomerDetail = () => {
             </button>
           </div>
 
-          {customer.isArchived && canManageMachines && (
+          {customer.isArchived && canCreateMachine && (
             <p className="text-sm text-gray-500 mb-4" data-pdf-exclude>
               Unarchive this customer before adding new machines.
             </p>
@@ -256,7 +257,7 @@ const CustomerDetail = () => {
         </div>
       </div>
 
-      {showAddMachine && !customer.isArchived && (
+      {showAddMachine && canCreateMachine && !customer.isArchived && (
         <MachineModal
           machine={null}
           onClose={() => setShowAddMachine(false)}

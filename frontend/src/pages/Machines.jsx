@@ -44,7 +44,8 @@ function machineMatchesSearch(machine, queryLower) {
 const Machines = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isElevated, isMeterUser, effectiveBranch, user, loading: authLoading } = useAuth();
+  const { isElevated, isMeterUser, can, effectiveBranch, user, loading: authLoading } = useAuth();
+  const canCreateMachine = can('copiers.machines.create');
   const location = useLocation();
   const [listTab, setListTab] = useState('active');
   const [search, setSearch] = useState('');
@@ -281,7 +282,7 @@ const Machines = () => {
               Import
             </button>
           )}
-          {listTab === 'active' && (
+          {listTab === 'active' && canCreateMachine && (
             <button
               data-tour="add-machine"
               onClick={() => setShowModal(true)}
@@ -373,7 +374,7 @@ const Machines = () => {
                     ? 'No decommissioned machines found.'
                     : 'No machines found. Add a machine or try another branch.'}
               </p>
-              {data && listTab === 'active' && (
+              {data && listTab === 'active' && canCreateMachine && (
                 <button
                   onClick={() => setShowModal(true)}
                   className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
