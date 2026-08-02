@@ -113,3 +113,24 @@ if (ALL_PERMISSION_KEYS.length !== 62) {
     `PERMISSION_CATALOG must have exactly 62 keys (found ${ALL_PERMISSION_KEYS.length})`
   );
 }
+
+/**
+ * Grouped catalog for admin UI checkbox editors (Stage F).
+ * Only includes fields that exist on each PermissionDef — no invented copy.
+ * @returns {{ groups: Array<{ id: string, label: string, keys: Array<{ key: string, label: string, description?: string }> }> }}
+ */
+export function getPermissionCatalogGrouped() {
+  return {
+    groups: PERMISSION_GROUPS.map((group) => ({
+      id: group.id,
+      label: group.label,
+      keys: PERMISSION_CATALOG.filter((p) => p.group === group.id).map((p) => {
+        const entry = { key: p.key, label: p.label };
+        if (p.description != null && p.description !== '') {
+          entry.description = p.description;
+        }
+        return entry;
+      }),
+    })),
+  };
+}
