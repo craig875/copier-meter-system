@@ -1,9 +1,10 @@
 /**
- * Stage A seed — idempotent sync of system roles + RolePermission matrix.
+ * Stage A seed — additive-only sync of system roles + RolePermission matrix.
  *
  * Migration 20260717200000 already seeds roles/permissions and backfills
- * users.role_id (including craig@pancom.co.za → Owner). This script re-applies
- * the JS matrix so local/dev can refresh without re-running the migration.
+ * users.role_id (including craig@pancom.co.za → Owner). This script adds
+ * missing JS-matrix keys to role_permissions; it never deletes keys that exist
+ * in the DB but are absent from the matrix (live Roles UI grants are preserved).
  *
  * Usage (from backend/):
  *   node prisma/seed-permissions-stage-a.mjs
@@ -61,7 +62,6 @@ async function syncRolePermissions() {
     const existingKeys = new Set(existing.map((r) => r.permissionKey));
 
     const toAdd = [...desired].filter((k) => !existingKeys.has(k));
-    const toRemove = [...existingKeys].filter((k) => !desired.has(k));
 
     if (toAdd.length) {
       await prisma.rolePermission.createMany({
@@ -72,17 +72,9 @@ async function syncRolePermissions() {
         skipDuplicates: true,
       });
     }
-    if (toRemove.length) {
-      await prisma.rolePermission.deleteMany({
-        where: {
-          roleId: role.id,
-          permissionKey: { in: toRemove },
-        },
-      });
-    }
 
     console.log(
-      `  ${role.key}: ${desired.size} keys (added ${toAdd.length}, removed ${toRemove.length})`
+      `  ${role.key}: matrix ${desired.size}, db ${existingKeys.size + toAdd.length} (added ${toAdd.length}, removed 0 — additive-only)`
     );
   }
 }
