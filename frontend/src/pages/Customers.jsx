@@ -327,8 +327,10 @@ const CustomerBulkImportModal = ({ onClose }) => {
 const Customers = ({ title = 'Customers' }) => {
   const queryClient = useQueryClient();
   const location = useLocation();
-  const { effectiveBranch, isElevated, isMeterUser } = useAuth();
+  const { effectiveBranch, isElevated, isMeterUser, can } = useAuth();
   const canArchive = isElevated || isMeterUser;
+  const canCreateCustomer = can('copiers.customers.create');
+  const canUpdateCustomer = can('copiers.customers.update');
   const [listTab, setListTab] = useState('active');
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -400,6 +402,7 @@ const Customers = ({ title = 'Customers' }) => {
   );
 
   const handleEdit = (customer) => {
+    if (!canUpdateCustomer) return;
     setEditingCustomer(customer);
     setShowModal(true);
   };
@@ -448,24 +451,28 @@ const Customers = ({ title = 'Customers' }) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {isElevated && listTab === 'active' && (
+          {listTab === 'active' && (
             <>
-              <button
-                type="button"
-                onClick={() => setShowImportModal(true)}
-                className="flex items-center px-4 py-2 border border-gray-300 text-gray-800 bg-white rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Import
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowModal(true)}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Customer
-              </button>
+              {isElevated && (
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(true)}
+                  className="flex items-center px-4 py-2 border border-gray-300 text-gray-800 bg-white rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import
+                </button>
+              )}
+              {canCreateCustomer && (
+                <button
+                  type="button"
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Customer
+                </button>
+              )}
             </>
           )}
         </div>
@@ -546,7 +553,7 @@ const Customers = ({ title = 'Customers' }) => {
                 </p>
               </div>
             </Link>
-            {(isElevated || canArchive) && (
+            {(isElevated || canArchive || canUpdateCustomer) && (
               <div
                 ref={openMenuId === customer.id ? menuRef : null}
                 className="absolute top-2 right-2"
@@ -565,7 +572,7 @@ const Customers = ({ title = 'Customers' }) => {
                 </button>
                 {openMenuId === customer.id && (
                   <div className="absolute right-0 top-full mt-1 py-1 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[140px] z-10">
-                    {isElevated && (
+                    {canUpdateCustomer && (
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -620,7 +627,7 @@ const Customers = ({ title = 'Customers' }) => {
         ))}
       </div>
 
-      {showModal && (
+      {showModal && (editingCustomer ? canUpdateCustomer : canCreateCustomer) && (
         <CustomerModal
           customer={editingCustomer}
           onClose={handleCloseModal}
