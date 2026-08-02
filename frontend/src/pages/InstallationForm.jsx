@@ -24,19 +24,13 @@ export default function InstallationForm() {
     : can('installations.create');
 
   const [form, setForm] = useState({
-    typeId: '',
+    typeName: '',
     customerName: '',
     siteName: '',
     area: '',
     siteAddress: '',
     salesOrderNumber: '',
     progress: '',
-  });
-
-  const { data: typesData } = useQuery({
-    queryKey: ['installations', 'types'],
-    queryFn: () => installationsApi.listTypes(),
-    enabled: canManageForm,
   });
 
   const { data: installData, isLoading: installLoading } = useQuery({
@@ -49,7 +43,7 @@ export default function InstallationForm() {
     if (!installData?.install) return;
     const i = installData.install;
     setForm({
-      typeId: i.typeId || '',
+      typeName: i.typeName || i.type?.name || '',
       customerName: i.customerName || '',
       siteName: i.siteName || '',
       area: i.area || '',
@@ -95,8 +89,6 @@ export default function InstallationForm() {
     );
   }
 
-  const types = (typesData?.types ?? []).filter((t) => t.isActive !== false);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({
@@ -107,8 +99,8 @@ export default function InstallationForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.typeId) {
-      toast.error('Hardware type is required');
+    if (!form.typeName.trim()) {
+      toast.error('Type is required');
       return;
     }
     if (!form.customerName.trim()) {
@@ -117,7 +109,7 @@ export default function InstallationForm() {
     }
 
     const payload = {
-      typeId: form.typeId,
+      typeName: form.typeName.trim(),
       customerName: form.customerName.trim(),
       siteName: emptyToNull(form.siteName),
       area: emptyToNull(form.area),
@@ -188,21 +180,17 @@ export default function InstallationForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Hardware Type *</label>
-          <select
-            name="typeId"
-            value={form.typeId}
+          <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+          <input
+            type="text"
+            name="typeName"
+            value={form.typeName}
             onChange={handleChange}
             required
+            maxLength={120}
+            placeholder="e.g. Copier / Fibre equipment"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">Select type...</option>
-            {types.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div>

@@ -17,6 +17,10 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString();
 }
 
+function installTypeLabel(install) {
+  return install?.typeName || install?.type?.name || null;
+}
+
 export default function InstallationsList() {
   const location = useLocation();
   const { can } = useAuth();
@@ -132,7 +136,9 @@ export default function InstallationsList() {
                   <td className="px-4 py-3 text-sm text-gray-700">
                     {install.area || '—'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{install.type?.name || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {installTypeLabel(install) || '—'}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={install.progress || ''}>
                     {install.progress || '—'}
                   </td>

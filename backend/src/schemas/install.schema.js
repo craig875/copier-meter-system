@@ -11,7 +11,9 @@ const dateString = z
 
 export const createInstallSchema = z.object({
   branch: branchEnum.optional(),
-  typeId: z.string().uuid('Invalid type ID'),
+  typeName: z.string().trim().min(1, 'Type is required').max(120),
+  /** Optional legacy catalog FK — kept for compatibility; not required. */
+  typeId: z.string().uuid('Invalid type ID').optional().nullable(),
   customerName: z.string().min(1, 'Customer name is required'),
   siteName: z.string().optional().nullable(),
   area: z.string().max(120).optional().nullable(),
@@ -29,7 +31,9 @@ export const createInstallSchema = z.object({
 });
 
 export const updateInstallSchema = z.object({
-  typeId: z.string().uuid().optional(),
+  typeName: z.string().trim().min(1).max(120).optional(),
+  /** Optional legacy catalog FK — kept for compatibility. */
+  typeId: z.string().uuid().optional().nullable(),
   customerName: z.string().min(1).optional(),
   siteName: z.string().optional().nullable(),
   area: z.string().max(120).optional().nullable(),

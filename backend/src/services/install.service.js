@@ -132,9 +132,17 @@ export class InstallService {
   }
 
   async createInstall(user, data, tenantBranch) {
-    const type = await this.installRepo.findTypeById(data.typeId);
-    if (!type || !type.isActive) {
-      throw new ValidationError('Invalid or inactive installation type');
+    const typeName = typeof data.typeName === 'string' ? data.typeName.trim() : '';
+    if (!typeName) {
+      throw new ValidationError('Type is required');
+    }
+
+    let typeId = data.typeId ?? null;
+    if (typeId) {
+      const type = await this.installRepo.findTypeById(typeId);
+      if (!type || !type.isActive) {
+        throw new ValidationError('Invalid or inactive installation type');
+      }
     }
 
     const branch = data.branch || tenantBranch;
@@ -150,7 +158,8 @@ export class InstallService {
 
     const created = await this.installRepo.create({
       branch,
-      typeId: data.typeId,
+      typeId,
+      typeName,
       customerName: data.customerName,
       siteName: data.siteName ?? null,
       area: data.area ?? null,
@@ -226,6 +235,13 @@ export class InstallService {
 
     const updateData = {};
     if (data.typeId !== undefined) updateData.typeId = data.typeId;
+    if (data.typeName !== undefined) {
+      const typeName = typeof data.typeName === 'string' ? data.typeName.trim() : '';
+      if (!typeName) {
+        throw new ValidationError('Type is required');
+      }
+      updateData.typeName = typeName;
+    }
     if (data.customerName !== undefined) updateData.customerName = data.customerName;
     if (data.siteName !== undefined) updateData.siteName = data.siteName;
     if (data.area !== undefined) updateData.area = data.area;

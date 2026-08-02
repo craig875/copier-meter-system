@@ -324,7 +324,9 @@ model InstallType {
 model Install {
   id                      String        @id @default(uuid())
   branch                  Branch
-  typeId                  String        @map("type_id")
+  typeId                  String?       @map("type_id")
+  /// Free-text install type label (UI: Type). Catalog InstallType remains optional legacy FK.
+  typeName                String?       @map("type_name")
   customerName            String        @map("customer_name")
   siteName                String?       @map("site_name")
   /// Free-text geographic area (suburb / region), not a fixed list.
@@ -342,7 +344,7 @@ model Install {
   createdAt               DateTime      @default(now()) @map("created_at")
   updatedAt               DateTime      @updatedAt @map("updated_at")
 
-  type      InstallType       @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  type      InstallType?      @relation(fields: [typeId], references: [id], onDelete: Restrict)
   createdBy User              @relation("InstallCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updates   InstallUpdate[]
   documents InstallDocument[]

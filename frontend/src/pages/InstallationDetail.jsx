@@ -25,6 +25,10 @@ function formatDateTime(d) {
   return new Date(d).toLocaleString();
 }
 
+function installTypeLabel(install) {
+  return install?.typeName || install?.type?.name || null;
+}
+
 function primaryDocument(install) {
   const docs = install?.documents ?? [];
   return docs.find((d) => d.kind === 'LINK') || docs[0] || null;
@@ -219,7 +223,9 @@ export default function InstallationDetail() {
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold text-gray-900 truncate">{install.customerName}</h1>
-          <p className="text-gray-500">{install.siteName || install.type?.name || 'Installation'}</p>
+          <p className="text-gray-500">
+            {install.siteName || installTypeLabel(install) || 'Installation'}
+          </p>
         </div>
         <span
           className={clsx(
@@ -248,7 +254,7 @@ export default function InstallationDetail() {
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <dt className="text-gray-500">Type</dt>
-                <dd className="font-medium text-gray-900">{install.type?.name || '—'}</dd>
+                <dd className="font-medium text-gray-900">{installTypeLabel(install) || '—'}</dd>
               </div>
               <div>
                 <dt className="text-gray-500">Branch</dt>
