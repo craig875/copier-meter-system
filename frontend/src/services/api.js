@@ -64,6 +64,16 @@ export const usersApi = {
   create: (data) => api.post('/users', data).then(res => res.data),
   update: (id, data) => api.put(`/users/${id}`, data).then(res => res.data),
   delete: (id) => api.delete(`/users/${id}`).then(res => res.data),
+  listPermissionOverrides: (userId) =>
+    api.get(`/users/${userId}/permission-overrides`).then((res) => res.data),
+  upsertPermissionOverride: (userId, body) =>
+    api.put(`/users/${userId}/permission-overrides`, body).then((res) => res.data),
+  deletePermissionOverride: (userId, permissionKey) =>
+    api
+      .delete(
+        `/users/${userId}/permission-overrides/${encodeURIComponent(permissionKey)}`
+      )
+      .then((res) => res.data),
 };
 
 // Roles API (Stage F — role matrix editing)
