@@ -29,8 +29,8 @@ export function moduleRequiredForPermission(permissionKey) {
  * Pure computation: role keys + GRANT/DENY overrides → effective list,
  * then (for non-owner) drop product-domain keys whose module the user lacks.
  *
- * DENY wins over GRANT. Owner always starts from the full catalog (62 keys)
- * and bypasses the module filter entirely.
+ * DENY wins over GRANT. Owner always receives the full catalog (62 keys)
+ * unconditionally — overrides are ignored and the module filter is skipped.
  *
  * GRANT overrides respect module boundaries (safer): an explicit GRANT cannot
  * open a product domain the user is not assigned to. Assign the module (and
@@ -50,21 +50,18 @@ export function computeEffectivePermissions({
   overrides = [],
   modules = [],
 }) {
-  const base =
-    roleKey === 'owner'
-      ? new Set(ALL_PERMISSION_KEYS)
-      : new Set(rolePermissionKeys);
+  // Owner immunity: full catalog, no overrides, no module filter.
+  if (roleKey === 'owner') {
+    return [...ALL_PERMISSION_KEYS].sort();
+  }
+
+  const base = new Set(rolePermissionKeys);
 
   for (const o of overrides) {
     if (o.effect === 'GRANT') base.add(o.permissionKey);
   }
   for (const o of overrides) {
     if (o.effect === 'DENY') base.delete(o.permissionKey);
-  }
-
-  // Owner: full catalog, no module filter (matches today's role bypass).
-  if (roleKey === 'owner') {
-    return [...base].sort();
   }
 
   const moduleSet = new Set(Array.isArray(modules) ? modules : []);
