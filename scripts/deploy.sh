@@ -50,13 +50,4 @@ echo "==> Frontend (build)"
 echo "==> Backend service (systemd)"
 systemctl restart copier-backend.service
 
-echo "==> PM2"
-cd "$ROOT"
-if pm2 describe copier-api >/dev/null 2>&1; then
-  pm2 reload ecosystem.config.cjs
-else
-  pm2 start ecosystem.config.cjs
-fi
-pm2 save
-
 echo "==> Deploy finished. Check: systemctl status copier-backend.service --no-pager"
