@@ -421,72 +421,70 @@ export default function InstallationDetail() {
               </ul>
             )}
           </div>
-
-          {canUpdate && (
-            <div>
-              <button
-                type="button"
-                onClick={openScheduleModal}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-800 hover:bg-gray-50"
-              >
-                {isScheduled ? 'Reschedule' : 'Schedule Installation'}
-              </button>
-            </div>
-          )}
         </div>
 
         {canUpdate && (
-          <div className="tile-card p-6 space-y-4 h-fit">
-            <h2 className="font-semibold text-gray-900">Update Progress</h2>
-            <form onSubmit={handleProgressSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+          <div className="space-y-4 h-fit">
+            <div className="tile-card p-6 space-y-4">
+              <h2 className="font-semibold text-gray-900">Update Progress</h2>
+              <form onSubmit={handleProgressSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  >
+                    {INSTALL_STATUSES.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Progress</label>
+                  <textarea
+                    value={progress}
+                    onChange={(e) => setProgress(trimLeading(e.target.value))}
+                    rows={3}
+                    placeholder="What is the current state?"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Timeline note (optional)
+                  </label>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(trimLeading(e.target.value))}
+                    rows={2}
+                    placeholder="Extra context for this update"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!canSubmitUpdate || updateMutation.isPending}
+                  className="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                 >
-                  {INSTALL_STATUSES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Progress</label>
-                <textarea
-                  value={progress}
-                  onChange={(e) => setProgress(trimLeading(e.target.value))}
-                  rows={3}
-                  placeholder="What is the current state?"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Timeline note (optional)
-                </label>
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(trimLeading(e.target.value))}
-                  rows={2}
-                  placeholder="Extra context for this update"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={!canSubmitUpdate || updateMutation.isPending}
-                className="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-              >
-                {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Save Update
-              </button>
-              <p className="text-xs text-gray-500">
-                Changing status or progress creates a timeline entry.
-              </p>
-            </form>
+                  {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Save Update
+                </button>
+                <p className="text-xs text-gray-500">
+                  Changing status or progress creates a timeline entry.
+                </p>
+              </form>
+            </div>
+
+            <button
+              type="button"
+              onClick={openScheduleModal}
+              className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              {isScheduled ? 'Reschedule' : 'Schedule Installation'}
+            </button>
           </div>
         )}
       </div>
