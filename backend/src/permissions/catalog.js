@@ -15,6 +15,7 @@ export const PERMISSION_GROUPS = [
   { id: 'copiers_catalog', label: 'Copiers — catalog & config' },
   { id: 'connectivity', label: 'Connectivity' },
   { id: 'fibre_orders', label: 'Fibre orders' },
+  { id: 'installations', label: 'Installations' },
   { id: 'users', label: 'Users & roles' },
   { id: 'audit', label: 'Audit' },
   { id: 'notifications', label: 'Notifications' },
@@ -84,6 +85,13 @@ export const PERMISSION_CATALOG = [
   { key: 'fibre_orders.update_requests.list', group: 'fibre_orders', label: 'List update requests' },
   { key: 'fibre_orders.update_requests.create', group: 'fibre_orders', label: 'Request order updates' },
 
+  { key: 'installations.view', group: 'installations', label: 'View installations list and details' },
+  { key: 'installations.create', group: 'installations', label: 'Create installations' },
+  { key: 'installations.update', group: 'installations', label: 'Update installations (progress, docs, fields)' },
+  { key: 'installations.tasks.manage', group: 'installations', label: 'Create, edit, assign, and delete install tasks' },
+  { key: 'installations.tasks.view_own', group: 'installations', label: 'View own assigned install tasks' },
+  { key: 'installations.tasks.update_status', group: 'installations', label: 'Update status on assigned install tasks' },
+
   { key: 'users.view', group: 'users', label: 'View users' },
   { key: 'users.create', group: 'users', label: 'Create users' },
   { key: 'users.update', group: 'users', label: 'Update users' },
@@ -108,9 +116,9 @@ export const STRICT_ADMIN_ONLY_KEYS = [
 /** Keys reserved for the immutable Owner role. */
 export const OWNER_ONLY_KEYS = ['users.assign_owner'];
 
-if (ALL_PERMISSION_KEYS.length !== 62) {
+if (ALL_PERMISSION_KEYS.length !== 68) {
   throw new Error(
-    `PERMISSION_CATALOG must have exactly 62 keys (found ${ALL_PERMISSION_KEYS.length})`
+    `PERMISSION_CATALOG must have exactly 68 keys (found ${ALL_PERMISSION_KEYS.length})`
   );
 }
 

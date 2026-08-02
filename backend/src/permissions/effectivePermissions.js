@@ -8,17 +8,27 @@ export const PERMISSION_PREFIX_TO_MODULE = Object.freeze({
   copiers: 'copiers',
   connectivity: 'connectivity',
   fibre_orders: 'fibre-orders',
+  installations: 'installations',
 });
+
+/** Assignee inbox keys — no product module required. */
+const INSTALLATIONS_MODULE_FREE_KEYS = new Set([
+  'installations.tasks.view_own',
+  'installations.tasks.update_status',
+]);
 
 /**
  * Module required for a permission key, or null if module-independent
- * (dashboard / users / audit / notifications / branches).
+ * (dashboard / users / audit / notifications / branches, plus install assignee keys).
  *
  * @param {string} permissionKey
  * @returns {string|null}
  */
 export function moduleRequiredForPermission(permissionKey) {
   if (typeof permissionKey !== 'string' || !permissionKey.includes('.')) {
+    return null;
+  }
+  if (INSTALLATIONS_MODULE_FREE_KEYS.has(permissionKey)) {
     return null;
   }
   const prefix = permissionKey.slice(0, permissionKey.indexOf('.'));
@@ -29,7 +39,7 @@ export function moduleRequiredForPermission(permissionKey) {
  * Pure computation: role keys + GRANT/DENY overrides → effective list,
  * then (for non-owner) drop product-domain keys whose module the user lacks.
  *
- * DENY wins over GRANT. Owner always receives the full catalog (62 keys)
+ * DENY wins over GRANT. Owner always receives the full catalog (68 keys)
  * unconditionally — overrides are ignored and the module filter is skipped.
  *
  * GRANT overrides respect module boundaries (safer): an explicit GRANT cannot

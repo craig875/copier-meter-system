@@ -151,6 +151,17 @@ const FIBRE_ELEVATED = [
   'fibre_orders.update_requests.list',
 ];
 
+const INSTALLATIONS_MANAGE = [
+  'installations.view',
+  'installations.create',
+  'installations.update',
+  'installations.tasks.manage',
+];
+const INSTALLATIONS_ASSIGNEE = [
+  'installations.tasks.view_own',
+  'installations.tasks.update_status',
+];
+
 const USERS_ELEVATED = [
   'users.view',
   'users.create',
@@ -186,6 +197,8 @@ const MANAGER_KEYS = uniqueKeys(
   FIBRE_ACCESS,
   FIBRE_AGENT,
   FIBRE_ELEVATED,
+  INSTALLATIONS_MANAGE,
+  INSTALLATIONS_ASSIGNEE,
   USERS_ELEVATED,
   ADMIN_OPS
 );
@@ -200,12 +213,20 @@ const METER_USER_KEYS = uniqueKeys(
   MACHINES_VIEW,
   MACHINES_MUTATE,
   CUSTOMERS_VIEW_ARCHIVE,
-  CONSUMABLES_USE
+  CONSUMABLES_USE,
+  INSTALLATIONS_ASSIGNEE
 );
 
-const CAPTURER_KEYS = uniqueKeys(DASH, BRANCH, COPIERS_ACCESS, READINGS_BASE, MACHINES_VIEW);
+const CAPTURER_KEYS = uniqueKeys(
+  DASH,
+  BRANCH,
+  COPIERS_ACCESS,
+  READINGS_BASE,
+  MACHINES_VIEW,
+  INSTALLATIONS_ASSIGNEE
+);
 
-const SALES_AGENT_KEYS = uniqueKeys(DASH, BRANCH, FIBRE_ACCESS, FIBRE_AGENT);
+const SALES_AGENT_KEYS = uniqueKeys(DASH, BRANCH, FIBRE_ACCESS, FIBRE_AGENT, INSTALLATIONS_ASSIGNEE);
 
 /**
  * Map of role key → permission keys (compatibility with today's gates).

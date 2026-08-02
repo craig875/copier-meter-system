@@ -53,7 +53,8 @@ export default function InstallationDetail() {
   const { id } = useParams();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { isElevated } = useAuth();
+  const { can } = useAuth();
+  const canUpdate = can('installations.update');
 
   const [status, setStatus] = useState('');
   const [progress, setProgress] = useState('');
@@ -156,7 +157,7 @@ export default function InstallationDetail() {
 
   return (
     <div className="space-y-6">
-      {!isElevated && (
+      {!canUpdate && (
         <div className="tile-card p-3 text-sm text-amber-800 bg-amber-50 border border-amber-100">
           Read-only view — you can update status on tasks assigned to you.
         </div>
@@ -174,7 +175,7 @@ export default function InstallationDetail() {
         >
           {installStatusLabel(install.status)}
         </span>
-        {isElevated && (
+        {canUpdate && (
           <Link
             to={`/installations/${id}/edit`}
             state={buildFromState(location)}
@@ -264,7 +265,7 @@ export default function InstallationDetail() {
           <div className="tile-card p-6 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-semibold text-gray-900">Documents</h2>
-              {isElevated && !editingDoc && (
+              {canUpdate && !editingDoc && (
                 <button
                   type="button"
                   onClick={() => setEditingDoc(true)}
@@ -275,7 +276,7 @@ export default function InstallationDetail() {
               )}
             </div>
 
-            {isElevated && editingDoc ? (
+            {canUpdate && editingDoc ? (
               <form onSubmit={handleDocSave} className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">URL *</label>
@@ -363,7 +364,7 @@ export default function InstallationDetail() {
           </div>
         </div>
 
-        {isElevated && (
+        {canUpdate && (
           <div className="tile-card p-6 space-y-4 h-fit">
             <h2 className="font-semibold text-gray-900">Update Progress</h2>
             <form onSubmit={handleProgressSubmit} className="space-y-4">

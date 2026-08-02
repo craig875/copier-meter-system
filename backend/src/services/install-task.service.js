@@ -1,14 +1,14 @@
 import { repositories } from '../repositories/index.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors.js';
 import { assertRecordInTenant } from '../middleware/tenant.js';
-import { hasAdminAccess } from '../utils/permissions.js';
+import { userHasPermission } from '../middleware/requirePermission.js';
 import {
   installTaskStatusLabel,
   isForwardTaskStatus,
 } from '../constants/install-task-statuses.js';
 
 /**
- * Install sub-tasks — elevated CRUD; assignees may advance own status.
+ * Install sub-tasks — manage CRUD; assignees may advance own status.
  */
 export class InstallTaskService {
   constructor(repos = repositories) {
@@ -25,7 +25,10 @@ export class InstallTaskService {
 
   async assertCanReadInstall(user, installId, tenantBranch) {
     const install = await this.assertInstallInTenant(installId, tenantBranch);
-    if (hasAdminAccess(user?.role)) return install;
+    if (userHasPermission(user, 'installations.view')) return install;
+    if (!userHasPermission(user, 'installations.tasks.view_own')) {
+      throw new ForbiddenError('Access denied');
+    }
     const hit = await this.taskRepo.userHasTaskOnInstall(user.id, installId);
     if (!hit) throw new ForbiddenError('Access denied');
     return install;
@@ -41,8 +44,8 @@ export class InstallTaskService {
   }
 
   async createTask(user, installId, data, tenantBranch) {
-    if (!hasAdminAccess(user?.role)) {
-      throw new ForbiddenError('Administrator or manager access required');
+    if (!userHasPermission(user, 'installations.tasks.manage')) {
+      throw new ForbiddenError('Permission denied');
     }
     await this.assertInstallInTenant(installId, tenantBranch);
 
@@ -64,8 +67,8 @@ export class InstallTaskService {
   }
 
   async updateTask(user, installId, taskId, data, tenantBranch) {
-    if (!hasAdminAccess(user?.role)) {
-      throw new ForbiddenError('Administrator or manager access required');
+    if (!userHasPermission(user, 'installations.tasks.manage')) {
+      throw new ForbiddenError('Permission denied');
     }
     await this.assertInstallInTenant(installId, tenantBranch);
 
@@ -100,8 +103,14 @@ export class InstallTaskService {
       throw new NotFoundError('Task');
     }
 
-    const elevated = hasAdminAccess(user?.role);
-    if (!elevated && existing.assignedToId !== user.id) {
+    const canManageStatus =
+      userHasPermission(user, 'installations.tasks.update_status') &&
+      userHasPermission(user, 'installations.view');
+    const isAssignee =
+      userHasPermission(user, 'installations.tasks.update_status') &&
+      existing.assignedToId === user.id;
+
+    if (!canManageStatus && !isAssignee) {
       throw new ForbiddenError('You can only update tasks assigned to you');
     }
 
@@ -143,8 +152,8 @@ export class InstallTaskService {
   }
 
   async deleteTask(user, installId, taskId, tenantBranch) {
-    if (!hasAdminAccess(user?.role)) {
-      throw new ForbiddenError('Administrator or manager access required');
+    if (!userHasPermission(user, 'installations.tasks.manage')) {
+      throw new ForbiddenError('Permission denied');
     }
     await this.assertInstallInTenant(installId, tenantBranch);
 

@@ -7,7 +7,13 @@
 export const MODULE_COPERS = 'copiers';
 export const MODULE_CONNECTIVITY = 'connectivity';
 export const MODULE_FIBRE_ORDERS = 'fibre-orders';
-export const KNOWN_MODULES = [MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS];
+export const MODULE_INSTALLATIONS = 'installations';
+export const KNOWN_MODULES = [
+  MODULE_COPERS,
+  MODULE_CONNECTIVITY,
+  MODULE_FIBRE_ORDERS,
+  MODULE_INSTALLATIONS,
+];
 
 /**
  * Default modules when none specified for a role (used on create / migration)
@@ -15,8 +21,12 @@ export const KNOWN_MODULES = [MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_O
  * @returns {string[]}
  */
 export const defaultModulesForRole = (role) => {
-  if (role === 'admin') return [MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS];
-  if (role === 'manager') return [MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS];
+  if (role === 'admin') {
+    return [MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS, MODULE_INSTALLATIONS];
+  }
+  if (role === 'manager') {
+    return [MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS, MODULE_INSTALLATIONS];
+  }
   if (role === 'management') return [MODULE_COPERS];
   if (role === 'sales_agent') return [MODULE_FIBRE_ORDERS];
   if (role === 'viewer') return [MODULE_CONNECTIVITY];

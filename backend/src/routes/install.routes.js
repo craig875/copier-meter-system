@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import { requirePermission } from '../middleware/requirePermission.js';
 import { requireTenantBranch } from '../middleware/tenant.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import {
@@ -13,8 +14,8 @@ import {
   updateInstallTaskStatusSchema,
 } from '../schemas/install-task.schema.js';
 import {
-  requireElevatedOrInstallTaskAssignee,
-  requireElevatedOrInstallAssignee,
+  requireInstallTaskStatusAccess,
+  requireInstallViewOrAssignee,
 } from '../middleware/requireElevatedOrInstallTaskAssignee.js';
 import {
   listInstallTypes,
@@ -38,41 +39,54 @@ const router = Router();
 router.use(authenticate);
 router.use(requireTenantBranch);
 
-// Assignee inbox — any authenticated user (tenant-scoped)
-router.get('/my-tasks', listMyInstallTasks);
+router.get(
+  '/my-tasks',
+  requirePermission('installations.tasks.view_own'),
+  listMyInstallTasks
+);
 
-// Elevated-only catalog / list / create
-router.get('/types', requireAdmin, listInstallTypes);
-router.get('/', requireAdmin, validateQuery(installListQuerySchema), listInstalls);
-router.post('/', requireAdmin, validate(createInstallSchema), createInstall);
+router.get('/types', requirePermission('installations.view'), listInstallTypes);
+router.get(
+  '/',
+  requirePermission('installations.view'),
+  validateQuery(installListQuerySchema),
+  listInstalls
+);
+router.post('/', requirePermission('installations.create'), validate(createInstallSchema), createInstall);
 
-// Tasks nested under install
-router.get('/:id/tasks', requireElevatedOrInstallAssignee, listInstallTasks);
+router.get('/:id/tasks', requireInstallViewOrAssignee, listInstallTasks);
 router.post(
   '/:id/tasks',
-  requireAdmin,
+  requirePermission('installations.tasks.manage'),
   validate(createInstallTaskSchema),
   createInstallTask
 );
 router.put(
   '/:id/tasks/:taskId',
-  requireAdmin,
+  requirePermission('installations.tasks.manage'),
   validate(updateInstallTaskSchema),
   updateInstallTask
 );
 router.patch(
   '/:id/tasks/:taskId/status',
-  requireElevatedOrInstallTaskAssignee,
+  requireInstallTaskStatusAccess,
   validate(updateInstallTaskStatusSchema),
   updateInstallTaskStatus
 );
-router.delete('/:id/tasks/:taskId', requireAdmin, deleteInstallTask);
+router.delete(
+  '/:id/tasks/:taskId',
+  requirePermission('installations.tasks.manage'),
+  deleteInstallTask
+);
 
-// Install read: elevated OR assignee on this install (R1)
-router.get('/:id/updates', requireElevatedOrInstallAssignee, getInstallUpdates);
-router.get('/:id', requireElevatedOrInstallAssignee, getInstall);
+router.get('/:id/updates', requireInstallViewOrAssignee, getInstallUpdates);
+router.get('/:id', requireInstallViewOrAssignee, getInstall);
 
-// Install mutate: elevated only
-router.put('/:id', requireAdmin, validate(updateInstallSchema), updateInstall);
+router.put(
+  '/:id',
+  requirePermission('installations.update'),
+  validate(updateInstallSchema),
+  updateInstall
+);
 
 export default router;

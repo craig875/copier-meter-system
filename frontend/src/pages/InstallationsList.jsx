@@ -14,7 +14,7 @@ import {
 
 export default function InstallationsList() {
   const location = useLocation();
-  const { isElevated } = useAuth();
+  const { can } = useAuth();
   const [statusTab, setStatusTab] = useState('active');
   const [search, setSearch] = useState('');
 
@@ -27,10 +27,10 @@ export default function InstallationsList() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['installations', 'list', params],
     queryFn: () => installationsApi.list(params),
-    enabled: isElevated,
+    enabled: can('installations.view'),
   });
 
-  if (!isElevated) {
+  if (!can('installations.view')) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have access to Installations.

@@ -108,7 +108,7 @@ const Layout = ({ children }) => {
     const topLinks = [
       ...(showConnectivity ? [connectivityNav] : []),
       ...(showFibreOrders ? [fibreOrdersNav] : []),
-      ...(isElevated ? [installationsNav] : []),
+      ...(can('installations.view') ? [installationsNav] : []),
       myInstallTasksNav,
     ];
 

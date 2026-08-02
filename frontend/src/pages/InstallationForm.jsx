@@ -18,7 +18,10 @@ export default function InstallationForm() {
   const isEditing = Boolean(id);
   const navigate = useNavigate();
   const location = useLocation();
-  const { isElevated, effectiveBranch } = useAuth();
+  const { can, effectiveBranch } = useAuth();
+  const canManageForm = isEditing
+    ? can('installations.update')
+    : can('installations.create');
 
   const [form, setForm] = useState({
     typeId: '',
@@ -34,13 +37,13 @@ export default function InstallationForm() {
   const { data: typesData } = useQuery({
     queryKey: ['installations', 'types'],
     queryFn: () => installationsApi.listTypes(),
-    enabled: isElevated,
+    enabled: canManageForm,
   });
 
   const { data: installData, isLoading: installLoading } = useQuery({
     queryKey: ['installations', id],
     queryFn: () => installationsApi.get(id),
-    enabled: isEditing && isElevated,
+    enabled: isEditing && canManageForm,
   });
 
   useEffect(() => {
@@ -78,7 +81,7 @@ export default function InstallationForm() {
     },
   });
 
-  if (!isElevated) {
+  if (!canManageForm) {
     return (
       <div className="tile-card p-6 text-center text-gray-500">
         You do not have permission to manage installations.

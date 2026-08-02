@@ -329,10 +329,10 @@ function App() {
       <Route path="/fibre-orders/:id" element={<ProtectedRoute requirePermission="fibre_orders.access"><Layout><FibreOrderDetail /></Layout></ProtectedRoute>} />
 
       {/* Installations Tracker */}
-      <Route path="/installations" element={<ProtectedRoute adminOnly><Layout><InstallationsList /></Layout></ProtectedRoute>} />
-      <Route path="/installations/my-tasks" element={<ProtectedRoute><Layout><MyInstallTasks /></Layout></ProtectedRoute>} />
-      <Route path="/installations/new" element={<ProtectedRoute adminOnly><Layout><InstallationForm /></Layout></ProtectedRoute>} />
-      <Route path="/installations/:id/edit" element={<ProtectedRoute adminOnly><Layout><InstallationForm /></Layout></ProtectedRoute>} />
+      <Route path="/installations" element={<ProtectedRoute requirePermission="installations.view"><Layout><InstallationsList /></Layout></ProtectedRoute>} />
+      <Route path="/installations/my-tasks" element={<ProtectedRoute requirePermission="installations.tasks.view_own"><Layout><MyInstallTasks /></Layout></ProtectedRoute>} />
+      <Route path="/installations/new" element={<ProtectedRoute requirePermission="installations.create"><Layout><InstallationForm /></Layout></ProtectedRoute>} />
+      <Route path="/installations/:id/edit" element={<ProtectedRoute requirePermission="installations.update"><Layout><InstallationForm /></Layout></ProtectedRoute>} />
       <Route path="/installations/:id" element={<ProtectedRoute><Layout><InstallationDetail /></Layout></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

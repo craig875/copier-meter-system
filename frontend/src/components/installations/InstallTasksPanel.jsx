@@ -17,8 +17,11 @@ function emptyForm() {
 }
 
 export default function InstallTasksPanel({ installId, tasks: initialTasks = [] }) {
-  const { user, isElevated } = useAuth();
+  const { user, can } = useAuth();
   const queryClient = useQueryClient();
+  const canManageTasks = can('installations.tasks.manage');
+  const canUpdateStatus = can('installations.tasks.update_status');
+  const canViewInstalls = can('installations.view');
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [editingId, setEditingId] = useState(null);
@@ -27,7 +30,7 @@ export default function InstallTasksPanel({ installId, tasks: initialTasks = [] 
   const { data: usersData } = useQuery({
     queryKey: ['users'],
     queryFn: () => usersApi.getAll(),
-    enabled: isElevated,
+    enabled: canManageTasks,
   });
 
   const users = usersData?.users ?? [];
@@ -82,7 +85,8 @@ export default function InstallTasksPanel({ installId, tasks: initialTasks = [] 
   const tasks = initialTasks;
 
   const canActOnStatus = (task) =>
-    isElevated || task.assignedToId === user?.id;
+    canUpdateStatus &&
+    (canViewInstalls || task.assignedToId === user?.id);
 
   const startEdit = (task) => {
     setEditingId(task.id);
@@ -97,7 +101,7 @@ export default function InstallTasksPanel({ installId, tasks: initialTasks = [] 
     <div className="tile-card p-6 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-semibold text-gray-900">Tasks</h2>
-        {isElevated && !showAdd && (
+        {canManageTasks && !showAdd && (
           <button
             type="button"
             onClick={() => setShowAdd(true)}
@@ -109,7 +113,7 @@ export default function InstallTasksPanel({ installId, tasks: initialTasks = [] 
         )}
       </div>
 
-      {isElevated && showAdd && (
+      {canManageTasks && showAdd && (
         <form
           className="space-y-3 p-3 border border-gray-200 rounded-lg bg-gray-50"
           onSubmit={(e) => {
@@ -295,7 +299,7 @@ export default function InstallTasksPanel({ installId, tasks: initialTasks = [] 
                           ))}
                         </select>
                       )}
-                      {isElevated && (
+                      {canManageTasks && (
                         <>
                           <button
                             type="button"
