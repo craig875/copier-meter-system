@@ -30,7 +30,6 @@ import logo from '../assets/logo.png';
 import Setup2FAPrompt from './Setup2FAPrompt';
 import ConnectivityAlertBanner from './connectivity/ConnectivityAlertBanner';
 import { notificationsApi, machinesApi } from '../services/api';
-import { MODULE_COPERS } from '../constants/modules';
 import { useBackNavigation } from '../hooks/useBackNavigation';
 
 const Layout = ({ children }) => {
@@ -40,12 +39,11 @@ const Layout = ({ children }) => {
     isElevated,
     isAdmin,
     isCapturer,
-    hasModule,
     can,
     effectiveBranch,
     canSwitchBranches,
   } = useAuth();
-  const showCopiers = hasModule(MODULE_COPERS);
+  const showCopiers = can('copiers.access');
   const showConnectivity = can('connectivity.access');
   const showFibreOrders = can('fibre_orders.access');
   const branchCityLabel =
