@@ -111,7 +111,7 @@ function App() {
       <Route
         path="/machines"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requirePermission="copiers.machines.view">
             <CapturerRestrict>
               <Layout>
                 <Machines />
@@ -295,23 +295,23 @@ function App() {
       />
 
       {/* Connectivity Monitoring Module */}
-      <Route path="/connectivity" element={<ProtectedRoute><Layout><ConnectivityDashboard /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/targets" element={<ProtectedRoute><Layout><ConnectivityTargets /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/targets/new" element={<ProtectedRoute><Layout><ConnectivityTargetForm /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/targets/:id/edit" element={<ProtectedRoute><Layout><ConnectivityTargetForm /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/targets/:id" element={<ProtectedRoute><Layout><ConnectivityTargetDetail /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/time-windows" element={<ProtectedRoute><Layout><ConnectivityTimeWindows /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/reports" element={<ProtectedRoute><Layout><ConnectivityReports /></Layout></ProtectedRoute>} />
-      <Route path="/connectivity/outages" element={<ProtectedRoute><Layout><ConnectivityOutages /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityDashboard /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityTargets /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets/new" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityTargetForm /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets/:id/edit" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityTargetForm /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/targets/:id" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityTargetDetail /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/time-windows" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityTimeWindows /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/reports" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityReports /></Layout></ProtectedRoute>} />
+      <Route path="/connectivity/outages" element={<ProtectedRoute requirePermission="connectivity.access"><Layout><ConnectivityOutages /></Layout></ProtectedRoute>} />
 
       {/* Fibre Orders Module */}
-      <Route path="/fibre-orders" element={<ProtectedRoute><Layout><FibreOrdersDashboard /></Layout></ProtectedRoute>} />
-      <Route path="/fibre-orders/list" element={<ProtectedRoute><Layout><FibreOrdersList /></Layout></ProtectedRoute>} />
-      <Route path="/fibre-orders/completed" element={<ProtectedRoute><Layout><FibreOrdersCompleted /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders" element={<ProtectedRoute requirePermission="fibre_orders.access"><Layout><FibreOrdersDashboard /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/list" element={<ProtectedRoute requirePermission="fibre_orders.access"><Layout><FibreOrdersList /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/completed" element={<ProtectedRoute requirePermission="fibre_orders.access"><Layout><FibreOrdersCompleted /></Layout></ProtectedRoute>} />
       <Route path="/fibre-orders/new" element={<ProtectedRoute requirePermission="fibre_orders.create"><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
       <Route path="/fibre-orders/products" element={<ProtectedRoute requirePermission="fibre_orders.products.manage"><Layout><FibreProducts /></Layout></ProtectedRoute>} />
       <Route path="/fibre-orders/:id/edit" element={<ProtectedRoute requirePermission="fibre_orders.update"><Layout><FibreOrderForm /></Layout></ProtectedRoute>} />
-      <Route path="/fibre-orders/:id" element={<ProtectedRoute><Layout><FibreOrderDetail /></Layout></ProtectedRoute>} />
+      <Route path="/fibre-orders/:id" element={<ProtectedRoute requirePermission="fibre_orders.access"><Layout><FibreOrderDetail /></Layout></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
