@@ -91,7 +91,7 @@ function App() {
       <Route
         path="/capture"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requirePermission="copiers.readings.view">
             <Layout>
               <Capture />
             </Layout>
