@@ -44,11 +44,13 @@ function machineMatchesSearch(machine, queryLower) {
 const Machines = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isElevated, can, effectiveBranch, user, loading: authLoading } = useAuth();
+  const { can, effectiveBranch, user, loading: authLoading } = useAuth();
   const canCreateMachine = can('copiers.machines.create');
   const canUpdateMachine = can('copiers.machines.update');
   const canDecommissionMachine = can('copiers.machines.decommission');
   const canRecommissionMachine = can('copiers.machines.recommission');
+  const canDeleteMachine = can('copiers.machines.delete');
+  const canImportMachines = can('copiers.machines.import');
   const location = useLocation();
   const [listTab, setListTab] = useState('active');
   const [search, setSearch] = useState('');
@@ -173,6 +175,7 @@ const Machines = () => {
   };
 
   const handleDelete = (machine) => {
+    if (!canDeleteMachine) return;
     if (window.confirm(`Delete machine ${machine.machineSerialNumber}? This will permanently remove the machine and all its readings.`)) {
       deleteMutation.mutate(machine.id);
     }
@@ -277,7 +280,7 @@ const Machines = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          {isElevated && listTab === 'active' && (
+          {canImportMachines && listTab === 'active' && (
             <button
               onClick={() => setShowImportModal(true)}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -541,7 +544,7 @@ const Machines = () => {
                         </button>
                       ) : null
                     )}
-                    {isElevated && (
+                    {canDeleteMachine && (
                       <button
                         onClick={() => handleDelete(machine)}
                         className="p-1 text-gray-500 hover:text-gray-900 transition-colors ml-2"
@@ -571,7 +574,7 @@ const Machines = () => {
       )}
 
       {/* Import Modal */}
-      {isElevated && showImportModal && (
+      {canImportMachines && showImportModal && (
         <ImportModal
           onClose={() => setShowImportModal(false)}
         />
