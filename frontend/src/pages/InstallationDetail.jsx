@@ -64,6 +64,10 @@ export default function InstallationDetail() {
   const [docUrl, setDocUrl] = useState('');
   const [docLabel, setDocLabel] = useState('');
 
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTechnician, setScheduleTechnician] = useState('');
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['installations', id],
     queryFn: () => installationsApi.get(id),
@@ -99,8 +103,16 @@ export default function InstallationDetail() {
 
   const updateMutation = useMutation({
     mutationFn: (payload) => installationsApi.update(id, payload),
-    onSuccess: () => {
-      toast.success('Installation updated');
+    onSuccess: (_data, variables) => {
+      const isScheduleOnly =
+        variables?.scheduledDate !== undefined &&
+        variables?.assignedTechnicianName !== undefined &&
+        variables?.status === undefined &&
+        variables?.progress === undefined &&
+        variables?.documentUrl === undefined;
+      if (!isScheduleOnly) {
+        toast.success('Installation updated');
+      }
       setNote('');
       setEditingDoc(false);
       invalidate();
@@ -153,6 +165,48 @@ export default function InstallationDetail() {
       documentUrl: url,
       documentLabel: docLabel.trim() || null,
     });
+  };
+
+  const isScheduled = Boolean(install?.scheduledDate && install?.assignedTechnicianName);
+
+  const openScheduleModal = () => {
+    setScheduleDate(install?.scheduledDate?.slice?.(0, 10) || '');
+    setScheduleTechnician(install?.assignedTechnicianName || '');
+    setShowScheduleModal(true);
+  };
+
+  const handleScheduleSubmit = (e) => {
+    e.preventDefault();
+    const date = scheduleDate.trim();
+    const tech = scheduleTechnician.trim();
+    if (!date) {
+      toast.error('Scheduled date is required');
+      return;
+    }
+    if (!tech) {
+      toast.error('Technician is required');
+      return;
+    }
+    const [y, m, d] = date.split('-').map(Number);
+    const displayDate = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+    updateMutation.mutate(
+      {
+        scheduledDate: date,
+        assignedTechnicianName: tech,
+        note: `Installation scheduled for ${displayDate} with ${tech}`,
+      },
+      {
+        onSuccess: () => {
+          toast.success(isScheduled ? 'Installation rescheduled' : 'Installation scheduled');
+          setShowScheduleModal(false);
+        },
+      }
+    );
   };
 
   return (
@@ -367,6 +421,18 @@ export default function InstallationDetail() {
               </ul>
             )}
           </div>
+
+          {canUpdate && (
+            <div>
+              <button
+                type="button"
+                onClick={openScheduleModal}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-800 hover:bg-gray-50"
+              >
+                {isScheduled ? 'Reschedule' : 'Schedule Installation'}
+              </button>
+            </div>
+          )}
         </div>
 
         {canUpdate && (
@@ -424,6 +490,60 @@ export default function InstallationDetail() {
           </div>
         )}
       </div>
+
+      {showScheduleModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {isScheduled ? 'Reschedule Installation' : 'Schedule Installation'}
+            </h2>
+            <form onSubmit={handleScheduleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Scheduled Date *
+                </label>
+                <input
+                  type="date"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Technician *
+                </label>
+                <input
+                  type="text"
+                  value={scheduleTechnician}
+                  onChange={(e) => setScheduleTechnician(trimLeading(e.target.value))}
+                  required
+                  placeholder="Free-text name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowScheduleModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {isScheduled ? 'Save Reschedule' : 'Schedule'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

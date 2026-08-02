@@ -17,6 +17,35 @@ function sameProgress(a, b) {
   return left === right;
 }
 
+function dateOnlyKey(value) {
+  if (value == null || value === '') return null;
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  const s = String(value);
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+function formatScheduleNoteDate(dateStr) {
+  const key = dateOnlyKey(dateStr);
+  if (!key) return null;
+  const [y, m, d] = key.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function buildScheduleTimelineNote(scheduledDate, technicianName) {
+  const when = formatScheduleNoteDate(scheduledDate);
+  const who = technicianName?.trim();
+  if (!when || !who) return null;
+  return `Installation scheduled for ${when} with ${who}`;
+}
+
 /**
  * Installations tracker — elevated CRUD + progress/status timeline.
  */
@@ -178,6 +207,23 @@ export class InstallService {
     const progressChanged =
       data.progress !== undefined && !sameProgress(data.progress, existing.progress);
 
+    const nextScheduledDate =
+      data.scheduledDate !== undefined
+        ? parseDateOnly(data.scheduledDate)
+        : existing.scheduledDate;
+    const nextTechnician =
+      data.assignedTechnicianName !== undefined
+        ? data.assignedTechnicianName
+        : existing.assignedTechnicianName;
+
+    const scheduledChanged =
+      data.scheduledDate !== undefined &&
+      dateOnlyKey(nextScheduledDate) !== dateOnlyKey(existing.scheduledDate);
+    const technicianChanged =
+      data.assignedTechnicianName !== undefined &&
+      !sameProgress(data.assignedTechnicianName, existing.assignedTechnicianName);
+    const scheduleChanged = scheduledChanged || technicianChanged;
+
     const updateData = {};
     if (data.typeId !== undefined) updateData.typeId = data.typeId;
     if (data.customerName !== undefined) updateData.customerName = data.customerName;
@@ -190,7 +236,7 @@ export class InstallService {
     if (data.status !== undefined) updateData.status = data.status;
     if (data.progress !== undefined) updateData.progress = data.progress;
     if (data.scheduledDate !== undefined) {
-      updateData.scheduledDate = parseDateOnly(data.scheduledDate);
+      updateData.scheduledDate = nextScheduledDate;
     }
     if (data.assignedTechnicianName !== undefined) {
       updateData.assignedTechnicianName = data.assignedTechnicianName;
@@ -225,6 +271,19 @@ export class InstallService {
         previousProgress: progressChanged ? existing.progress : null,
         newProgress: progressChanged ? nextProgress : null,
         note: data.note ?? null,
+        createdById: user.id,
+      });
+    } else if (scheduleChanged) {
+      const scheduleNote =
+        data.note?.trim() ||
+        buildScheduleTimelineNote(nextScheduledDate, nextTechnician);
+      await this.installRepo.createUpdate({
+        installId: id,
+        previousStatus: null,
+        newStatus: null,
+        previousProgress: null,
+        newProgress: null,
+        note: scheduleNote,
         createdById: user.id,
       });
     }

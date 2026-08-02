@@ -100,6 +100,7 @@ export default function InstallationsList() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Area</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sales Order</th>
@@ -118,9 +119,12 @@ export default function InstallationsList() {
                     >
                       {install.customerName}
                     </Link>
-                    <p className={clsx('text-xs', install.siteName || install.area ? 'text-gray-500' : 'text-gray-400')}>
-                      {[install.siteName, install.area].filter(Boolean).join(' · ') || 'No site / area'}
+                    <p className={clsx('text-xs', install.siteName ? 'text-gray-500' : 'text-gray-400')}>
+                      {install.siteName || 'No site'}
                     </p>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {install.area || '—'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{install.type?.name || '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={install.progress || ''}>

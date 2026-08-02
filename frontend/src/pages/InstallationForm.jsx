@@ -30,8 +30,6 @@ export default function InstallationForm() {
     area: '',
     siteAddress: '',
     salesOrderNumber: '',
-    assignedTechnicianName: '',
-    scheduledDate: '',
     progress: '',
   });
 
@@ -57,8 +55,6 @@ export default function InstallationForm() {
       area: i.area || '',
       siteAddress: i.siteAddress || '',
       salesOrderNumber: i.salesOrderNumber || '',
-      assignedTechnicianName: i.assignedTechnicianName || '',
-      scheduledDate: i.scheduledDate?.slice?.(0, 10) || '',
       progress: i.progress || '',
     });
   }, [installData]);
@@ -127,8 +123,6 @@ export default function InstallationForm() {
       area: emptyToNull(form.area),
       siteAddress: emptyToNull(form.siteAddress),
       salesOrderNumber: emptyToNull(form.salesOrderNumber),
-      assignedTechnicianName: emptyToNull(form.assignedTechnicianName),
-      scheduledDate: emptyToNull(form.scheduledDate),
       progress: emptyToNull(form.progress),
     };
 
@@ -211,37 +205,13 @@ export default function InstallationForm() {
           </select>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sales Order Number</label>
-            <input
-              type="text"
-              name="salesOrderNumber"
-              value={form.salesOrderNumber}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date</label>
-            <input
-              type="date"
-              name="scheduledDate"
-              value={form.scheduledDate}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-            />
-          </div>
-        </div>
-
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Technician</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Sales Order Number</label>
           <input
             type="text"
-            name="assignedTechnicianName"
-            value={form.assignedTechnicianName}
+            name="salesOrderNumber"
+            value={form.salesOrderNumber}
             onChange={handleChange}
-            placeholder="Free-text name"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
           />
         </div>
