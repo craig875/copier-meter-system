@@ -331,6 +331,8 @@ const Customers = ({ title = 'Customers' }) => {
   const canArchive = isElevated || isMeterUser;
   const canCreateCustomer = can('copiers.customers.create');
   const canUpdateCustomer = can('copiers.customers.update');
+  const canDeleteCustomer = can('copiers.customers.delete');
+  const canImportCustomers = can('copiers.customers.import');
   const [listTab, setListTab] = useState('active');
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -413,6 +415,7 @@ const Customers = ({ title = 'Customers' }) => {
   };
 
   const handleDelete = (customer) => {
+    if (!canDeleteCustomer) return;
     const machineCount = customer._count?.machines ?? 0;
     if (machineCount > 0) {
       toast.error(`Cannot delete: ${machineCount} machine(s) are linked to this customer. Unlink them first.`);
@@ -453,7 +456,7 @@ const Customers = ({ title = 'Customers' }) => {
         <div className="flex items-center gap-2">
           {listTab === 'active' && (
             <>
-              {isElevated && (
+              {canImportCustomers && (
                 <button
                   type="button"
                   onClick={() => setShowImportModal(true)}
@@ -553,7 +556,7 @@ const Customers = ({ title = 'Customers' }) => {
                 </p>
               </div>
             </Link>
-            {(isElevated || canArchive || canUpdateCustomer) && (
+            {(canDeleteCustomer || canArchive || canUpdateCustomer) && (
               <div
                 ref={openMenuId === customer.id ? menuRef : null}
                 className="absolute top-2 right-2"
@@ -605,7 +608,7 @@ const Customers = ({ title = 'Customers' }) => {
                         {listTab === 'archived' ? 'Unarchive' : 'Archive'}
                       </button>
                     )}
-                    {isElevated && (
+                    {canDeleteCustomer && (
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -634,7 +637,7 @@ const Customers = ({ title = 'Customers' }) => {
         />
       )}
 
-      {isElevated && showImportModal && (
+      {canImportCustomers && showImportModal && (
         <CustomerBulkImportModal onClose={() => setShowImportModal(false)} />
       )}
     </div>
