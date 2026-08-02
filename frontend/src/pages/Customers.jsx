@@ -327,8 +327,8 @@ const CustomerBulkImportModal = ({ onClose }) => {
 const Customers = ({ title = 'Customers' }) => {
   const queryClient = useQueryClient();
   const location = useLocation();
-  const { effectiveBranch, isElevated, isMeterUser, can } = useAuth();
-  const canArchive = isElevated || isMeterUser;
+  const { effectiveBranch, can } = useAuth();
+  const canArchive = can('copiers.customers.archive');
   const canCreateCustomer = can('copiers.customers.create');
   const canUpdateCustomer = can('copiers.customers.update');
   const canDeleteCustomer = can('copiers.customers.delete');
@@ -410,6 +410,7 @@ const Customers = ({ title = 'Customers' }) => {
   };
 
   const handleArchive = (customer) => {
+    if (!canArchive) return;
     const willArchive = listTab === 'active';
     archiveMutation.mutate({ id: customer.id, isArchived: willArchive });
   };
