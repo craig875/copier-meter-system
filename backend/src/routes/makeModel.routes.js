@@ -19,16 +19,21 @@ import { createMakeSchema, updateMakeSchema, createModelSchema, updateModelSchem
 
 const router = Router();
 
-router.use(authenticate);
-router.use(requireTenantBranch);
+/**
+ * Auth + tenant only on /makes and /models handlers — not as pathless router.use().
+ * This router is mounted at `/` so its pathless middleware previously ran for every
+ * later /api/* route (roles, users, permissions, …) and blocked multi-branch callers.
+ */
+const withTenant = [authenticate, requireTenantBranch];
 
 // Read - all authenticated users (for machine form)
-router.get('/makes', requirePermission('copiers.access'), getMakes);
-router.get('/models', requirePermission('copiers.access'), getModels);
+router.get('/makes', ...withTenant, requirePermission('copiers.access'), getMakes);
+router.get('/models', ...withTenant, requirePermission('copiers.access'), getModels);
 
 // Create/Update/Delete - admin only
 router.post(
   '/makes',
+  ...withTenant,
   requireAdmin,
   requirePermission('copiers.catalog.makes_manage'),
   validate(createMakeSchema),
@@ -36,12 +41,14 @@ router.post(
 );
 router.post(
   '/makes/import',
+  ...withTenant,
   requireAdmin,
   requirePermission('copiers.catalog.import'),
   importMakeModelParts
 );
 router.put(
   '/makes/:id',
+  ...withTenant,
   requireAdmin,
   requirePermission('copiers.catalog.makes_manage'),
   validate(updateMakeSchema),
@@ -49,6 +56,7 @@ router.put(
 );
 router.delete(
   '/makes/:id',
+  ...withTenant,
   requireAdmin,
   requirePermission('copiers.catalog.makes_manage'),
   deleteMake
@@ -56,6 +64,7 @@ router.delete(
 
 router.post(
   '/models',
+  ...withTenant,
   requireAdmin,
   requirePermission('copiers.catalog.models_manage'),
   validate(createModelSchema),
@@ -63,6 +72,7 @@ router.post(
 );
 router.put(
   '/models/:id',
+  ...withTenant,
   requireAdmin,
   requirePermission('copiers.catalog.models_manage'),
   validate(updateModelSchema),
@@ -70,6 +80,7 @@ router.put(
 );
 router.delete(
   '/models/:id',
+  ...withTenant,
   requireAdmin,
   requirePermission('copiers.catalog.models_manage'),
   deleteModel

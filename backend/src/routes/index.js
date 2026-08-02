@@ -33,12 +33,13 @@ router.use('/readings', readingRoutes);
 // Consumable Tracker
 router.use('/consumables', consumableRoutes);
 
-// Public health (before makeModel mount, which applies auth to /api/*)
+// Public health (no auth)
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Makes & Models (read for forms; CRUD via makeModel routes)
+// Makes & Models at /makes and /models (auth+tenant are per-route, not pathless —
+// mounting at `/` must not gate unrelated routers registered below).
 router.use('/', makeModelRoutes);
 
 // Audit / Transaction history (admin only)
