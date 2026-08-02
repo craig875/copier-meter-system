@@ -19,6 +19,7 @@ const CustomerDetail = () => {
   const { effectiveBranch, isElevated, isMeterUser, can } = useAuth();
   const canManageMachines = isElevated || isMeterUser;
   const canCreateMachine = can('copiers.machines.create');
+  const canDecommissionMachine = can('copiers.machines.decommission');
   const pdfCaptureRef = useRef(null);
   const [showAddMachine, setShowAddMachine] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -93,6 +94,7 @@ const CustomerDetail = () => {
   };
 
   const handleDecommission = (machine) => {
+    if (!canDecommissionMachine) return;
     if (!window.confirm(`Decommission machine ${machine.machineSerialNumber}?`)) return;
     decommissionMutation.mutate(machine.id);
   };
@@ -225,7 +227,8 @@ const CustomerDetail = () => {
                     partsDue={partsDueByMachine[machine.id] || []}
                     effectiveBranch={effectiveBranch}
                   />
-                  {canManageMachines && (
+                  {((machine.isDecommissioned && canManageMachines) ||
+                    (!machine.isDecommissioned && canDecommissionMachine)) && (
                     <div className="flex justify-end pb-4 -mt-2" data-pdf-exclude>
                       {machine.isDecommissioned ? (
                         <button

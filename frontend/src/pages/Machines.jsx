@@ -47,6 +47,7 @@ const Machines = () => {
   const { isElevated, isMeterUser, can, effectiveBranch, user, loading: authLoading } = useAuth();
   const canCreateMachine = can('copiers.machines.create');
   const canUpdateMachine = can('copiers.machines.update');
+  const canDecommissionMachine = can('copiers.machines.decommission');
   const location = useLocation();
   const [listTab, setListTab] = useState('active');
   const [search, setSearch] = useState('');
@@ -177,6 +178,7 @@ const Machines = () => {
   };
 
   const handleDecommission = (machine) => {
+    if (!canDecommissionMachine) return;
     if (window.confirm(`Decommission machine ${machine.machineSerialNumber}? It will be removed from capture lists but history will remain accessible.`)) {
       decommissionMutation.mutate(machine.id);
     }
@@ -528,13 +530,15 @@ const Machines = () => {
                         </button>
                       ) : null
                     ) : (
-                      <button
-                        onClick={() => handleDecommission(machine)}
-                        className="p-1 text-gray-500 hover:text-orange-600 transition-colors ml-2"
-                        title="Decommission"
-                      >
-                        <Archive className="h-4 w-4" />
-                      </button>
+                      canDecommissionMachine ? (
+                        <button
+                          onClick={() => handleDecommission(machine)}
+                          className="p-1 text-gray-500 hover:text-orange-600 transition-colors ml-2"
+                          title="Decommission"
+                        >
+                          <Archive className="h-4 w-4" />
+                        </button>
+                      ) : null
                     )}
                     {isElevated && (
                       <button
