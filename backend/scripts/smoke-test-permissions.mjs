@@ -741,6 +741,10 @@ function applyGetOnlyFilter(cases) {
   });
 }
 
+/** Per-request abort (ms). Override with SMOKE_FETCH_TIMEOUT_MS. Default 90s. */
+const FETCH_TIMEOUT_MS =
+  Number(process.env.SMOKE_FETCH_TIMEOUT_MS || 90000) || 90000;
+
 async function request(method, path, { token, branch, body } = {}) {
   const headers = { Accept: 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -748,19 +752,36 @@ async function request(method, path, { token, branch, body } = {}) {
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-  let data = null;
-  const text = await res.text();
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS);
+  const t0 = Date.now();
   try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text?.slice?.(0, 120) ?? null;
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: ac.signal,
+    });
+    let data = null;
+    const text = await res.text();
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text?.slice?.(0, 120) ?? null;
+    }
+    return { status: res.status, data, ms: Date.now() - t0 };
+  } catch (e) {
+    if (e?.name === 'AbortError') {
+      return {
+        status: 0,
+        data: { error: `fetch aborted after ${FETCH_TIMEOUT_MS}ms` },
+        ms: Date.now() - t0,
+      };
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-  return { status: res.status, data };
 }
 
 function okStatus(status, allowed) {
@@ -821,7 +842,7 @@ async function main() {
   console.log(`\n=== ${domain.title} ===\n`);
   console.log(`SMOKE_API_BASE=${BASE}`);
   console.log(
-    `SMOKE_GET_ONLY=${GET_ONLY}  SMOKE_REQUEST_DELAY_MS=${REQUEST_DELAY_MS}`
+    `SMOKE_GET_ONLY=${GET_ONLY}  SMOKE_REQUEST_DELAY_MS=${REQUEST_DELAY_MS}  SMOKE_FETCH_TIMEOUT_MS=${FETCH_TIMEOUT_MS}`
   );
   console.log(
     `JWT_SECRET: set from env (length=${JWT_SECRET.length}, prefix=${JWT_SECRET.slice(0, 4)}…)`
@@ -886,21 +907,31 @@ async function main() {
         mutatingAttempted += 1;
       }
       if (REQUEST_DELAY_MS > 0) await sleep(REQUEST_DELAY_MS);
+      process.stdout.write(
+        `… ${label} ${user.email} | ${c.name} (${method} ${c.path}) … `
+      );
       const res = await request(c.method, c.path, {
         token,
         branch: userBranch,
         body: c.body,
       });
-      const pass = okStatus(res.status, c.expect);
+      const pass =
+        res.status === 0 ? false : okStatus(res.status, c.expect);
+      const tag = pass ? 'PASS' : 'FAIL';
+      console.log(
+        `${tag} ${res.status}${res.ms != null ? ` ${res.ms}ms` : ''}`
+      );
       results.push({
         user: user.email,
         label,
         route: c.name,
-        status: res.status,
+        status: res.status === 0 ? 'TIMEOUT' : res.status,
         pass,
         detail: pass
           ? ''
-          : `expected ${c.expect.join('|')}, body=${JSON.stringify(res.data)?.slice(0, 160)}`,
+          : res.status === 0
+            ? res.data?.error || 'fetch timeout'
+            : `expected ${c.expect.join('|')}, body=${JSON.stringify(res.data)?.slice(0, 160)}`,
       });
     }
   }
@@ -922,9 +953,10 @@ async function main() {
   let failN = 0;
   let skipN = 0;
   for (const r of results) {
-    const tag = r.status === 'SKIP' ? 'SKIP' : r.pass ? 'PASS' : 'FAIL';
+    const tag =
+      r.status === 'SKIP' ? 'SKIP' : r.status === 'TIMEOUT' ? 'TIMEOUT' : r.pass ? 'PASS' : 'FAIL';
     if (tag === 'PASS') passN += 1;
-    else if (tag === 'FAIL') failN += 1;
+    else if (tag === 'FAIL' || tag === 'TIMEOUT') failN += 1;
     else skipN += 1;
     const st = r.status === 'SKIP' ? '' : ` → ${r.status}`;
     console.log(
