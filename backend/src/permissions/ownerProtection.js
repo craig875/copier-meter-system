@@ -12,11 +12,21 @@ export function assertRoleMutable(role) {
 }
 
 /**
+ * Whether a user is Owner-protected (immutable account for override mutations).
+ * Same predicate as assertUserNotOwnerProtected — used by publicUser serializers.
+ * @param {{ email?: string, assignedRole?: { key?: string } | null } | null | undefined} user
+ * @returns {boolean}
+ */
+export function isOwnerProtected(user) {
+  return user?.assignedRole?.key === 'owner' || user?.email === OWNER_EMAIL;
+}
+
+/**
  * Reject override mutations targeting the Owner account.
  * @param {{ email?: string, assignedRole?: { key?: string } | null } | null | undefined} user
  */
 export function assertUserNotOwnerProtected(user) {
-  if (user?.assignedRole?.key === 'owner' || user?.email === OWNER_EMAIL) {
+  if (isOwnerProtected(user)) {
     throw new ForbiddenError(
       'Permission overrides cannot be applied to the Owner account'
     );
