@@ -147,36 +147,30 @@ function App() {
       <Route
         path="/consumables/summary"
         element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <ConsumablesSummary />
-              </Layout>
-            </CapturerRestrict>
+          <ProtectedRoute requirePermission="copiers.consumables.view">
+            <Layout>
+              <ConsumablesSummary />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/consumables/machines/:machineId"
         element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <ConsumableMachineDetail />
-              </Layout>
-            </CapturerRestrict>
+          <ProtectedRoute requirePermission="copiers.consumables.view">
+            <Layout>
+              <ConsumableMachineDetail />
+            </Layout>
           </ProtectedRoute>
         }
       />
       <Route
         path="/consumables/machines/:machineId/readings"
         element={
-          <ProtectedRoute>
-            <CapturerRestrict>
-              <Layout>
-                <MachineReadingsHistory />
-              </Layout>
-            </CapturerRestrict>
+          <ProtectedRoute requirePermission="copiers.consumables.view">
+            <Layout>
+              <MachineReadingsHistory />
+            </Layout>
           </ProtectedRoute>
         }
       />
