@@ -12,6 +12,11 @@ import {
   installStatusLabel,
 } from '../constants/installations';
 
+function formatDate(d) {
+  if (!d) return null;
+  return new Date(d).toLocaleDateString();
+}
+
 export default function InstallationsList() {
   const location = useLocation();
   const { can } = useAuth();
@@ -106,6 +111,7 @@ export default function InstallationsList() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sales Order</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Technician</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scheduled</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -162,6 +168,11 @@ export default function InstallationsList() {
                     >
                       {installStatusLabel(install.status)}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {formatDate(install.scheduledDate) || (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                 </tr>
               ))}
