@@ -44,10 +44,11 @@ function machineMatchesSearch(machine, queryLower) {
 const Machines = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isElevated, isMeterUser, can, effectiveBranch, user, loading: authLoading } = useAuth();
+  const { isElevated, can, effectiveBranch, user, loading: authLoading } = useAuth();
   const canCreateMachine = can('copiers.machines.create');
   const canUpdateMachine = can('copiers.machines.update');
   const canDecommissionMachine = can('copiers.machines.decommission');
+  const canRecommissionMachine = can('copiers.machines.recommission');
   const location = useLocation();
   const [listTab, setListTab] = useState('active');
   const [search, setSearch] = useState('');
@@ -185,7 +186,7 @@ const Machines = () => {
   };
 
   const handleRecommission = (machine) => {
-    if (!(isElevated || isMeterUser)) return;
+    if (!canRecommissionMachine) return;
     if (window.confirm(`Recommission machine ${machine.machineSerialNumber}? It will be added back to capture lists.`)) {
       recommissionMutation.mutate(machine.id);
     }
@@ -518,7 +519,7 @@ const Machines = () => {
                       </button>
                     )}
                     {listTab === 'decommissioned' || machine.isDecommissioned ? (
-                      (isElevated || isMeterUser) ? (
+                      canRecommissionMachine ? (
                         <button
                           onClick={() => handleRecommission(machine)}
                           disabled={recommissionMutation.isPending}
