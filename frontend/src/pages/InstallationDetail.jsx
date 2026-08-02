@@ -240,6 +240,11 @@ export default function InstallationDetail() {
                 <dt className="text-gray-500">Site</dt>
                 <dd className="font-medium text-gray-900">
                   {install.siteName || '—'}
+                  {install.area && (
+                    <span className="block text-gray-600 font-normal mt-0.5">
+                      {install.area}
+                    </span>
+                  )}
                   {install.siteAddress && (
                     <span className="block text-gray-600 font-normal mt-0.5">
                       {install.siteAddress}

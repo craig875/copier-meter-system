@@ -81,7 +81,7 @@ export default function InstallationsList() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Search customer, site, SO#, technician..."
+          placeholder="Search customer, site, area, SO#, technician..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -118,9 +118,9 @@ export default function InstallationsList() {
                     >
                       {install.customerName}
                     </Link>
-                    {install.siteName && (
-                      <p className="text-xs text-gray-500">{install.siteName}</p>
-                    )}
+                    <p className={clsx('text-xs', install.siteName || install.area ? 'text-gray-500' : 'text-gray-400')}>
+                      {[install.siteName, install.area].filter(Boolean).join(' · ') || 'No site / area'}
+                    </p>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{install.type?.name || '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={install.progress || ''}>

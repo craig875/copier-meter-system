@@ -27,6 +27,7 @@ export default function InstallationForm() {
     typeId: '',
     customerName: '',
     siteName: '',
+    area: '',
     siteAddress: '',
     salesOrderNumber: '',
     assignedTechnicianName: '',
@@ -53,6 +54,7 @@ export default function InstallationForm() {
       typeId: i.typeId || '',
       customerName: i.customerName || '',
       siteName: i.siteName || '',
+      area: i.area || '',
       siteAddress: i.siteAddress || '',
       salesOrderNumber: i.salesOrderNumber || '',
       assignedTechnicianName: i.assignedTechnicianName || '',
@@ -122,6 +124,7 @@ export default function InstallationForm() {
       typeId: form.typeId,
       customerName: form.customerName.trim(),
       siteName: emptyToNull(form.siteName),
+      area: emptyToNull(form.area),
       siteAddress: emptyToNull(form.siteAddress),
       salesOrderNumber: emptyToNull(form.salesOrderNumber),
       assignedTechnicianName: emptyToNull(form.assignedTechnicianName),
@@ -162,6 +165,19 @@ export default function InstallationForm() {
             name="siteName"
             value={form.siteName}
             onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
+          <input
+            type="text"
+            name="area"
+            value={form.area}
+            onChange={handleChange}
+            maxLength={120}
+            placeholder="Suburb / region"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
           />
         </div>

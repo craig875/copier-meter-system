@@ -68,6 +68,7 @@ export class InstallService {
         where.OR = [
           { customerName: { contains: s, mode: 'insensitive' } },
           { siteName: { contains: s, mode: 'insensitive' } },
+          { area: { contains: s, mode: 'insensitive' } },
           { siteAddress: { contains: s, mode: 'insensitive' } },
           { salesOrderNumber: { contains: s, mode: 'insensitive' } },
           { progress: { contains: s, mode: 'insensitive' } },
@@ -123,6 +124,7 @@ export class InstallService {
       typeId: data.typeId,
       customerName: data.customerName,
       siteName: data.siteName ?? null,
+      area: data.area ?? null,
       siteAddress: data.siteAddress ?? null,
       salesOrderNumber: data.salesOrderNumber ?? null,
       status,
@@ -180,6 +182,7 @@ export class InstallService {
     if (data.typeId !== undefined) updateData.typeId = data.typeId;
     if (data.customerName !== undefined) updateData.customerName = data.customerName;
     if (data.siteName !== undefined) updateData.siteName = data.siteName;
+    if (data.area !== undefined) updateData.area = data.area;
     if (data.siteAddress !== undefined) updateData.siteAddress = data.siteAddress;
     if (data.salesOrderNumber !== undefined) {
       updateData.salesOrderNumber = data.salesOrderNumber;

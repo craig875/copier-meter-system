@@ -327,6 +327,8 @@ model Install {
   typeId                  String        @map("type_id")
   customerName            String        @map("customer_name")
   siteName                String?       @map("site_name")
+  /// Free-text geographic area (suburb / region), not a fixed list.
+  area                    String?
   siteAddress             String?       @map("site_address")
   salesOrderNumber        String?       @map("sales_order_number")
   status                  InstallStatus @default(active)
