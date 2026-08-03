@@ -25,6 +25,7 @@ import {
 import clsx from 'clsx';
 import ReadingUnchangedConfirmModal from '../components/ReadingUnchangedConfirmModal';
 import UnableToObtainModal from '../components/UnableToObtainModal';
+import { formatDate } from '../utils/dateFormat';
 import {
   findUnchangedCountersForReadings,
   applyUnchangedReasons,
@@ -1151,7 +1152,7 @@ const Capture = () => {
                 <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
                 <span className="text-yellow-800">
                   This month has been submitted and is locked for editing. Submitted on{' '}
-                  {new Date(submission.submittedAt).toLocaleDateString()}
+                  {formatDate(submission.submittedAt)}
                 </span>
               </div>
               {canUnlockMonth && queryBranch && (

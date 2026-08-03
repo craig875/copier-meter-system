@@ -26,6 +26,7 @@ import MachineLifeTile from '../components/MachineLifeTile';
 import MonthlyUsageCycleTile from '../components/MonthlyUsageCycleTile';
 import ThreeMonthAverageUsageTile from '../components/ThreeMonthAverageUsageTile';
 import MachineModal from '../components/MachineModal';
+import { formatDate } from '../utils/dateFormat';
 
 const ConsumableMachineDetail = () => {
   const { machineId } = useParams();
@@ -148,13 +149,13 @@ const ConsumableMachineDetail = () => {
   }
 
   const handleDeleteOrder = (r) => {
-    if (window.confirm(`Delete this part order record?\n\n${r.partName} • ${r.orderDate ? new Date(r.orderDate).toLocaleDateString() : ''}\n\nThis cannot be undone.`)) {
+    if (window.confirm(`Delete this part order record?\n\n${r.partName} • ${r.orderDate ? formatDate(r.orderDate) : ''}\n\nThis cannot be undone.`)) {
       deleteOrderMutation.mutate(r.id);
     }
   };
 
   const buildCopyLine = (r) => {
-    const date = r.orderDate ? new Date(r.orderDate).toLocaleDateString() : '-';
+    const date = r.orderDate ? formatDate(r.orderDate) : '-';
     const prior = r.priorReading?.toLocaleString() ?? '-';
     const current = r.currentReading?.toLocaleString() ?? '-';
     const usage = r.usage?.toLocaleString() ?? '-';
@@ -179,7 +180,7 @@ const ConsumableMachineDetail = () => {
     <tr className="border-b border-gray-100">
       <td className="py-2 px-2 text-gray-700">{r.partName}</td>
       <td className="py-2 px-2 text-gray-600">
-        {r.orderDate ? new Date(r.orderDate).toLocaleDateString() : '-'}
+        {r.orderDate ? formatDate(r.orderDate) : '-'}
       </td>
       <td className="py-2 px-2 text-right">{r.priorReading?.toLocaleString() ?? '-'}</td>
       <td className="py-2 px-2 text-right">{r.currentReading?.toLocaleString() ?? '-'}</td>

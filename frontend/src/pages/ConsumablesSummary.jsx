@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Loader2, ChevronRight, AlertTriangle, CheckCircle, Upload, Download, X } from 'lucide-react';
 import { useState } from 'react';
+import { formatDate } from '../utils/dateFormat';
 
 const ConsumablesSummary = () => {
   const queryClient = useQueryClient();
@@ -248,7 +249,7 @@ const ConsumablesSummary = () => {
                     <td className="py-3 px-2 text-gray-600">{row.model || '-'}</td>
                     <td className="py-3 px-2">{row.partName}</td>
                     <td className="py-3 px-2 text-gray-600">
-                      {row.lastOrderDate ? new Date(row.lastOrderDate).toLocaleDateString() : '-'}
+                      {row.lastOrderDate ? formatDate(row.lastOrderDate) : '-'}
                     </td>
                     <td className="py-3 px-2 text-right">{row.usage?.toLocaleString() ?? '-'}</td>
                     <td className="py-3 px-2 text-center">
