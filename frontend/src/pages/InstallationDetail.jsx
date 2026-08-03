@@ -13,17 +13,8 @@ import {
   installStatusLabel,
 } from '../constants/installations';
 import { trimLeading } from '../utils/string';
+import { formatDate, formatDateTime, formatDateFriendly } from '../utils/dateFormat';
 import InstallTasksPanel from '../components/installations/InstallTasksPanel';
-
-function formatDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString();
-}
-
-function formatDateTime(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleString();
-}
 
 function installTypeLabel(install) {
   return install?.typeName || install?.type?.name || null;
@@ -188,18 +179,11 @@ export default function InstallationDetail() {
       toast.error('Technician is required');
       return;
     }
-    const [y, m, d] = date.split('-').map(Number);
-    const displayDate = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      timeZone: 'UTC',
-    });
     updateMutation.mutate(
       {
         scheduledDate: date,
         assignedTechnicianName: tech,
-        note: `Installation scheduled for ${displayDate} with ${tech}`,
+        note: `Installation scheduled for ${formatDateFriendly(date)} with ${tech}`,
       },
       {
         onSuccess: () => {

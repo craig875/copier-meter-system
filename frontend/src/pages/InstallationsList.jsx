@@ -11,11 +11,7 @@ import {
   INSTALL_STATUS_BADGE,
   installStatusLabel,
 } from '../constants/installations';
-
-function formatDate(d) {
-  if (!d) return null;
-  return new Date(d).toLocaleDateString();
-}
+import { formatDate } from '../utils/dateFormat';
 
 function installTypeLabel(install) {
   return install?.typeName || install?.type?.name || null;
@@ -176,9 +172,7 @@ export default function InstallationsList() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    {formatDate(install.scheduledDate) || (
-                      <span className="text-gray-400">—</span>
-                    )}
+                    {formatDate(install.scheduledDate)}
                   </td>
                 </tr>
               ))}
