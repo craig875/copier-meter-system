@@ -25,16 +25,7 @@ import {
   isConnectivityPromptDismissed,
   dismissConnectivityPrompt,
 } from '../utils/fibreOrderConnectivity';
-
-function formatDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString();
-}
-
-function formatDateTime(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleString();
-}
+import { formatDate, formatDateTime } from '../utils/dateFormat';
 
 export default function FibreOrderDetail() {
   const { id } = useParams();

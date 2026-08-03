@@ -5,11 +5,7 @@ import { Bell, Loader2 } from 'lucide-react';
 import { fibreOrdersApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import FibreStatusBadge from './FibreStatusBadge';
-
-function formatWhen(d) {
-  if (!d) return '';
-  return new Date(d).toLocaleString();
-}
+import { formatDateTime } from '../../utils/dateFormat';
 
 export default function FibreOrderUpdateRequestsPanel() {
   const location = useLocation();
@@ -63,7 +59,7 @@ export default function FibreOrderUpdateRequestsPanel() {
                   {req.order?.customerName}
                 </p>
                 <p className="text-sm text-gray-500">
-                  Requested by {req.requestedBy?.name} · {formatWhen(req.createdAt)}
+                  Requested by {req.requestedBy?.name} · {formatDateTime(req.createdAt)}
                 </p>
                 {req.note && (
                   <p className="text-sm text-gray-600 mt-1 line-clamp-2">&ldquo;{req.note}&rdquo;</p>

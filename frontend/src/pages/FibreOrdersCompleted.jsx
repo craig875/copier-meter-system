@@ -7,11 +7,7 @@ import { fibreOrdersApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
-
-function formatDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString();
-}
+import { formatDate } from '../utils/dateFormat';
 
 export default function FibreOrdersCompleted() {
   const location = useLocation();

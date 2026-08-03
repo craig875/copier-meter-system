@@ -9,11 +9,7 @@ import { fibreOrderQueryParams } from '../utils/fibreOrderQuery';
 import { ACTIVE_PIPELINE_STATUSES, formatWeeksRemaining, isActiveFibreOrder } from '../constants/fibreOrders';
 import FibreStatusBadge from '../components/fibre/FibreStatusBadge';
 import FibreOrderProgressBar from '../components/fibre/FibreOrderProgressBar';
-
-function formatDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString();
-}
+import { formatDate } from '../utils/dateFormat';
 
 export default function FibreOrdersList() {
   const location = useLocation();
