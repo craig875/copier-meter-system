@@ -19,6 +19,7 @@ import {
 import clsx from 'clsx';
 import { MODULE_OPTIONS, MODULE_COPERS, MODULE_FIBRE_ORDERS } from '../constants/modules';
 import { branchLabel } from '../utils/branchSelection';
+import { formatDate } from '../utils/dateFormat';
 
 /** All product module keys — keep in sync via MODULE_OPTIONS, never hardcode. */
 const ALL_MODULE_KEYS = MODULE_OPTIONS.map((o) => o.key);
@@ -193,7 +194,7 @@ const Users = () => {
                     : 'Unknown'}
                 </span>
                 <span className="text-xs text-gray-400">
-                  {new Date(user.createdAt).toLocaleDateString()}
+                  {formatDate(user.createdAt)}
                 </span>
               </div>
               {user.branch && (
