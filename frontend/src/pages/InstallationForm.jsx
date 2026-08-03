@@ -29,6 +29,8 @@ export default function InstallationForm() {
     siteName: '',
     area: '',
     siteAddress: '',
+    contactPersonName: '',
+    contactPersonPhone: '',
     salesOrderNumber: '',
     progress: '',
   });
@@ -48,6 +50,8 @@ export default function InstallationForm() {
       siteName: i.siteName || '',
       area: i.area || '',
       siteAddress: i.siteAddress || '',
+      contactPersonName: i.contactPersonName || '',
+      contactPersonPhone: i.contactPersonPhone || '',
       salesOrderNumber: i.salesOrderNumber || '',
       progress: i.progress || '',
     });
@@ -114,9 +118,14 @@ export default function InstallationForm() {
       siteName: emptyToNull(form.siteName),
       area: emptyToNull(form.area),
       siteAddress: emptyToNull(form.siteAddress),
+      contactPersonName: emptyToNull(form.contactPersonName),
+      contactPersonPhone: emptyToNull(form.contactPersonPhone),
       salesOrderNumber: emptyToNull(form.salesOrderNumber),
-      progress: emptyToNull(form.progress),
     };
+
+    if (isEditing) {
+      payload.progress = emptyToNull(form.progress);
+    }
 
     if (!isEditing && effectiveBranch) {
       payload.branch = effectiveBranch;
@@ -180,6 +189,32 @@ export default function InstallationForm() {
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+          <input
+            type="text"
+            name="contactPersonName"
+            value={form.contactPersonName}
+            onChange={handleChange}
+            maxLength={120}
+            placeholder="Optional"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+          <input
+            type="text"
+            name="contactPersonPhone"
+            value={form.contactPersonPhone}
+            onChange={handleChange}
+            maxLength={60}
+            placeholder="Optional"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+          />
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
           <input
             type="text"
@@ -204,19 +239,19 @@ export default function InstallationForm() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {isEditing ? 'Progress' : 'Initial Progress Note'}
-          </label>
-          <textarea
-            name="progress"
-            value={form.progress}
-            onChange={handleChange}
-            rows={3}
-            placeholder="e.g. Awaiting delivery / Site survey booked"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-          />
-        </div>
+        {isEditing && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Progress</label>
+            <textarea
+              name="progress"
+              value={form.progress}
+              onChange={handleChange}
+              rows={3}
+              placeholder="e.g. Awaiting delivery / Site survey booked"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-2">
           <button

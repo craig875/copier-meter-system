@@ -164,6 +164,8 @@ export class InstallService {
       siteName: data.siteName ?? null,
       area: data.area ?? null,
       siteAddress: data.siteAddress ?? null,
+      contactPersonName: data.contactPersonName ?? null,
+      contactPersonPhone: data.contactPersonPhone ?? null,
       salesOrderNumber: data.salesOrderNumber ?? null,
       status,
       progress: data.progress ?? null,
@@ -246,6 +248,12 @@ export class InstallService {
     if (data.siteName !== undefined) updateData.siteName = data.siteName;
     if (data.area !== undefined) updateData.area = data.area;
     if (data.siteAddress !== undefined) updateData.siteAddress = data.siteAddress;
+    if (data.contactPersonName !== undefined) {
+      updateData.contactPersonName = data.contactPersonName;
+    }
+    if (data.contactPersonPhone !== undefined) {
+      updateData.contactPersonPhone = data.contactPersonPhone;
+    }
     if (data.salesOrderNumber !== undefined) {
       updateData.salesOrderNumber = data.salesOrderNumber;
     }

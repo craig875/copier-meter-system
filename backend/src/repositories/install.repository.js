@@ -85,7 +85,7 @@ export class InstallRepository extends BaseRepository {
           where: { id: existing.id },
           data: {
             url,
-            label: label ?? existing.label ?? 'Documents',
+            label: label ?? existing.label ?? 'Installation Documents',
           },
         });
       }
@@ -94,7 +94,7 @@ export class InstallRepository extends BaseRepository {
           installId,
           kind: 'LINK',
           url,
-          label: label || 'Documents',
+          label: label || 'Installation Documents',
           createdById,
         },
       });

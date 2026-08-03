@@ -332,6 +332,9 @@ model Install {
   /// Free-text geographic area (suburb / region), not a fixed list.
   area                    String?
   siteAddress             String?       @map("site_address")
+  /// Optional site contact (free-text; no phone format validation).
+  contactPersonName       String?       @map("contact_person_name")
+  contactPersonPhone      String?       @map("contact_person_phone")
   salesOrderNumber        String?       @map("sales_order_number")
   status                  InstallStatus @default(active)
   /// Free-text current progress (e.g. "awaiting stock").

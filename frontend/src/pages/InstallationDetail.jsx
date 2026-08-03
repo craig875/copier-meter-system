@@ -65,7 +65,6 @@ export default function InstallationDetail() {
 
   const [editingDoc, setEditingDoc] = useState(false);
   const [docUrl, setDocUrl] = useState('');
-  const [docLabel, setDocLabel] = useState('');
 
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
@@ -95,8 +94,7 @@ export default function InstallationDetail() {
   useEffect(() => {
     if (!editingDoc) return;
     setDocUrl(doc?.url || '');
-    setDocLabel(doc?.label || '');
-  }, [editingDoc, doc?.url, doc?.label]);
+  }, [editingDoc, doc?.url]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['installations', id] });
@@ -162,10 +160,12 @@ export default function InstallationDetail() {
       toast.error('Document URL is required');
       return;
     }
-    updateMutation.mutate({
-      documentUrl: url,
-      documentLabel: docLabel.trim() || null,
-    });
+    // New links: default label. Edit existing: omit label so BE preserves custom text.
+    const payload = { documentUrl: url };
+    if (!doc) {
+      payload.documentLabel = 'Installation Documents';
+    }
+    updateMutation.mutate(payload);
   };
 
   const isScheduled = Boolean(install?.scheduledDate && install?.assignedTechnicianName);
@@ -309,6 +309,18 @@ export default function InstallationDetail() {
                   )}
                 </dd>
               </div>
+              <div>
+                <dt className="text-gray-500">Contact Person</dt>
+                <dd className="font-medium text-gray-900">
+                  {install.contactPersonName || '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-gray-500">Contact Phone</dt>
+                <dd className="font-medium text-gray-900">
+                  {install.contactPersonPhone || '—'}
+                </dd>
+              </div>
               <div className="sm:col-span-2">
                 <dt className="text-gray-500">Current Progress</dt>
                 <dd className="font-medium text-gray-900 whitespace-pre-wrap">
@@ -348,16 +360,6 @@ export default function InstallationDetail() {
                     onChange={(e) => setDocUrl(trimLeading(e.target.value))}
                     placeholder="https://..."
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Label</label>
-                  <input
-                    type="text"
-                    value={docLabel}
-                    onChange={(e) => setDocLabel(trimLeading(e.target.value))}
-                    placeholder="OneDrive folder / packing list"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
