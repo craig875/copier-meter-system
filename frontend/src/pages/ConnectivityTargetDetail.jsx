@@ -25,17 +25,9 @@ import { connectivityApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
 import StatusBadge from '../components/connectivity/StatusBadge';
+import { formatDateTime as formatDisplayDateTime } from '../utils/dateFormat';
 
-function formatDate(d) {
-  if (!d) return '-';
-  return new Date(d).toLocaleString();
-}
-
-function formatTime(d) {
-  if (!d) return '-';
-  return new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
+/** Chart / series tick labels — short locale-style labels, intentionally not shared display format. */
 function formatDateTime(d) {
   if (!d) return '-';
   return new Date(d).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -292,7 +284,7 @@ export default function ConnectivityTargetDetail() {
                 Packet loss: {target.currentPacketLossPercent != null ? `${target.currentPacketLossPercent}%` : '-'}
               </p>
               <p className="text-sm text-gray-500">Resolved IP: {target.resolvedIp || '-'}</p>
-              <p className="text-sm text-gray-500">Last check: {formatDate(target.lastCheckAt)}</p>
+              <p className="text-sm text-gray-500">Last check: {formatDisplayDateTime(target.lastCheckAt)}</p>
             </div>
           </div>
           {canCheckTarget && (
@@ -462,8 +454,8 @@ export default function ConnectivityTargetDetail() {
             <tbody className="bg-white divide-y divide-gray-200">
               {outages.map((o) => (
                 <tr key={o.id}>
-                  <td className="px-4 py-2 text-sm">{formatDate(o.startedAt)}</td>
-                  <td className="px-4 py-2 text-sm">{o.endedAt ? formatDate(o.endedAt) : 'Ongoing'}</td>
+                  <td className="px-4 py-2 text-sm">{formatDisplayDateTime(o.startedAt)}</td>
+                  <td className="px-4 py-2 text-sm">{o.endedAt ? formatDisplayDateTime(o.endedAt) : 'Ongoing'}</td>
                   <td className="px-4 py-2 text-sm">
                     {o.durationSeconds != null
                       ? o.durationSeconds >= 60

@@ -4,6 +4,7 @@ import { connectivityApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { trimLeading } from '../utils/string';
 import OutageNoteEditor from '../components/connectivity/OutageNoteEditor';
+import { formatDateTime } from '../utils/dateFormat';
 
 function formatDuration(sec) {
   if (sec == null) return '-';
@@ -11,11 +12,6 @@ function formatDuration(sec) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return s ? `${m}m ${s}s` : `${m}m`;
-}
-
-function formatDate(d) {
-  if (!d) return '-';
-  return new Date(d).toLocaleString();
 }
 
 export default function ConnectivityOutages() {
@@ -100,8 +96,8 @@ export default function ConnectivityOutages() {
                     <tr key={o.id}>
                       <td className="px-4 py-3 text-sm">{o.target?.customerName || '-'}</td>
                       <td className="px-4 py-3 text-sm">{o.target?.siteName || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{formatDate(o.startedAt)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{formatDate(o.endedAt)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(o.startedAt)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(o.endedAt)}</td>
                       <td className="px-4 py-3 text-sm">{formatDuration(o.durationSeconds)}</td>
                       <td className="px-4 py-3 text-sm max-w-xs">
                         <OutageNoteEditor

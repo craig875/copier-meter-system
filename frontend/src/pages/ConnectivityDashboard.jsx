@@ -10,6 +10,7 @@ import { trimLeading } from '../utils/string';
 import ConnectivitySummaryCards from '../components/connectivity/ConnectivitySummaryCards';
 import StatusBadge from '../components/connectivity/StatusBadge';
 import OutageNoteEditor from '../components/connectivity/OutageNoteEditor';
+import { formatDateTime } from '../utils/dateFormat';
 
 const rowStyleByStatus = {
   up: { border: 'border-l-4 border-l-green-500', bg: 'bg-green-50/40' },
@@ -33,11 +34,6 @@ function headerToSortKey(h) {
   if (h === 'Latency') return 'currentLatencyMs';
   if (h === 'Went down at') return 'wentDownAt';
   return 'lastCheckAt';
-}
-
-function formatDate(d) {
-  if (!d) return '-';
-  return new Date(d).toLocaleString();
 }
 
 function compareValues(aVal, bVal, sortDir) {
@@ -282,9 +278,9 @@ export default function ConnectivityDashboard() {
                     </td>
                     <td className="px-4 py-3 text-sm">{t.currentLatencyMs != null ? `${Math.round(t.currentLatencyMs)} ms` : '-'}</td>
                     {isDownFilter && (
-                      <td className="px-4 py-3 text-sm text-gray-500">{formatDate(t.wentDownAt)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{formatDateTime(t.wentDownAt)}</td>
                     )}
-                    <td className="px-4 py-3 text-sm text-gray-500">{formatDate(t.lastCheckAt)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{formatDateTime(t.lastCheckAt)}</td>
                   </tr>
                 );
                 })
