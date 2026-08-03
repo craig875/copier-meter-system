@@ -34,7 +34,7 @@ export const services = {
   fibreProduct: new FibreProductService(),
   fibreOrder: new FibreOrderService(),
   install: new InstallService(),
-  installTask: new InstallTaskService(),
+  installTask: new InstallTaskService(undefined, notificationService),
   role: new RoleService(),
   permissionOverride: new PermissionOverrideService(),
   permissionPreview: new PermissionPreviewService(),

@@ -29,7 +29,9 @@ export class InstallTaskRepository extends BaseRepository {
       where: { id },
       include: {
         ...taskInclude,
-        install: { select: { id: true, branch: true, customerName: true } },
+        install: {
+          select: { id: true, branch: true, customerName: true, siteName: true },
+        },
       },
     });
   }

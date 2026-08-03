@@ -175,6 +175,46 @@ export class NotificationService {
   }
 
   /**
+   * Notify a single assignee when an install task is assigned (or reassigned) to them.
+   * @param {Object} params
+   * @param {string} params.assigneeUserId
+   * @param {string} params.branch - install branch
+   * @param {string} params.taskId
+   * @param {string} params.taskTitle
+   * @param {string} params.installId
+   * @param {string} params.customerName
+   * @param {string} [params.siteName]
+   * @param {string} params.assignedByName
+   */
+  async notifyInstallTaskAssigned({
+    assigneeUserId,
+    branch,
+    taskId,
+    taskTitle,
+    installId,
+    customerName,
+    siteName,
+    assignedByName,
+  }) {
+    if (!assigneeUserId) return;
+
+    const tenantBranch = normalizeBranch(branch);
+    const location = siteName
+      ? `${customerName} (${siteName})`
+      : customerName || 'an installation';
+
+    await this.notificationRepo.createForUsers([assigneeUserId], {
+      branch: tenantBranch,
+      type: 'install_task_assigned',
+      title: `Task assigned: ${taskTitle}`,
+      message: `${assignedByName} assigned you a task on ${location}`,
+      linkUrl: `/installations/${installId}`,
+      entityType: 'install_task',
+      entityId: taskId,
+    });
+  }
+
+  /**
    * Notify admins when a connectivity link goes down, is restored, or has DNS failure
    * @param {Object} target - MonitoringTarget with id, customerName, siteName, monitoringTarget, branch
    * @param {string} alertType - down, restored, dns_failure
