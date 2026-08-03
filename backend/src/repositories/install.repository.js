@@ -31,7 +31,7 @@ export class InstallRepository extends BaseRepository {
     return this.prisma.install.findMany({
       where,
       include: installInclude,
-      orderBy: options.orderBy ?? { updatedAt: 'desc' },
+      orderBy: options.orderBy ?? { createdAt: 'asc' },
       ...options,
     });
   }
