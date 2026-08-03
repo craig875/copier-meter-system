@@ -1,11 +1,15 @@
 import { z } from 'zod';
+import { KNOWN_MODULES } from '../utils/permissions.js';
 
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
 });
 
-const moduleKey = z.enum(['copiers', 'connectivity', 'fibre-orders']);
+/** Zod requires a non-empty tuple; KNOWN_MODULES is the sole source of truth. */
+const moduleKey = z.enum(
+  /** @type {[string, ...string[]]} */ ([...KNOWN_MODULES])
+);
 const branchEnum = z.enum(['JHB', 'CT'], {
   required_error: 'Branch is required',
   invalid_type_error: 'Branch must be JHB or CT',

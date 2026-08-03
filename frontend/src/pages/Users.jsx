@@ -17,8 +17,11 @@ import {
   UserCog,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { MODULE_OPTIONS } from '../constants/modules';
+import { MODULE_OPTIONS, MODULE_COPERS, MODULE_FIBRE_ORDERS } from '../constants/modules';
 import { branchLabel } from '../utils/branchSelection';
+
+/** All product module keys — keep in sync via MODULE_OPTIONS, never hardcode. */
+const ALL_MODULE_KEYS = MODULE_OPTIONS.map((o) => o.key);
 
 const BRANCH_ACCESS_OPTIONS = [
   { key: 'JHB', label: 'Johannesburg', description: 'Access Johannesburg (JHB) data and workflows' },
@@ -267,10 +270,10 @@ const UserModal = ({ user, canUpdate, canManageOverrides, onClose }) => {
     allowedBranches: normalizeAllowedBranches(user),
     modules:
       user?.role === 'admin'
-        ? ['copiers', 'connectivity', 'fibre-orders']
+        ? [...ALL_MODULE_KEYS]
         : Array.isArray(user?.modules) && user.modules.length > 0
           ? [...user.modules]
-          : ['copiers'],
+          : [MODULE_COPERS],
   });
 
   const validateForm = () => {
@@ -338,13 +341,13 @@ const UserModal = ({ user, canUpdate, canManageOverrides, onClose }) => {
     setFormData((prev) => {
       const next = { ...prev, [name]: v };
       if (name === 'role' && v === 'admin') {
-        next.modules = ['copiers', 'connectivity', 'fibre-orders'];
+        next.modules = [...ALL_MODULE_KEYS];
       }
       if (name === 'role' && v === 'sales_agent') {
-        next.modules = ['fibre-orders'];
+        next.modules = [MODULE_FIBRE_ORDERS];
       }
       if (name === 'role' && v !== 'admin' && (!next.modules || next.modules.length === 0)) {
-        next.modules = ['copiers'];
+        next.modules = [MODULE_COPERS];
       }
       if (name === 'branch' && (v === 'JHB' || v === 'CT')) {
         const set = new Set(prev.allowedBranches || []);

@@ -7,8 +7,9 @@ import PermissionCheckboxGroups from '../components/PermissionCheckboxGroups';
 import toast from 'react-hot-toast';
 import { Pencil, X, Check, Shield, Lock } from 'lucide-react';
 import clsx from 'clsx';
+import { MODULE_OPTIONS } from '../constants/modules';
 
-const PREVIEW_MODULES = ['copiers', 'connectivity', 'fibre-orders'];
+const PREVIEW_MODULES = MODULE_OPTIONS.map((o) => o.key);
 const PREVIEW_DEBOUNCE_MS = 350;
 
 function setsEqual(a, b) {

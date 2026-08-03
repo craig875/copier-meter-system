@@ -1,9 +1,15 @@
 import { z } from 'zod';
 import { ALL_PERMISSION_KEYS } from '../permissions/catalog.js';
+import { KNOWN_MODULES } from '../utils/permissions.js';
 
 /** Zod requires a non-empty tuple; catalog is the sole source of truth. */
 const permissionKeySchema = z.enum(
   /** @type {[string, ...string[]]} */ ([...ALL_PERMISSION_KEYS])
+);
+
+/** Zod requires a non-empty tuple; KNOWN_MODULES is the sole source of truth. */
+const moduleKeySchema = z.enum(
+  /** @type {[string, ...string[]]} */ ([...KNOWN_MODULES])
 );
 
 /**
@@ -23,7 +29,7 @@ export const previewEffectivePermissionsSchema = z
         })
       )
       .optional(),
-    modules: z.array(z.enum(['copiers', 'connectivity', 'fibre-orders'])).optional(),
+    modules: z.array(moduleKeySchema).optional(),
   })
   .superRefine((b, ctx) => {
     if (b.userId) {
