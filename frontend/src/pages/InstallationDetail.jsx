@@ -62,7 +62,6 @@ export default function InstallationDetail() {
 
   const [status, setStatus] = useState('');
   const [progress, setProgress] = useState('');
-  const [note, setNote] = useState('');
 
   const [editingDoc, setEditingDoc] = useState(false);
   const [docUrl, setDocUrl] = useState('');
@@ -117,7 +116,6 @@ export default function InstallationDetail() {
       if (!isScheduleOnly) {
         toast.success('Installation updated');
       }
-      setNote('');
       setEditingDoc(false);
       invalidate();
     },
@@ -154,7 +152,6 @@ export default function InstallationDetail() {
     const payload = {};
     if (statusChanged) payload.status = status;
     if (progressChanged) payload.progress = progress.trim() || null;
-    if (note.trim()) payload.note = note.trim();
     updateMutation.mutate(payload);
   };
 
@@ -455,18 +452,6 @@ export default function InstallationDetail() {
                     onChange={(e) => setProgress(trimLeading(e.target.value))}
                     rows={3}
                     placeholder="What is the current state?"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Timeline note (optional)
-                  </label>
-                  <textarea
-                    value={note}
-                    onChange={(e) => setNote(trimLeading(e.target.value))}
-                    rows={2}
-                    placeholder="Extra context for this update"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
