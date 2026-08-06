@@ -112,10 +112,10 @@ export default function InstallationForm() {
       return;
     }
 
+    // siteName only on edit; create omits it so new rows stay null.
     const payload = {
       typeName: form.typeName.trim(),
       customerName: form.customerName.trim(),
-      siteName: emptyToNull(form.siteName),
       area: emptyToNull(form.area),
       siteAddress: emptyToNull(form.siteAddress),
       contactPersonName: emptyToNull(form.contactPersonName),
@@ -124,6 +124,7 @@ export default function InstallationForm() {
     };
 
     if (isEditing) {
+      payload.siteName = emptyToNull(form.siteName);
       payload.progress = emptyToNull(form.progress);
     }
 
@@ -153,16 +154,18 @@ export default function InstallationForm() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
-          <input
-            type="text"
-            name="siteName"
-            value={form.siteName}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-          />
-        </div>
+        {isEditing && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
+            <input
+              type="text"
+              name="siteName"
+              value={form.siteName}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
