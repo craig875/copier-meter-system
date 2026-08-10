@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Printer, LayoutDashboard, Globe, Radio } from 'lucide-react';
+import { Printer, LayoutDashboard, Globe, Radio, HardDrive, ListTodo } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const copierModules = [
@@ -46,6 +46,26 @@ const fibreOrdersModule = {
   iconColor: 'text-violet-700',
 };
 
+const installationsModule = {
+  id: 'installations',
+  name: 'Installations',
+  description: 'Track site installations, progress, and technician assignments',
+  href: '/installations',
+  icon: HardDrive,
+  color: 'bg-emerald-50',
+  iconColor: 'text-emerald-700',
+};
+
+const myInstallTasksModule = {
+  id: 'my-install-tasks',
+  name: 'My Tasks',
+  description: 'View and update installation tasks assigned to you',
+  href: '/installations/my-tasks',
+  icon: ListTodo,
+  color: 'bg-amber-50',
+  iconColor: 'text-amber-700',
+};
+
 const HomeDashboard = () => {
   const { user, isCapturer, can } = useAuth();
   const tiles = [];
@@ -57,6 +77,12 @@ const HomeDashboard = () => {
   }
   if (can('fibre_orders.access')) {
     tiles.push(fibreOrdersModule);
+  }
+  if (can('installations.view')) {
+    tiles.push(installationsModule);
+  }
+  if (can('installations.tasks.view_own')) {
+    tiles.push(myInstallTasksModule);
   }
 
   return (
