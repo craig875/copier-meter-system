@@ -65,7 +65,7 @@ export default function ConnectivityDashboard() {
   const [statusFilter, setStatusFilter] = useState(statusFromUrl);
 
   useEffect(() => {
-    if (statusFromUrl) setStatusFilter(statusFromUrl);
+    setStatusFilter(statusFromUrl);
   }, [statusFromUrl]);
 
   const isDownFilter = statusFilter === 'down';
@@ -117,7 +117,9 @@ export default function ConnectivityDashboard() {
         t.fno?.toLowerCase().includes(s)
       );
     }
-    if (statusFilter) {
+    if (statusFilter === 'partial') {
+      list = list.filter((t) => t.currentStatus === 'partial' || t.currentStatus === 'dns_failure');
+    } else if (statusFilter) {
       list = list.filter((t) => t.currentStatus === statusFilter);
     }
     list.sort((a, b) => compareValues(a[sortBy], b[sortBy], sortDir));
