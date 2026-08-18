@@ -81,56 +81,186 @@ model UserPermissionOverride {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  name         String
+  id                                      String                          @id @default(uuid())
+  email                                   String                          @unique
+  passwordHash                            String                          @map("password_hash")
+  name                                    String
   /// Legacy enum role — still authoritative for enforcement in Stage A
-  role         UserRole  @default(meter_user)
+  role                                    UserRole                        @default(meter_user)
   /// New role FK — seeded in Stage A; not enforced yet
-  roleId       String    @map("role_id")
-  branch       Branch
-  /// Feature modules this user may access: copiers, connectivity (extensible)
-  modules      String[]  @default([])
-  twoFactorSecret   String?   @map("two_factor_secret")
-  twoFactorEnabled Boolean   @default(false) @map("two_factor_enabled")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  readings        Reading[]
-  unableToReadOverrides Reading[] @relation("UnableToReadOverrideBy")
+  roleId                                  String                          @map("role_id")
+  branch                                  Branch
+  /// Feature modules this user may access: copiers, connectivity, fibre-orders, installations, crm
+  modules                                 String[]                        @default([])
+  twoFactorSecret                         String?                         @map("two_factor_secret")
+  twoFactorEnabled                        Boolean                         @default(false) @map("two_factor_enabled")
+  createdAt                               DateTime                        @default(now()) @map("created_at")
+  updatedAt                               DateTime                        @updatedAt @map("updated_at")
+  readings                                Reading[]
+  unableToReadOverrides                   Reading[]                       @relation("UnableToReadOverrideBy")
   unableToObtainOverrideRequestsRequested UnableToObtainOverrideRequest[] @relation("UnableToObtainOverrideRequestedBy")
-  unableToObtainOverrideRequestsResolved UnableToObtainOverrideRequest[] @relation("UnableToObtainOverrideResolvedBy")
-  submissions     Submission[]
-  auditLogs       AuditLog[]
-  partReplacements PartReplacement[]
-  notifications   Notification[]
+  unableToObtainOverrideRequestsResolved  UnableToObtainOverrideRequest[] @relation("UnableToObtainOverrideResolvedBy")
+  submissions                             Submission[]
+  auditLogs                               AuditLog[]
+  partReplacements                        PartReplacement[]
+  notifications                           Notification[]
 
-  installationProjectsCreated    InstallationProject[]           @relation("InstallationProjectCreatedBy")
+  installationProjectsCreated  InstallationProject[]           @relation("InstallationProjectCreatedBy")
   installationProjectStepsDone InstallationProjectStep[]
   installationAssignments      InstallationProjectAssignment[]
 
-  fibreOrdersAsSalesAgent FibreOrder[] @relation("FibreOrderSalesAgent")
-  fibreOrdersCreated      FibreOrder[] @relation("FibreOrderCreatedBy")
-  orderUpdates            OrderUpdate[]
-  fibreUpdateRequests     FibreOrderUpdateRequest[] @relation("FibreUpdateRequestRequestedBy")
+  fibreOrdersAsSalesAgent     FibreOrder[]              @relation("FibreOrderSalesAgent")
+  fibreOrdersCreated          FibreOrder[]              @relation("FibreOrderCreatedBy")
+  orderUpdates                OrderUpdate[]
+  fibreUpdateRequests         FibreOrderUpdateRequest[] @relation("FibreUpdateRequestRequestedBy")
   fibreUpdateRequestsResolved FibreOrderUpdateRequest[] @relation("FibreUpdateRequestResolvedBy")
 
   branchAccess        UserBranchAccess[]
   branchAccessGranted UserBranchAccess[] @relation("UserBranchAccessGrantedBy")
 
-  assignedRole                 Role                     @relation(fields: [roleId], references: [id])
-  permissionOverrides          UserPermissionOverride[] @relation("UserPermissionOverrides")
-  permissionOverridesGranted   UserPermissionOverride[] @relation("UserPermissionOverrideGrantedBy")
-  permissionShadowLogs         PermissionShadowLog[]
+  assignedRole               Role                     @relation(fields: [roleId], references: [id])
+  permissionOverrides        UserPermissionOverride[] @relation("UserPermissionOverrides")
+  permissionOverridesGranted UserPermissionOverride[] @relation("UserPermissionOverrideGrantedBy")
+  permissionShadowLogs       PermissionShadowLog[]
 
-  installsCreated              Install[]               @relation("InstallCreatedBy")
-  installUpdatesCreated        InstallUpdate[]         @relation("InstallUpdateCreatedBy")
-  installDocumentsCreated      InstallDocument[]       @relation("InstallDocumentCreatedBy")
-  installTasksAssigned         InstallTask[]           @relation("InstallTaskAssignee")
-  installTasksCreated          InstallTask[]           @relation("InstallTaskCreatedBy")
-  appSettingsUpdated           AppSetting[]            @relation("AppSettingUpdatedBy")
+  installsCreated         Install[]         @relation("InstallCreatedBy")
+  installUpdatesCreated   InstallUpdate[]   @relation("InstallUpdateCreatedBy")
+  installDocumentsCreated InstallDocument[] @relation("InstallDocumentCreatedBy")
+  installTasksAssigned    InstallTask[]     @relation("InstallTaskAssignee")
+  installTasksCreated     InstallTask[]     @relation("InstallTaskCreatedBy")
+  appSettingsUpdated      AppSetting[]      @relation("AppSettingUpdatedBy")
+
+  accountsManaged      Customer[]    @relation("CustomerAccountManager")
+  dealsOwned           Deal[]        @relation("DealOwner")
+  crmActivitiesLogged  CrmActivity[] @relation("CrmActivityLogger")
+  crmTasksAssigned     CrmTask[]     @relation("CrmTaskAssignee")
 
   @@map("users")
+}
+
+enum CrmStatus {
+  prospect
+  active
+  dormant
+  churned
+}
+
+enum DealStage {
+  lead
+  qualified
+  proposal
+  negotiation
+  won
+  lost
+}
+
+enum CrmActivityType {
+  call
+  email
+  meeting
+  note
+}
+
+enum CrmTaskStatus {
+  pending
+  done
+}
+
+enum CrmTaskPriority {
+  low
+  medium
+  high
+}
+
+model Contact {
+  id          String    @id @default(uuid())
+  customerId  String    @map("customer_id")
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  name        String
+  role        String?
+  email       String?
+  phone       String?
+  isPrimary   Boolean   @default(false) @map("is_primary")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  deals       Deal[]
+  activities  CrmActivity[]
+
+  @@index([customerId])
+  @@map("contacts")
+}
+
+model Deal {
+  id                String     @id @default(uuid())
+  customerId        String     @map("customer_id")
+  customer          Customer   @relation(fields: [customerId], references: [id])
+  contactId         String?    @map("contact_id")
+  contact           Contact?   @relation(fields: [contactId], references: [id])
+  ownerId           String     @map("owner_id")
+  owner             User       @relation("DealOwner", fields: [ownerId], references: [id])
+  title             String
+  stage             DealStage  @default(lead)
+  value             Decimal?   @db.Decimal(12, 2)
+  currency          String     @default("ZAR")
+  expectedCloseDate DateTime?  @map("expected_close_date")
+  actualCloseDate   DateTime?  @map("actual_close_date")
+  lostReason        String?    @map("lost_reason")
+  source            String?
+  branch            Branch
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  activities        CrmActivity[]
+  crmTasks          CrmTask[]
+
+  @@index([customerId])
+  @@index([ownerId])
+  @@index([branch])
+  @@map("deals")
+}
+
+model CrmActivity {
+  id           String          @id @default(uuid())
+  type         CrmActivityType
+  customerId   String          @map("customer_id")
+  customer     Customer        @relation(fields: [customerId], references: [id])
+  contactId    String?         @map("contact_id")
+  contact      Contact?        @relation(fields: [contactId], references: [id])
+  dealId       String?         @map("deal_id")
+  deal         Deal?           @relation(fields: [dealId], references: [id])
+  userId       String          @map("user_id")
+  user         User            @relation("CrmActivityLogger", fields: [userId], references: [id])
+  subject      String
+  body         String?
+  activityDate DateTime        @default(now()) @map("activity_date")
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  @@index([customerId])
+  @@index([dealId])
+  @@map("crm_activities")
+}
+
+model CrmTask {
+  id           String          @id @default(uuid())
+  title        String
+  description  String?
+  dueDate      DateTime?       @map("due_date")
+  status       CrmTaskStatus   @default(pending)
+  priority     CrmTaskPriority @default(medium)
+  assignedToId String          @map("assigned_to_id")
+  assignedTo   User            @relation("CrmTaskAssignee", fields: [assignedToId], references: [id])
+  customerId   String?         @map("customer_id")
+  customer     Customer?       @relation(fields: [customerId], references: [id])
+  dealId       String?         @map("deal_id")
+  deal         Deal?           @relation(fields: [dealId], references: [id])
+  createdAt    DateTime        @default(now()) @map("created_at")
+  completedAt  DateTime?       @map("completed_at")
+
+  @@index([assignedToId])
+  @@index([customerId])
+  @@map("crm_tasks")
 }
 
 /// Stage C: mismatch log between legacy role gates and effective permissions (observe-only).
@@ -212,7 +342,7 @@ model InstallationTypeStep {
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
 
-  type            InstallationType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  type            InstallationType          @relation(fields: [typeId], references: [id], onDelete: Cascade)
   projectStepRefs InstallationProjectStep[]
 
   @@index([typeId])
@@ -268,12 +398,12 @@ model InstallationProjectStep {
 }
 
 model InstallationProjectAssignment {
-  id        String             @id @default(uuid())
-  projectId String             @map("project_id")
-  duty      InstallationDuty   @map("duty")
-  userId    String             @map("user_id")
-  createdAt DateTime           @default(now()) @map("created_at")
-  updatedAt DateTime           @updatedAt @map("updated_at")
+  id        String           @id @default(uuid())
+  projectId String           @map("project_id")
+  duty      InstallationDuty @map("duty")
+  userId    String           @map("user_id")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
 
   project InstallationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -322,30 +452,30 @@ model InstallType {
 
 /// One installation job (UI: Installations).
 model Install {
-  id                      String        @id @default(uuid())
-  branch                  Branch
-  typeId                  String?       @map("type_id")
+  id                     String        @id @default(uuid())
+  branch                 Branch
+  typeId                 String?       @map("type_id")
   /// Free-text install type label (UI: Type). Catalog InstallType remains optional legacy FK.
-  typeName                String?       @map("type_name")
-  customerName            String        @map("customer_name")
-  siteName                String?       @map("site_name")
+  typeName               String?       @map("type_name")
+  customerName           String        @map("customer_name")
+  siteName               String?       @map("site_name")
   /// Free-text geographic area (suburb / region), not a fixed list.
-  area                    String?
-  siteAddress             String?       @map("site_address")
+  area                   String?
+  siteAddress            String?       @map("site_address")
   /// Optional site contact (free-text; no phone format validation).
-  contactPersonName       String?       @map("contact_person_name")
-  contactPersonPhone      String?       @map("contact_person_phone")
-  salesOrderNumber        String?       @map("sales_order_number")
-  status                  InstallStatus @default(active)
+  contactPersonName      String?       @map("contact_person_name")
+  contactPersonPhone     String?       @map("contact_person_phone")
+  salesOrderNumber       String?       @map("sales_order_number")
+  status                 InstallStatus @default(active)
   /// Free-text current progress (e.g. "awaiting stock").
-  progress                String?
-  scheduledDate           DateTime?     @map("scheduled_date") @db.Date
-  completedDate           DateTime?     @map("completed_date") @db.Date
-  assignedTechnicianName  String?       @map("assigned_technician_name")
-  notes                   String?
-  createdById             String        @map("created_by")
-  createdAt               DateTime      @default(now()) @map("created_at")
-  updatedAt               DateTime      @updatedAt @map("updated_at")
+  progress               String?
+  scheduledDate          DateTime?     @map("scheduled_date") @db.Date
+  completedDate          DateTime?     @map("completed_date") @db.Date
+  assignedTechnicianName String?       @map("assigned_technician_name")
+  notes                  String?
+  createdById            String        @map("created_by")
+  createdAt              DateTime      @default(now()) @map("created_at")
+  updatedAt              DateTime      @updatedAt @map("updated_at")
 
   type      InstallType?      @relation(fields: [typeId], references: [id], onDelete: Restrict)
   createdBy User              @relation("InstallCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
@@ -486,26 +616,26 @@ model FibreProduct {
 }
 
 model FibreOrder {
-  id                   String      @id @default(uuid())
-  branch               Branch      @default(JHB) @map("branch")
-  customerName         String      @map("customer_name")
-  customerReference    String?     @map("customer_reference")
-  installationAddress  String      @map("installation_address")
-  productId            String      @map("product_id")
-  salesAgentId         String      @map("sales_agent_id")
-  orderPlacementDate   DateTime    @map("order_placement_date") @db.Date
-  expectedInstallDate  DateTime    @map("expected_install_date") @db.Date
-  pipelineStatus       FibrePipelineStatus @default(order_placed) @map("pipeline_status")
-  overlayStatus        FibreOverlayStatus? @map("overlay_status")
-  notes                String?             @map("notes")
-  createdById          String      @map("created_by")
-  createdAt            DateTime    @default(now()) @map("created_at")
-  updatedAt            DateTime    @updatedAt @map("updated_at")
+  id                  String              @id @default(uuid())
+  branch              Branch              @default(JHB) @map("branch")
+  customerName        String              @map("customer_name")
+  customerReference   String?             @map("customer_reference")
+  installationAddress String              @map("installation_address")
+  productId           String              @map("product_id")
+  salesAgentId        String              @map("sales_agent_id")
+  orderPlacementDate  DateTime            @map("order_placement_date") @db.Date
+  expectedInstallDate DateTime            @map("expected_install_date") @db.Date
+  pipelineStatus      FibrePipelineStatus @default(order_placed) @map("pipeline_status")
+  overlayStatus       FibreOverlayStatus? @map("overlay_status")
+  notes               String?             @map("notes")
+  createdById         String              @map("created_by")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
 
-  product     FibreProduct  @relation(fields: [productId], references: [id], onDelete: Restrict)
-  salesAgent  User          @relation("FibreOrderSalesAgent", fields: [salesAgentId], references: [id], onDelete: Restrict)
-  createdBy   User          @relation("FibreOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updates     OrderUpdate[]
+  product        FibreProduct              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  salesAgent     User                      @relation("FibreOrderSalesAgent", fields: [salesAgentId], references: [id], onDelete: Restrict)
+  createdBy      User                      @relation("FibreOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updates        OrderUpdate[]
   updateRequests FibreOrderUpdateRequest[]
 
   @@index([branch])
@@ -517,15 +647,15 @@ model FibreOrder {
 }
 
 model OrderUpdate {
-  id             String       @id @default(uuid())
-  orderId        String       @map("order_id")
+  id                     String               @id @default(uuid())
+  orderId                String               @map("order_id")
   previousPipelineStatus FibrePipelineStatus? @map("previous_pipeline_status")
   newPipelineStatus      FibrePipelineStatus? @map("new_pipeline_status")
-  previousOverlayStatus FibreOverlayStatus? @map("previous_overlay_status")
-  newOverlayStatus       FibreOverlayStatus? @map("new_overlay_status")
-  note           String?      @map("note")
-  updatedById    String       @map("updated_by")
-  createdAt      DateTime     @default(now()) @map("created_at")
+  previousOverlayStatus  FibreOverlayStatus?  @map("previous_overlay_status")
+  newOverlayStatus       FibreOverlayStatus?  @map("new_overlay_status")
+  note                   String?              @map("note")
+  updatedById            String               @map("updated_by")
+  createdAt              DateTime             @default(now()) @map("created_at")
 
   order     FibreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
   updatedBy User       @relation(fields: [updatedById], references: [id], onDelete: Restrict)
@@ -577,18 +707,29 @@ enum MeterType {
 }
 
 model Customer {
-  id           String    @id @default(uuid())
-  name         String    @map("name")
-  contactName  String?    @map("contact_name")
-  email        String?   @map("email")
-  phone        String?   @map("phone")
-  address      String?   @map("address")
-  branch       Branch    @map("branch")
-  isArchived   Boolean   @default(false) @map("is_archived")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id          String   @id @default(uuid())
+  name        String   @map("name")
+  contactName String?  @map("contact_name")
+  email       String?  @map("email")
+  phone       String?  @map("phone")
+  address     String?  @map("address")
+  branch      Branch   @map("branch")
+  isArchived  Boolean  @default(false) @map("is_archived")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   machines Machine[]
+
+    accountManagerId String?      @map("account_manager_id")
+  accountManager   User?        @relation("CustomerAccountManager", fields: [accountManagerId], references: [id])
+  crmStatus        CrmStatus    @default(prospect) @map("crm_status")
+  source           String?      @map("source")
+  industry         String?      @map("industry")
+
+  contacts         Contact[]
+  deals            Deal[]
+  activities       CrmActivity[]
+  crmTasks         CrmTask[]
 
   @@index([name])
   @@index([branch])
@@ -596,11 +737,11 @@ model Customer {
 }
 
 model Make {
-  id      String   @id @default(uuid())
-  name    String   @map("name")
-  branch  Branch   @map("branch")
+  id     String @id @default(uuid())
+  name   String @map("name")
+  branch Branch @map("branch")
 
-  models  Model[]
+  models Model[]
 
   @@unique([name, branch])
   @@index([branch])
@@ -618,16 +759,16 @@ enum ModelType {
 }
 
 model Model {
-  id          String     @id @default(uuid())
-  makeId      String     @map("make_id")
-  name        String     @map("name")
-  paperSize   PaperSize  @default(A4) @map("paper_size")
-  modelType   ModelType  @default(mono) @map("model_type")
-  machineLife Int?       @map("machine_life")
-  branch      Branch     @map("branch")
+  id          String    @id @default(uuid())
+  makeId      String    @map("make_id")
+  name        String    @map("name")
+  paperSize   PaperSize @default(A4) @map("paper_size")
+  modelType   ModelType @default(mono) @map("model_type")
+  machineLife Int?      @map("machine_life")
+  branch      Branch    @map("branch")
 
-  make      Make      @relation(fields: [makeId], references: [id], onDelete: Restrict)
-  machines  Machine[]
+  make       Make        @relation(fields: [makeId], references: [id], onDelete: Restrict)
+  machines   Machine[]
   modelParts ModelPart[]
 
   @@unique([makeId, name])
@@ -637,24 +778,24 @@ model Model {
 }
 
 model Machine {
-  id                String    @id @default(uuid())
-  machineSerialNumber String    @unique @map("machine_serial_number")
-  modelId           String?   @map("model_id")
-  customerId        String?   @map("customer_id")
-  location          String?   @map("location")
-  contractReference String?   @map("contract_reference")
-  monoEnabled       Boolean   @default(true) @map("mono_enabled")
-  colourEnabled     Boolean   @default(false) @map("colour_enabled")
-  scanEnabled       Boolean   @default(false) @map("scan_enabled")
-  isActive          Boolean   @default(true) @map("is_active")
-  isDecommissioned Boolean   @default(false) @map("is_decommissioned")
-  branch            Branch    @default(JHB)
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  model     Model?    @relation(fields: [modelId], references: [id], onDelete: SetNull)
-  customer  Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  readings  Reading[]
-  partReplacements  PartReplacement[]
+  id                             String                          @id @default(uuid())
+  machineSerialNumber            String                          @unique @map("machine_serial_number")
+  modelId                        String?                         @map("model_id")
+  customerId                     String?                         @map("customer_id")
+  location                       String?                         @map("location")
+  contractReference              String?                         @map("contract_reference")
+  monoEnabled                    Boolean                         @default(true) @map("mono_enabled")
+  colourEnabled                  Boolean                         @default(false) @map("colour_enabled")
+  scanEnabled                    Boolean                         @default(false) @map("scan_enabled")
+  isActive                       Boolean                         @default(true) @map("is_active")
+  isDecommissioned               Boolean                         @default(false) @map("is_decommissioned")
+  branch                         Branch                          @default(JHB)
+  createdAt                      DateTime                        @default(now()) @map("created_at")
+  updatedAt                      DateTime                        @updatedAt @map("updated_at")
+  model                          Model?                          @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  customer                       Customer?                       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  readings                       Reading[]
+  partReplacements               PartReplacement[]
   unableToObtainOverrideRequests UnableToObtainOverrideRequest[]
 
   @@index([contractReference])
@@ -693,34 +834,34 @@ model UnableToObtainOverrideRequest {
 }
 
 model Reading {
-  id           String   @id @default(uuid())
-  machineId    String   @map("machine_id")
-  year         Int
-  month        Int
-  monoReading  Int?     @map("mono_reading")
-  colourReading Int?    @map("colour_reading")
-  scanReading  Int?     @map("scan_reading")
-  monoUsage    Int?     @map("mono_usage")
-  colourUsage  Int?     @map("colour_usage")
-  scanUsage    Int?     @map("scan_usage")
-  note         String?  @map("note")
-  unableToRead         Boolean  @default(false) @map("unable_to_read")
-  unableToReadReason   String?  @map("unable_to_read_reason")
+  id                         String    @id @default(uuid())
+  machineId                  String    @map("machine_id")
+  year                       Int
+  month                      Int
+  monoReading                Int?      @map("mono_reading")
+  colourReading              Int?      @map("colour_reading")
+  scanReading                Int?      @map("scan_reading")
+  monoUsage                  Int?      @map("mono_usage")
+  colourUsage                Int?      @map("colour_usage")
+  scanUsage                  Int?      @map("scan_usage")
+  note                       String?   @map("note")
+  unableToRead               Boolean   @default(false) @map("unable_to_read")
+  unableToReadReason         String?   @map("unable_to_read_reason")
   unableToReadOverride       Boolean   @default(false) @map("unable_to_read_override")
   unableToReadOverrideReason String?   @map("unable_to_read_override_reason")
   unableToReadOverrideBy     String?   @map("unable_to_read_override_by")
   unableToReadOverrideAt     DateTime? @map("unable_to_read_override_at")
-  monoUnchangedReason   String?  @map("mono_unchanged_reason")
-  colourUnchangedReason String?  @map("colour_unchanged_reason")
-  scanUnchangedReason   String?  @map("scan_unchanged_reason")
-  branch       Branch   @default(JHB)
-  capturedBy   String   @map("captured_by")
-  capturedAt   DateTime @default(now()) @map("captured_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  monoUnchangedReason        String?   @map("mono_unchanged_reason")
+  colourUnchangedReason      String?   @map("colour_unchanged_reason")
+  scanUnchangedReason        String?   @map("scan_unchanged_reason")
+  branch                     Branch    @default(JHB)
+  capturedBy                 String    @map("captured_by")
+  capturedAt                 DateTime  @default(now()) @map("captured_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
 
-  machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [capturedBy], references: [id])
-  unableToReadOverrideUser User? @relation("UnableToReadOverrideBy", fields: [unableToReadOverrideBy], references: [id], onDelete: SetNull)
+  machine                  Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  user                     User    @relation(fields: [capturedBy], references: [id])
+  unableToReadOverrideUser User?   @relation("UnableToReadOverrideBy", fields: [unableToReadOverrideBy], references: [id], onDelete: SetNull)
 
   @@unique([machineId, year, month])
   @@index([machineId])
@@ -731,13 +872,13 @@ model Reading {
 }
 
 model Submission {
-  id        String   @id @default(uuid())
-  year      Int
-  month     Int
-  branch    Branch   @default(JHB)
-  submittedBy String  @map("submitted_by")
+  id          String   @id @default(uuid())
+  year        Int
+  month       Int
+  branch      Branch   @default(JHB)
+  submittedBy String   @map("submitted_by")
   submittedAt DateTime @default(now()) @map("submitted_at")
-  user      User     @relation(fields: [submittedBy], references: [id])
+  user        User     @relation(fields: [submittedBy], references: [id])
 
   @@unique([year, month, branch])
   @@index([year, month])
@@ -769,16 +910,16 @@ model ModelPart {
   itemCode      String?     @map("item_code")
   partType      PartType    @default(general) @map("part_type")
   tonerColor    TonerColor? @map("toner_color")
-  expectedYield  Int       @map("expected_yield")
-  costRand      Decimal   @map("cost_rand") @db.Decimal(12, 2)
-  meterType     MeterType @default(mono) @map("meter_type")
-  branch        Branch    @default(JHB)
-  isActive      Boolean   @default(true) @map("is_active")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  expectedYield Int         @map("expected_yield")
+  costRand      Decimal     @map("cost_rand") @db.Decimal(12, 2)
+  meterType     MeterType   @default(mono) @map("meter_type")
+  branch        Branch      @default(JHB)
+  isActive      Boolean     @default(true) @map("is_active")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
 
-  model         Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
-  replacements  PartReplacement[]
+  model        Model             @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  replacements PartReplacement[]
 
   @@unique([modelId, partName, branch])
   @@index([modelId])
@@ -810,24 +951,24 @@ model Notification {
 }
 
 model PartReplacement {
-  id                     String    @id @default(uuid())
-  machineId               String    @map("machine_id")
-  modelPartId             String    @map("model_part_id")
-  orderDate               DateTime  @map("order_date")
-  priorReading            Int       @map("prior_reading")
-  currentReading          Int       @map("current_reading")
-  usage                   Int       @map("usage")
-  remainingTonerPercent   Float?    @map("remaining_toner_percent")
-  yieldMet                Boolean   @map("yield_met")
-  shortfallClicks         Int       @default(0) @map("shortfall_clicks")
-  adjustedShortfallClicks Int       @default(0) @map("adjusted_shortfall_clicks")
-  costPerClick            Decimal   @map("cost_per_click") @db.Decimal(10, 4)
-  displayChargeRand       Decimal   @map("display_charge_rand") @db.Decimal(12, 2)
-  expectedYieldSnapshot   Int       @map("expected_yield_snapshot")
-  costRandSnapshot        Decimal   @map("cost_rand_snapshot") @db.Decimal(12, 2)
-  branch                  Branch    @default(JHB)
-  capturedBy              String    @map("captured_by")
-  capturedAt              DateTime  @default(now()) @map("captured_at")
+  id                      String   @id @default(uuid())
+  machineId               String   @map("machine_id")
+  modelPartId             String   @map("model_part_id")
+  orderDate               DateTime @map("order_date")
+  priorReading            Int      @map("prior_reading")
+  currentReading          Int      @map("current_reading")
+  usage                   Int      @map("usage")
+  remainingTonerPercent   Float?   @map("remaining_toner_percent")
+  yieldMet                Boolean  @map("yield_met")
+  shortfallClicks         Int      @default(0) @map("shortfall_clicks")
+  adjustedShortfallClicks Int      @default(0) @map("adjusted_shortfall_clicks")
+  costPerClick            Decimal  @map("cost_per_click") @db.Decimal(10, 4)
+  displayChargeRand       Decimal  @map("display_charge_rand") @db.Decimal(12, 2)
+  expectedYieldSnapshot   Int      @map("expected_yield_snapshot")
+  costRandSnapshot        Decimal  @map("cost_rand_snapshot") @db.Decimal(12, 2)
+  branch                  Branch   @default(JHB)
+  capturedBy              String   @map("captured_by")
+  capturedAt              DateTime @default(now()) @map("captured_at")
 
   machine   Machine   @relation(fields: [machineId], references: [id], onDelete: Cascade)
   modelPart ModelPart @relation(fields: [modelPartId], references: [id], onDelete: Restrict)
@@ -868,34 +1009,34 @@ enum AlertDeliveryStatus {
 }
 
 model MonitoringTarget {
-  id                     String    @id @default(uuid())
-  branch                 Branch    @default(JHB) @map("branch")
-  customerName           String    @map("customer_name")
-  siteName               String    @map("site_name")
-  monitoringTarget       String    @map("monitoring_target")
-  supplier               String?   @map("supplier")
-  circuitNumber          String?   @map("circuit_number")
-  fno                    String?   @map("fno")
-  serviceType            ConnectivityServiceType @default(other) @map("service_type")
-  notes                  String?   @map("notes")
-  alertEmail             String?   @map("alert_email")
-  contactPersonName      String?   @map("contact_person_name")
-  contactPersonPhone     String?   @map("contact_person_phone")
-  status                 MonitoringStatus @default(enabled) @map("status")
-  resolvedIp             String?   @map("resolved_ip")
-  dnsRefreshIntervalMinutes Int    @default(5) @map("dns_refresh_interval_minutes")
-  lastCheckAt            DateTime? @map("last_check_at")
-  currentStatus          LinkStatus? @map("current_status")
-  currentLatencyMs       Float?    @map("current_latency_ms")
-  currentPacketLossPercent Float?  @map("current_packet_loss_percent")
-  consecutiveFailures    Int       @default(0) @map("consecutive_failures")
-  createdAt              DateTime  @default(now()) @map("created_at")
-  updatedAt              DateTime  @updatedAt @map("updated_at")
+  id                        String                  @id @default(uuid())
+  branch                    Branch                  @default(JHB) @map("branch")
+  customerName              String                  @map("customer_name")
+  siteName                  String                  @map("site_name")
+  monitoringTarget          String                  @map("monitoring_target")
+  supplier                  String?                 @map("supplier")
+  circuitNumber             String?                 @map("circuit_number")
+  fno                       String?                 @map("fno")
+  serviceType               ConnectivityServiceType @default(other) @map("service_type")
+  notes                     String?                 @map("notes")
+  alertEmail                String?                 @map("alert_email")
+  contactPersonName         String?                 @map("contact_person_name")
+  contactPersonPhone        String?                 @map("contact_person_phone")
+  status                    MonitoringStatus        @default(enabled) @map("status")
+  resolvedIp                String?                 @map("resolved_ip")
+  dnsRefreshIntervalMinutes Int                     @default(5) @map("dns_refresh_interval_minutes")
+  lastCheckAt               DateTime?               @map("last_check_at")
+  currentStatus             LinkStatus?             @map("current_status")
+  currentLatencyMs          Float?                  @map("current_latency_ms")
+  currentPacketLossPercent  Float?                  @map("current_packet_loss_percent")
+  consecutiveFailures       Int                     @default(0) @map("consecutive_failures")
+  createdAt                 DateTime                @default(now()) @map("created_at")
+  updatedAt                 DateTime                @updatedAt @map("updated_at")
 
-  checkResults  MonitoringCheckResult[]
+  checkResults     MonitoringCheckResult[]
   alertTimeWindows AlertTimeWindow[]
-  outageLogs     OutageLog[]
-  alertLogs      AlertLog[]
+  outageLogs       OutageLog[]
+  alertLogs        AlertLog[]
 
   @@index([status])
   @@index([currentStatus])
@@ -904,14 +1045,14 @@ model MonitoringTarget {
 }
 
 model MonitoringCheckResult {
-  id                   String    @id @default(uuid())
-  targetId              String    @map("target_id")
-  status               LinkStatus @map("status")
-  latencyMs            Float?    @map("latency_ms")
-  packetLossPercent    Float     @default(0) @map("packet_loss_percent")
-  lastSuccessfulPing   DateTime? @map("last_successful_ping")
-  checkedAt            DateTime  @default(now()) @map("checked_at")
-  nodeId               String?   @map("node_id")
+  id                 String     @id @default(uuid())
+  targetId           String     @map("target_id")
+  status             LinkStatus @map("status")
+  latencyMs          Float?     @map("latency_ms")
+  packetLossPercent  Float      @default(0) @map("packet_loss_percent")
+  lastSuccessfulPing DateTime?  @map("last_successful_ping")
+  checkedAt          DateTime   @default(now()) @map("checked_at")
+  nodeId             String?    @map("node_id")
 
   target MonitoringTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
 
@@ -921,26 +1062,26 @@ model MonitoringCheckResult {
 }
 
 model MonitoringNode {
-  id           String    @id @default(uuid())
-  name         String    @map("name")
-  apiKeyHash   String    @map("api_key_hash")
-  enabled      Boolean   @default(true) @map("enabled")
-  lastSeenAt   DateTime? @map("last_seen_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id         String    @id @default(uuid())
+  name       String    @map("name")
+  apiKeyHash String    @map("api_key_hash")
+  enabled    Boolean   @default(true) @map("enabled")
+  lastSeenAt DateTime? @map("last_seen_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
 
   @@map("monitoring_nodes")
 }
 
 model AlertTimeWindow {
-  id        String   @id @default(uuid())
-  targetId  String?  @map("target_id")
-  startTime String   @map("start_time")
-  endTime   String   @map("end_time")
-  daysOfWeek Json    @map("days_of_week")
-  enabled   Boolean  @default(true) @map("enabled")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(uuid())
+  targetId   String?  @map("target_id")
+  startTime  String   @map("start_time")
+  endTime    String   @map("end_time")
+  daysOfWeek Json     @map("days_of_week")
+  enabled    Boolean  @default(true) @map("enabled")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   target MonitoringTarget? @relation(fields: [targetId], references: [id], onDelete: Cascade)
 
@@ -953,7 +1094,7 @@ model OutageLog {
   targetId        String    @map("target_id")
   startedAt       DateTime  @map("started_at")
   endedAt         DateTime? @map("ended_at")
-  durationSeconds Int?     @map("duration_seconds")
+  durationSeconds Int?      @map("duration_seconds")
   statusAtEnd     String?   @map("status_at_end")
   note            String?   @map("note")
   createdAt       DateTime  @default(now()) @map("created_at")
@@ -966,13 +1107,13 @@ model OutageLog {
 }
 
 model AlertLog {
-  id              String             @id @default(uuid())
-  targetId        String             @map("target_id")
-  alertType       String             @map("alert_type")
-  sentAt          DateTime           @default(now()) @map("sent_at")
-  deliveryStatus  AlertDeliveryStatus @default(pending) @map("delivery_status")
-  recipientEmail  String             @map("recipient_email")
-  createdAt       DateTime           @default(now()) @map("created_at")
+  id             String              @id @default(uuid())
+  targetId       String              @map("target_id")
+  alertType      String              @map("alert_type")
+  sentAt         DateTime            @default(now()) @map("sent_at")
+  deliveryStatus AlertDeliveryStatus @default(pending) @map("delivery_status")
+  recipientEmail String              @map("recipient_email")
+  createdAt      DateTime            @default(now()) @map("created_at")
 
   target MonitoringTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
 
@@ -982,11 +1123,11 @@ model AlertLog {
 }
 
 model SlaTarget {
-  id            String   @id @default(uuid())
+  id            String                  @id @default(uuid())
   serviceType   ConnectivityServiceType @unique @map("service_type")
-  targetPercent Float    @map("target_percent")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  targetPercent Float                   @map("target_percent")
+  createdAt     DateTime                @default(now()) @map("created_at")
+  updatedAt     DateTime                @updatedAt @map("updated_at")
 
   @@map("sla_targets")
 }
