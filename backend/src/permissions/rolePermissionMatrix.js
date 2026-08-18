@@ -5,6 +5,8 @@
 
 import {
   ALL_PERMISSION_KEYS,
+  CRM_AGENT_PERMISSION_KEYS,
+  CRM_PERMISSION_KEYS,
   OWNER_ONLY_KEYS,
   STRICT_ADMIN_ONLY_KEYS,
 } from './catalog.js';
@@ -17,6 +19,7 @@ export const SYSTEM_ROLE_IDS = Object.freeze({
   meter_user: 'a0000000-0000-4000-8000-000000000004',
   capturer: 'a0000000-0000-4000-8000-000000000005',
   sales_agent: 'a0000000-0000-4000-8000-000000000006',
+  sales_manager: 'a0000000-0000-4000-8000-000000000007',
 });
 
 export const SYSTEM_ROLES = Object.freeze([
@@ -69,10 +72,19 @@ export const SYSTEM_ROLES = Object.freeze([
     id: SYSTEM_ROLE_IDS.sales_agent,
     key: 'sales_agent',
     name: 'Sales Agent',
-    description: 'Fibre orders access + update requests',
+    description: 'Fibre orders access + CRM (own deals/tasks; self-assign accounts; no assign-all or delete)',
     isSystem: true,
     isImmutable: false,
     sortOrder: 5,
+  },
+  {
+    id: SYSTEM_ROLE_IDS.sales_manager,
+    key: 'sales_manager',
+    name: 'Sales Manager',
+    description: 'CRM only: full CRM access including assign, manage-all, reports, and deal delete',
+    isSystem: true,
+    isImmutable: false,
+    sortOrder: 6,
   },
 ]);
 
@@ -151,6 +163,9 @@ const FIBRE_ELEVATED = [
   'fibre_orders.update_requests.list',
 ];
 
+const CRM_ALL = [...CRM_PERMISSION_KEYS];
+const CRM_AGENT = [...CRM_AGENT_PERMISSION_KEYS];
+
 const INSTALLATIONS_MANAGE = [
   'installations.view',
   'installations.create',
@@ -197,6 +212,7 @@ const MANAGER_KEYS = uniqueKeys(
   FIBRE_ACCESS,
   FIBRE_AGENT,
   FIBRE_ELEVATED,
+  CRM_ALL,
   INSTALLATIONS_MANAGE,
   INSTALLATIONS_ASSIGNEE,
   USERS_ELEVATED,
@@ -226,7 +242,16 @@ const CAPTURER_KEYS = uniqueKeys(
   INSTALLATIONS_ASSIGNEE
 );
 
-const SALES_AGENT_KEYS = uniqueKeys(DASH, BRANCH, FIBRE_ACCESS, FIBRE_AGENT, INSTALLATIONS_ASSIGNEE);
+const SALES_AGENT_KEYS = uniqueKeys(
+  DASH,
+  BRANCH,
+  FIBRE_ACCESS,
+  FIBRE_AGENT,
+  INSTALLATIONS_ASSIGNEE,
+  CRM_AGENT
+);
+
+const SALES_MANAGER_KEYS = uniqueKeys(DASH, BRANCH, CRM_ALL);
 
 /**
  * Map of role key → permission keys (compatibility with today's gates).
@@ -239,6 +264,7 @@ export const ROLE_PERMISSION_MATRIX = Object.freeze({
   meter_user: METER_USER_KEYS,
   capturer: CAPTURER_KEYS,
   sales_agent: SALES_AGENT_KEYS,
+  sales_manager: SALES_MANAGER_KEYS,
 });
 
 /** Owner email promoted to the Owner role during Stage A backfill. */

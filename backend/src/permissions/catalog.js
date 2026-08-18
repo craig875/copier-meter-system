@@ -15,6 +15,13 @@ export const PERMISSION_GROUPS = [
   { id: 'copiers_catalog', label: 'Copiers — catalog & config' },
   { id: 'connectivity', label: 'Connectivity' },
   { id: 'fibre_orders', label: 'Fibre orders' },
+  { id: 'crm', label: 'CRM — access' },
+  { id: 'crm_accounts', label: 'CRM — accounts' },
+  { id: 'crm_contacts', label: 'CRM — contacts' },
+  { id: 'crm_deals', label: 'CRM — deals' },
+  { id: 'crm_activities', label: 'CRM — activities' },
+  { id: 'crm_tasks', label: 'CRM — tasks' },
+  { id: 'crm_reports', label: 'CRM — reports' },
   { id: 'installations', label: 'Installations' },
   { id: 'users', label: 'Users & roles' },
   { id: 'audit', label: 'Audit' },
@@ -85,6 +92,32 @@ export const PERMISSION_CATALOG = [
   { key: 'fibre_orders.update_requests.list', group: 'fibre_orders', label: 'List update requests' },
   { key: 'fibre_orders.update_requests.create', group: 'fibre_orders', label: 'Request order updates' },
 
+  { key: 'crm.access', group: 'crm', label: 'Access CRM area' },
+
+  { key: 'crm.accounts.view', group: 'crm_accounts', label: 'View CRM accounts' },
+  { key: 'crm.accounts.create', group: 'crm_accounts', label: 'Create CRM accounts' },
+  { key: 'crm.accounts.update', group: 'crm_accounts', label: 'Update CRM accounts' },
+  { key: 'crm.accounts.assign_own', group: 'crm_accounts', label: 'Assign CRM accounts to yourself' },
+  { key: 'crm.accounts.assign_all', group: 'crm_accounts', label: 'Assign any CRM account to any user' },
+
+  { key: 'crm.contacts.view', group: 'crm_contacts', label: 'View contacts' },
+  { key: 'crm.contacts.manage', group: 'crm_contacts', label: 'Create / edit / delete contacts' },
+
+  { key: 'crm.deals.view', group: 'crm_deals', label: 'View deals' },
+  { key: 'crm.deals.create', group: 'crm_deals', label: 'Create deals' },
+  { key: 'crm.deals.manage_own', group: 'crm_deals', label: 'Edit deals you own' },
+  { key: 'crm.deals.manage_all', group: 'crm_deals', label: 'Edit any deal' },
+  { key: 'crm.deals.delete', group: 'crm_deals', label: 'Delete deals' },
+
+  { key: 'crm.activities.view', group: 'crm_activities', label: 'View CRM activities' },
+  { key: 'crm.activities.log', group: 'crm_activities', label: 'Log CRM activities' },
+
+  { key: 'crm.tasks.view', group: 'crm_tasks', label: 'View CRM tasks' },
+  { key: 'crm.tasks.manage_own', group: 'crm_tasks', label: 'Manage CRM tasks assigned to you' },
+  { key: 'crm.tasks.manage_all', group: 'crm_tasks', label: 'Manage any CRM task' },
+
+  { key: 'crm.reports.view', group: 'crm_reports', label: 'View CRM reports' },
+
   { key: 'installations.view', group: 'installations', label: 'View installations list and details' },
   { key: 'installations.create', group: 'installations', label: 'Create installations' },
   { key: 'installations.update', group: 'installations', label: 'Update installations (progress, docs, fields)' },
@@ -107,6 +140,27 @@ export const PERMISSION_CATALOG = [
 
 export const ALL_PERMISSION_KEYS = PERMISSION_CATALOG.map((p) => p.key);
 
+/** Every CRM catalog key (`crm.*`). */
+export const CRM_PERMISSION_KEYS = ALL_PERMISSION_KEYS.filter((k) => k.startsWith('crm.'));
+
+/**
+ * CRM keys withheld from the regular sales agent / BD role:
+ * any `manage_all`, deal delete, `crm.accounts.assign_all`, and reports.
+ * `crm.accounts.assign_own` is granted so agents can self-assign new prospects.
+ */
+export function isCrmAgentExcludedKey(key) {
+  if (typeof key !== 'string' || !key.startsWith('crm.')) return false;
+  if (key.includes('.manage_all')) return true;
+  if (key === 'crm.deals.delete') return true;
+  if (key === 'crm.accounts.assign_all') return true;
+  if (key === 'crm.reports.view') return true;
+  return false;
+}
+
+export const CRM_AGENT_PERMISSION_KEYS = CRM_PERMISSION_KEYS.filter(
+  (k) => !isCrmAgentExcludedKey(k)
+);
+
 /** Keys that map to today's admin-only (role === admin, excludes manager) surfaces. */
 export const STRICT_ADMIN_ONLY_KEYS = [
   'copiers.readings.uto_force_override',
@@ -116,9 +170,9 @@ export const STRICT_ADMIN_ONLY_KEYS = [
 /** Keys reserved for the immutable Owner role. */
 export const OWNER_ONLY_KEYS = ['users.assign_owner'];
 
-if (ALL_PERMISSION_KEYS.length !== 68) {
+if (ALL_PERMISSION_KEYS.length !== 87) {
   throw new Error(
-    `PERMISSION_CATALOG must have exactly 68 keys (found ${ALL_PERMISSION_KEYS.length})`
+    `PERMISSION_CATALOG must have exactly 87 keys (found ${ALL_PERMISSION_KEYS.length})`
   );
 }
 

@@ -8,11 +8,13 @@ export const MODULE_COPERS = 'copiers';
 export const MODULE_CONNECTIVITY = 'connectivity';
 export const MODULE_FIBRE_ORDERS = 'fibre-orders';
 export const MODULE_INSTALLATIONS = 'installations';
+export const MODULE_CRM = 'crm';
 export const KNOWN_MODULES = [
   MODULE_COPERS,
   MODULE_CONNECTIVITY,
   MODULE_FIBRE_ORDERS,
   MODULE_INSTALLATIONS,
+  MODULE_CRM,
 ];
 
 /**
@@ -22,13 +24,26 @@ export const KNOWN_MODULES = [
  */
 export const defaultModulesForRole = (role) => {
   if (role === 'admin') {
-    return [MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS, MODULE_INSTALLATIONS];
+    return [
+      MODULE_COPERS,
+      MODULE_CONNECTIVITY,
+      MODULE_FIBRE_ORDERS,
+      MODULE_INSTALLATIONS,
+      MODULE_CRM,
+    ];
   }
   if (role === 'manager') {
-    return [MODULE_COPERS, MODULE_CONNECTIVITY, MODULE_FIBRE_ORDERS, MODULE_INSTALLATIONS];
+    return [
+      MODULE_COPERS,
+      MODULE_CONNECTIVITY,
+      MODULE_FIBRE_ORDERS,
+      MODULE_INSTALLATIONS,
+      MODULE_CRM,
+    ];
   }
   if (role === 'management') return [MODULE_COPERS];
-  if (role === 'sales_agent') return [MODULE_FIBRE_ORDERS];
+  if (role === 'sales_agent') return [MODULE_FIBRE_ORDERS, MODULE_CRM];
+  if (role === 'sales_manager') return [MODULE_FIBRE_ORDERS, MODULE_CRM];
   if (role === 'viewer') return [MODULE_CONNECTIVITY];
   return [MODULE_COPERS];
 };
