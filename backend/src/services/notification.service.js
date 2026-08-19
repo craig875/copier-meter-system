@@ -13,14 +13,49 @@ export class NotificationService {
   }
 
   /**
-   * Get admin user IDs
+   * Users who should receive in-app inbox alerts (notifications.access).
+   * Enum `admin` is kept as a fallback for dual-run accounts without a role matrix row.
    */
   async getAdminUserIds() {
-    const admins = await prisma.user.findMany({
-      where: { role: 'admin' },
-      select: { id: true },
-    });
-    return admins.map((u) => u.id);
+    const [notifyRoles, grantRows, denyRows, admins] = await Promise.all([
+      prisma.role.findMany({
+        where: {
+          OR: [
+            { key: 'owner' },
+            { permissions: { some: { permissionKey: 'notifications.access' } } },
+          ],
+        },
+        select: { id: true },
+      }),
+      prisma.userPermissionOverride.findMany({
+        where: { permissionKey: 'notifications.access', effect: 'GRANT' },
+        select: { userId: true },
+      }),
+      prisma.userPermissionOverride.findMany({
+        where: { permissionKey: 'notifications.access', effect: 'DENY' },
+        select: { userId: true },
+      }),
+      prisma.user.findMany({
+        where: { role: 'admin' },
+        select: { id: true },
+      }),
+    ]);
+
+    const fromRoles = notifyRoles.length
+      ? await prisma.user.findMany({
+          where: { roleId: { in: notifyRoles.map((r) => r.id) } },
+          select: { id: true },
+        })
+      : [];
+
+    const deny = new Set(denyRows.map((r) => r.userId));
+    const ids = new Set([
+      ...admins.map((u) => u.id),
+      ...fromRoles.map((u) => u.id),
+      ...grantRows.map((r) => r.userId),
+    ]);
+    for (const id of deny) ids.delete(id);
+    return [...ids];
   }
 
   /**
