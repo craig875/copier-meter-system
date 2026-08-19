@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { buildFromState } from '../utils/navigationFrom';
 import { notificationsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import NotificationPreferences from '../components/NotificationPreferences';
 import {
   Bell,
   Loader2,
@@ -104,7 +105,7 @@ const Notifications = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
           <p className="text-gray-500 mt-1">
-            Alerts when part orders are captured and when notes are added to readings
+            Alerts for copiers, connectivity, fibre orders, and installation tasks
           </p>
         </div>
         {unreadCount > 0 && (
@@ -178,6 +179,8 @@ const Notifications = () => {
           </div>
         )}
       </div>
+
+      <NotificationPreferences />
     </div>
   );
 };

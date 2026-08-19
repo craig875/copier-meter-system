@@ -104,6 +104,7 @@ model User {
   auditLogs                               AuditLog[]
   partReplacements                        PartReplacement[]
   notifications                           Notification[]
+  notificationPreferences                 NotificationPreference[]
 
   installationProjectsCreated  InstallationProject[]           @relation("InstallationProjectCreatedBy")
   installationProjectStepsDone InstallationProjectStep[]
@@ -948,6 +949,21 @@ model Notification {
   @@index([createdAt])
   @@index([readAt])
   @@map("notifications")
+}
+
+model NotificationPreference {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  category  String   @map("category") // copiers | connectivity | fibre_orders | installations
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
+  @@index([userId])
+  @@map("notification_preferences")
 }
 
 model PartReplacement {

@@ -1,5 +1,7 @@
 import prisma from '../config/database.js';
 import { NotFoundError } from '../utils/errors.js';
+import { categoryForNotificationType } from '../notifications/categories.js';
+import notificationPreferenceRepository from './notificationPreference.repository.js';
 
 /**
  * Notification Repository - Data access for notifications
@@ -28,8 +30,15 @@ export class NotificationRepository {
    */
   async createForUsers(userIds, data) {
     if (userIds.length === 0) return [];
+    const category = categoryForNotificationType(data.type);
+    const disabled = category
+      ? await notificationPreferenceRepository.findDisabledUserIds(userIds, category)
+      : [];
+    const deny = new Set(disabled);
+    const recipients = userIds.filter((id) => !deny.has(id));
+    if (recipients.length === 0) return [];
     const notifications = await prisma.notification.createMany({
-      data: userIds.map((userId) => ({
+      data: recipients.map((userId) => ({
         userId,
         branch: data.branch ?? null,
         type: data.type,

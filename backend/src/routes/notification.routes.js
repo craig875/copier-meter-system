@@ -7,6 +7,8 @@ import {
   markRead,
   markAllRead,
   getUnreadCount,
+  getPreferences,
+  setPreference,
 } from '../controllers/notification.controller.js';
 
 const router = Router();
@@ -18,6 +20,8 @@ router.use(requireTenantBranch);
 
 router.get('/', getNotifications);
 router.get('/unread-count', getUnreadCount);
+router.get('/preferences', getPreferences);
+router.put('/preferences', setPreference);
 router.patch('/:id/read', markRead);
 router.post('/mark-all-read', markAllRead);
 

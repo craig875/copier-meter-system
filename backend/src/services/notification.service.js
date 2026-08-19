@@ -2,6 +2,11 @@ import { repositories } from '../repositories/index.js';
 import prisma from '../config/database.js';
 import { MODULE_FIBRE_ORDERS } from '../utils/permissions.js';
 import { normalizeBranch } from '../middleware/tenant.js';
+import {
+  categoriesAvailableToUser,
+  isNotificationCategory,
+} from '../notifications/categories.js';
+import { AppError } from '../utils/errors.js';
 
 /**
  * Notification Service - Business logic for admin notifications
@@ -9,6 +14,7 @@ import { normalizeBranch } from '../middleware/tenant.js';
 export class NotificationService {
   constructor(repos = repositories) {
     this.notificationRepo = repos.notification;
+    this.preferenceRepo = repos.notificationPreference;
     this.userRepo = repos.user;
   }
 
@@ -311,5 +317,29 @@ export class NotificationService {
    */
   async countUnread(userId, branch = null) {
     return this.notificationRepo.countUnread(userId, branch);
+  }
+
+  async getPreferences(user) {
+    const available = categoriesAvailableToUser(user);
+    const rows = await this.preferenceRepo.findByUserId(user.id);
+    const byCategory = new Map(rows.map((row) => [row.category, row.enabled]));
+    return available.map((cat) => ({
+      category: cat.key,
+      label: cat.label,
+      description: cat.description,
+      enabled: byCategory.has(cat.key) ? Boolean(byCategory.get(cat.key)) : true,
+    }));
+  }
+
+  async setPreference(user, category, enabled) {
+    if (!isNotificationCategory(category)) {
+      throw new AppError('Unknown notification category', 400);
+    }
+    const allowed = categoriesAvailableToUser(user).some((cat) => cat.key === category);
+    if (!allowed) {
+      throw new AppError('You do not have that notification category', 403);
+    }
+    await this.preferenceRepo.upsert(user.id, category, Boolean(enabled));
+    return this.getPreferences(user);
   }
 }

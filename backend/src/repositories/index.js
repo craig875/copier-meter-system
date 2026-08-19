@@ -7,6 +7,7 @@ import { ModelPartRepository } from './modelPart.repository.js';
 import { PartReplacementRepository } from './partReplacement.repository.js';
 import { CustomerRepository } from './customer.repository.js';
 import notificationRepository from './notification.repository.js';
+import notificationPreferenceRepository from './notificationPreference.repository.js';
 
 import { FibreProductRepository } from './fibre-product.repository.js';
 import { FibreOrderRepository } from './fibre-order.repository.js';
@@ -31,6 +32,7 @@ export const repositories = {
   partReplacement: new PartReplacementRepository(prisma),
   customer: new CustomerRepository(prisma),
   notification: notificationRepository,
+  notificationPreference: notificationPreferenceRepository,
   fibreProduct: new FibreProductRepository(prisma),
   fibreOrder: new FibreOrderRepository(prisma),
   orderUpdate: new OrderUpdateRepository(prisma),

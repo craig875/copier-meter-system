@@ -172,6 +172,8 @@ export const notificationsApi = {
   getUnreadCount: () => api.get('/notifications/unread-count').then(res => res.data),
   markRead: (id) => api.patch(`/notifications/${id}/read`),
   markAllRead: () => api.post('/notifications/mark-all-read'),
+  getPreferences: () => api.get('/notifications/preferences').then((res) => res.data),
+  setPreference: (body) => api.put('/notifications/preferences', body).then((res) => res.data),
 };
 
 // Customers API
