@@ -40,7 +40,7 @@ export function moduleRequiredForPermission(permissionKey) {
  * Pure computation: role keys + GRANT/DENY overrides → effective list,
  * then (for non-owner) drop product-domain keys whose module the user lacks.
  *
- * DENY wins over GRANT. Owner always receives the full catalog (87 keys)
+ * DENY wins over GRANT. Owner always receives the full catalog (95 keys)
  * unconditionally — overrides are ignored and the module filter is skipped.
  *
  * GRANT overrides respect module boundaries (safer): an explicit GRANT cannot

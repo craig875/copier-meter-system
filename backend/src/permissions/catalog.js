@@ -23,6 +23,7 @@ export const PERMISSION_GROUPS = [
   { id: 'crm_tasks', label: 'CRM — tasks' },
   { id: 'crm_reports', label: 'CRM — reports' },
   { id: 'installations', label: 'Installations' },
+  { id: 'finance', label: 'Finance' },
   { id: 'users', label: 'Users & roles' },
   { id: 'audit', label: 'Audit' },
   { id: 'notifications', label: 'Notifications' },
@@ -125,6 +126,15 @@ export const PERMISSION_CATALOG = [
   { key: 'installations.tasks.view_own', group: 'installations', label: 'View own assigned install tasks' },
   { key: 'installations.tasks.update_status', group: 'installations', label: 'Update status on assigned install tasks' },
 
+  { key: 'finance.billing.view', group: 'finance', label: 'View billing import runs and history' },
+  { key: 'finance.billing.process', group: 'finance', label: 'Process billing import files' },
+  { key: 'finance.billing.save', group: 'finance', label: 'Save a processed billing run' },
+  { key: 'finance.billing.delete', group: 'finance', label: 'Delete a billing run from history' },
+  { key: 'finance.lookup.view', group: 'finance', label: 'View Engine 3 client lookup table' },
+  { key: 'finance.lookup.manage', group: 'finance', label: 'Add, edit and delete Engine 3 lookup entries' },
+  { key: 'finance.exclusions.view', group: 'finance', label: 'View finance exclusion rules' },
+  { key: 'finance.exclusions.manage', group: 'finance', label: 'Add and remove finance exclusion rules' },
+
   { key: 'users.view', group: 'users', label: 'View users' },
   { key: 'users.create', group: 'users', label: 'Create users' },
   { key: 'users.update', group: 'users', label: 'Update users' },
@@ -170,9 +180,9 @@ export const STRICT_ADMIN_ONLY_KEYS = [
 /** Keys reserved for the immutable Owner role. */
 export const OWNER_ONLY_KEYS = ['users.assign_owner'];
 
-if (ALL_PERMISSION_KEYS.length !== 87) {
+if (ALL_PERMISSION_KEYS.length !== 95) {
   throw new Error(
-    `PERMISSION_CATALOG must have exactly 87 keys (found ${ALL_PERMISSION_KEYS.length})`
+    `PERMISSION_CATALOG must have exactly 95 keys (found ${ALL_PERMISSION_KEYS.length})`
   );
 }
 

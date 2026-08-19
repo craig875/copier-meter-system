@@ -17,6 +17,7 @@ import installRoutes from './install.routes.js';
 import roleRoutes from './role.routes.js';
 import permissionOverrideRoutes from './permissionOverride.routes.js';
 import permissionPreviewRoutes from './permissionPreview.routes.js';
+import financeRoutes from './finance.routes.js';
 
 const router = Router();
 
@@ -68,5 +69,8 @@ router.use('/fibre-orders', fibreOrderRoutes);
 
 // Installations tracker (elevated)
 router.use('/installations', installRoutes);
+
+// Finance module
+router.use('/finance', financeRoutes);
 
 export default router;

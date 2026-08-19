@@ -1131,3 +1131,75 @@ model SlaTarget {
 
   @@map("sla_targets")
 }
+model BillingRun {
+  id            String           @id @default(uuid())
+  branch        String           @map("branch")
+  period        String           @map("period")          // e.g. "2026-05"
+  processedBy   String           @map("processed_by")    // display name, no FK
+  notes         String?          @map("notes")
+  totalMobile   Float            @default(0) @map("total_mobile")
+  totalIntl     Float            @default(0) @map("total_intl")
+  totalNational Float            @default(0) @map("total_national")
+  totalLocal    Float            @default(0) @map("total_local")
+  totalSpecial  Float            @default(0) @map("total_special")
+  totalVirtual  Float            @default(0) @map("total_virtual")
+  totalVce      Float            @default(0) @map("total_vce")
+  grandTotal    Float            @default(0) @map("grand_total")
+  clientCount   Int              @default(0) @map("client_count")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  lines         BillingRunLine[]
+
+  @@index([branch])
+  @@index([period])
+  @@index([createdAt])
+  @@map("billing_runs")
+}
+
+model BillingRunLine {
+  id            String     @id @default(uuid())
+  billingRunId  String     @map("billing_run_id")
+  clientCode    String     @map("client_code")
+  customerName  String     @map("customer_name")
+  category      String     @default("") @map("category")
+  mobile        Float      @default(0) @map("mobile")
+  international Float      @default(0) @map("international")
+  national      Float      @default(0) @map("national")
+  local         Float      @default(0) @map("local")
+  special       Float      @default(0) @map("special")
+  virtual       Float      @default(0) @map("virtual")
+  vce           Float      @default(0) @map("vce")
+  lineTotal     Float      @default(0) @map("line_total")
+
+  run           BillingRun @relation(fields: [billingRunId], references: [id], onDelete: Cascade)
+
+  @@index([billingRunId])
+  @@index([clientCode])
+  @@map("billing_run_lines")
+}
+
+model Engine3Lookup {
+  id            String   @id @default(uuid())
+  branch        String   @map("branch")
+  customerName  String   @map("customer_name")
+  smartEdgeCode String   @default("") @map("smart_edge_code")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([branch, customerName])
+  @@index([branch])
+  @@map("engine3_lookup")
+}
+
+model FinanceExclusion {
+  id        String   @id @default(uuid())
+  branch    String   @map("branch")
+  type      String   @map("type")    // "category" or "code"
+  value     String   @map("value")   // e.g. "Data" or "ACC0101"
+  note      String?  @map("note")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([branch, type, value])
+  @@index([branch])
+  @@map("finance_exclusions")
+}

@@ -177,6 +177,8 @@ const INSTALLATIONS_ASSIGNEE = [
   'installations.tasks.update_status',
 ];
 
+const FINANCE_ALL = ALL_PERMISSION_KEYS.filter((k) => k.startsWith('finance.'));
+
 const USERS_ELEVATED = [
   'users.view',
   'users.create',
@@ -215,6 +217,7 @@ const MANAGER_KEYS = uniqueKeys(
   CRM_ALL,
   INSTALLATIONS_MANAGE,
   INSTALLATIONS_ASSIGNEE,
+  FINANCE_ALL,
   USERS_ELEVATED,
   ADMIN_OPS
 );
