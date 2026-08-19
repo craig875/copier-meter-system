@@ -42,6 +42,11 @@ import InstallationForm from './pages/InstallationForm';
 import MyInstallTasks from './pages/MyInstallTasks';
 import UnableToObtainOverrides from './pages/admin/UnableToObtainOverrides';
 import Roles from './pages/Roles';
+import FinanceDashboard from './pages/Finance/FinanceDashboard';
+import BillingImport from './pages/Finance/BillingImport';
+import BillingRunDetail from './pages/Finance/BillingRunDetail';
+import FinanceLookup from './pages/Finance/FinanceLookup';
+import FinanceExclusions from './pages/Finance/FinanceExclusions';
 
 function App() {
   const { user, loading, canSwitchBranches, activeBranch } = useAuth();
@@ -334,6 +339,13 @@ function App() {
       <Route path="/installations/new" element={<ProtectedRoute requirePermission="installations.create"><Layout><InstallationForm /></Layout></ProtectedRoute>} />
       <Route path="/installations/:id/edit" element={<ProtectedRoute requirePermission="installations.update"><Layout><InstallationForm /></Layout></ProtectedRoute>} />
       <Route path="/installations/:id" element={<ProtectedRoute><Layout><InstallationDetail /></Layout></ProtectedRoute>} />
+
+      {/* Finance */}
+      <Route path="/finance" element={<ProtectedRoute requirePermission="finance.billing.view"><Layout><FinanceDashboard /></Layout></ProtectedRoute>} />
+      <Route path="/finance/billing" element={<ProtectedRoute requirePermission="finance.billing.view"><Layout><BillingImport /></Layout></ProtectedRoute>} />
+      <Route path="/finance/billing/:id" element={<ProtectedRoute requirePermission="finance.billing.view"><Layout><BillingRunDetail /></Layout></ProtectedRoute>} />
+      <Route path="/finance/lookup" element={<ProtectedRoute requirePermission="finance.billing.view"><Layout><FinanceLookup /></Layout></ProtectedRoute>} />
+      <Route path="/finance/exclusions" element={<ProtectedRoute requirePermission="finance.billing.view"><Layout><FinanceExclusions /></Layout></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

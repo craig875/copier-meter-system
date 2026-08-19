@@ -1,9 +1,12 @@
 // backend/routes/finance.routes.js
 import express from 'express';
+import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/requirePermission.js';
 import * as financeController from '../controllers/finance.controller.js';
- 
+
 const router = express.Router();
+
+router.use(authenticate);
  
 // ── Engine 3 Lookup ───────────────────────────────────────────────
 router.get(

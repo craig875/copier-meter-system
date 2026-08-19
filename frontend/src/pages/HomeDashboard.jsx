@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Printer, LayoutDashboard, Globe, Radio, HardDrive, ListTodo } from 'lucide-react';
+import { Printer, LayoutDashboard, Globe, Radio, HardDrive, ListTodo, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const copierModules = [
@@ -66,6 +66,16 @@ const myInstallTasksModule = {
   iconColor: 'text-amber-700',
 };
 
+const financeModule = {
+  id: 'finance',
+  name: 'Finance',
+  description: 'Billing import, Engine 3 lookup, and exclusions',
+  href: '/finance',
+  icon: Wallet,
+  color: 'bg-teal-50',
+  iconColor: 'text-teal-700',
+};
+
 const HomeDashboard = () => {
   const { user, isCapturer, can } = useAuth();
   const tiles = [];
@@ -83,6 +93,9 @@ const HomeDashboard = () => {
   }
   if (can('installations.tasks.view_own')) {
     tiles.push(myInstallTasksModule);
+  }
+  if (can('finance.billing.view')) {
+    tiles.push(financeModule);
   }
 
   return (

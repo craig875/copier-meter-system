@@ -1,5 +1,6 @@
 // backend/controllers/finance.controller.js
 import { PrismaClient } from '@prisma/client';
+import { billedTotals, billingLineAmount, toBillingRunLineCreate, withLineTypeTotals } from '../services/billingRunLines.js';
  
 const prisma = new PrismaClient();
  
@@ -135,7 +136,20 @@ export async function getBillingHistory(req, res) {
       }),
       prisma.billingRun.count({ where }),
     ]);
-    res.json({ runs, total, limit: parseInt(limit), offset: parseInt(offset) });
+    const runIds = runs.map((run) => run.id);
+    const groups = runIds.length
+      ? await prisma.billingRunLine.groupBy({
+          by: ['billingRunId', 'lineType'],
+          where: { billingRunId: { in: runIds } },
+          _sum: { lineTotal: true },
+        })
+      : [];
+    res.json({
+      runs: withLineTypeTotals(runs, groups),
+      total,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
   } catch (err) {
     console.error('getBillingHistory error:', err);
     res.status(500).json({ error: 'Failed to fetch billing history' });
@@ -151,7 +165,7 @@ export async function getBillingRun(req, res) {
       where: { id },
       include: {
         lines: {
-          orderBy: { clientCode: 'asc' },
+          orderBy: [{ lineType: 'asc' }, { clientCode: 'asc' }],
         },
       },
     });
@@ -164,70 +178,71 @@ export async function getBillingRun(req, res) {
 }
  
 // POST /api/finance/billing/save
-// Body: { branch, period, notes, lines: [{ clientCode, customerName, category, mobile, ... }] }
+// Body: { branch, period, notes, lines, excludedLines, unmatchedLines }
+// Zero-activity contract clients belong in `lines` with lineType billed.
 export async function saveBillingRun(req, res) {
   try {
-    const { branch, period, notes, lines = [] } = req.body;
+    const { branch, period, notes, lines = [], excludedLines = [], unmatchedLines = [], noActivityLines = [] } = req.body;
     if (!branch || !period) {
       return res.status(400).json({ error: 'branch and period are required' });
     }
-    if (!lines.length) {
+
+    const billed = [
+      ...(Array.isArray(lines) ? lines : []),
+      ...(Array.isArray(noActivityLines) ? noActivityLines : []),
+    ];
+    const excluded = Array.isArray(excludedLines) ? excludedLines : [];
+    const unmatched = Array.isArray(unmatchedLines) ? unmatchedLines : [];
+    if (!billed.length && !excluded.length && !unmatched.length) {
       return res.status(400).json({ error: 'No lines to save' });
     }
- 
-    // Calculate totals from lines
-    const totals = lines.reduce((acc, l) => {
-      acc.totalMobile   += l.mobile        || 0;
-      acc.totalIntl     += l.international || 0;
-      acc.totalNational += l.national      || 0;
-      acc.totalLocal    += l.local         || 0;
-      acc.totalSpecial  += l.special       || 0;
-      acc.totalVirtual  += l.virtual       || 0;
-      acc.totalVce      += l.vce           || 0;
-      return acc;
-    }, {
-      totalMobile: 0, totalIntl: 0, totalNational: 0,
-      totalLocal: 0, totalSpecial: 0, totalVirtual: 0, totalVce: 0,
-    });
- 
-    const grandTotal = Object.values(totals).reduce((s, v) => s + v, 0);
+
+    const totals = billedTotals(billed);
+    const billedTotal = Object.values(totals).reduce((s, v) => s + v, 0);
+    const supplierTotal =
+      billedTotal +
+      excluded.reduce((s, l) => s + billingLineAmount(l), 0) +
+      unmatched.reduce((s, l) => s + billingLineAmount(l), 0);
     const processedBy = req.user?.name || req.user?.email || 'Unknown';
- 
-    const run = await prisma.billingRun.create({
-      data: {
-        branch,
-        period,
-        notes: notes || null,
-        processedBy,
-        clientCount: lines.length,
-        grandTotal,
-        ...totals,
-        lines: {
-          create: lines.map(l => ({
-            clientCode:    l.clientCode    || '',
-            customerName:  l.customerName  || '',
-            category:      l.category      || '',
-            mobile:        l.mobile        || 0,
-            international: l.international || 0,
-            national:      l.national      || 0,
-            local:         l.local         || 0,
-            special:       l.special       || 0,
-            virtual:       l.virtual       || 0,
-            vce:           l.vce           || 0,
-            lineTotal: (
-              (l.mobile || 0) + (l.international || 0) +
-              (l.national || 0) + (l.local || 0) +
-              (l.special || 0) + (l.virtual || 0) + (l.vce || 0)
-            ),
-          })),
+
+    const lineRows = [
+      ...billed.map((l) => toBillingRunLineCreate(l, 'billed')),
+      ...excluded.map((l) => toBillingRunLineCreate(l, 'excluded')),
+      ...unmatched.map((l) => toBillingRunLineCreate(l, 'unmatched')),
+    ];
+
+    const run = await prisma.$transaction(async (tx) => {
+      const created = await tx.billingRun.create({
+        data: {
+          branch,
+          period,
+          notes: notes || null,
+          processedBy,
+          clientCount: billed.length,
+          grandTotal: supplierTotal,
+          ...totals,
         },
-      },
-      include: { lines: true },
+      });
+      await tx.billingRunLine.createMany({
+        data: lineRows.map((row) => ({ ...row, billingRunId: created.id })),
+      });
+      return created;
     });
- 
+
     res.json({ ok: true, run });
   } catch (err) {
     console.error('saveBillingRun error:', err);
+    if (err.name === 'PrismaClientValidationError') {
+      return res.status(500).json({
+        error:
+          'Failed to save billing run: the database client is missing a billing line field. Run prisma migrate deploy and prisma generate, then restart the API.',
+      });
+    }
+    if (err.code === 'P2022' || /column .* does not exist/i.test(String(err.message))) {
+      return res.status(500).json({
+        error: 'Failed to save billing run: a billing line column is missing. Run prisma migrate deploy.',
+      });
+    }
     res.status(500).json({ error: 'Failed to save billing run' });
   }
 }

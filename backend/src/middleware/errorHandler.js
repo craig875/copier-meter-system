@@ -13,6 +13,12 @@ export const errorHandler = (err, req, res, next) => {
     name: err.name,
   });
 
+  if (err.status === 413 || err.type === 'entity.too.large' || err.name === 'PayloadTooLargeError') {
+    return res.status(413).json({
+      error: 'Request is too large. Try saving fewer lines or raise the JSON body limit.',
+    });
+  }
+
   // If error is an AppError (operational error), use its status code
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({

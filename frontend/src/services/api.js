@@ -1,12 +1,9 @@
 import axios from 'axios';
 
-// Production build: set VITE_API_URL when the SPA is served separately from the API.
-// Vite dev: always use same-origin `/api` (proxied to localhost:3001) so a wrong machine env cannot break login.
-const baseURL = import.meta.env.DEV
-  ? '/api'
-  : import.meta.env.VITE_API_URL
-    ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
-    : '/api';
+// Origin of the API (no trailing /api). Vite loads frontend/.env.local in `npm run dev`.
+// If unset, same-origin `/api` is used (vite.config.js proxies that to localhost:3001).
+const apiOrigin = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const baseURL = apiOrigin ? `${apiOrigin}/api` : '/api';
 
 const api = axios.create({
   baseURL,
@@ -308,6 +305,21 @@ export const fibreOrdersApi = {
     api.post(`/fibre-orders/${id}/request-update`, { note: note || null }).then((r) => r.data),
   listUpdateRequests: (branch) =>
     api.get('/fibre-orders/update-requests', { params: fibreBranchParams(branch) }).then((r) => r.data),
+};
+
+/** Finance billing, Engine 3 lookup, and exclusions */
+export const financeApi = {
+  getBillingHistory: (branch, params = {}) =>
+    api.get('/finance/billing/history', { params: { branch, ...params } }).then((r) => r.data),
+  getBillingRun: (id) => api.get(`/finance/billing/${id}`).then((r) => r.data),
+  getLookup: (branch) => api.get(`/finance/lookup/${encodeURIComponent(branch)}`).then((r) => r.data),
+  saveLookup: (branch, lookup) =>
+    api.post(`/finance/lookup/${encodeURIComponent(branch)}`, { lookup }).then((r) => r.data),
+  getExclusions: (branch) =>
+    api.get(`/finance/exclusions/${encodeURIComponent(branch)}`).then((r) => r.data),
+  saveExclusions: (branch, body) =>
+    api.post(`/finance/exclusions/${encodeURIComponent(branch)}`, body).then((r) => r.data),
+  saveBillingRun: (body) => api.post('/finance/billing/save', body).then((r) => r.data),
 };
 
 /** Installations tracker (elevated CRUD; assignees may update own task status) */

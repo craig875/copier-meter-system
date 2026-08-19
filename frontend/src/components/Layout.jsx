@@ -24,6 +24,10 @@ import {
   ShieldAlert,
   HardDrive,
   ListTodo,
+  Wallet,
+  FileSpreadsheet,
+  BookUser,
+  Ban,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -102,6 +106,17 @@ const Layout = ({ children }) => {
     href: '/installations/my-tasks',
     icon: ListTodo,
   };
+  const financeNav = {
+    name: 'Finance',
+    href: '/finance',
+    icon: Wallet,
+    activePaths: ['/finance/billing', '/finance/lookup', '/finance/exclusions'],
+    children: [
+      { name: 'Billing Import', href: '/finance/billing', icon: FileSpreadsheet },
+      { name: 'Client Lookup', href: '/finance/lookup', icon: BookUser },
+      { name: 'Exclusions', href: '/finance/exclusions', icon: Ban },
+    ],
+  };
 
   const navigation = (() => {
     const home = { name: 'Home', href: '/', icon: Home };
@@ -110,6 +125,7 @@ const Layout = ({ children }) => {
       ...(showFibreOrders ? [fibreOrdersNav] : []),
       ...(can('installations.view') ? [installationsNav] : []),
       myInstallTasksNav,
+      ...(can('finance.billing.view') ? [financeNav] : []),
     ];
 
     let nav;

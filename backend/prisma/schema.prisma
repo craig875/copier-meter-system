@@ -1170,11 +1170,14 @@ model BillingRunLine {
   virtual       Float      @default(0) @map("virtual")
   vce           Float      @default(0) @map("vce")
   lineTotal     Float      @default(0) @map("line_total")
+  lineType      String     @default("billed") @map("line_type") // billed | excluded | unmatched | noActivity
+  confirmed     Boolean    @default(false) @map("confirmed")
 
   run           BillingRun @relation(fields: [billingRunId], references: [id], onDelete: Cascade)
 
   @@index([billingRunId])
   @@index([clientCode])
+  @@index([billingRunId, lineType])
   @@map("billing_run_lines")
 }
 
