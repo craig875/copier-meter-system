@@ -322,6 +322,7 @@ export const financeApi = {
   saveExclusions: (branch, body) =>
     api.post(`/finance/exclusions/${encodeURIComponent(branch)}`, body).then((r) => r.data),
   saveBillingRun: (body) => api.post('/finance/billing/save', body).then((r) => r.data),
+  submitBillingRun: (id) => api.post(`/finance/billing/${id}/submit`).then((r) => r.data),
 };
 
 /** Installations tracker (elevated CRUD; assignees may update own task status) */

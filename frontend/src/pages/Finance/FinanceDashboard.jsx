@@ -1,11 +1,26 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
+import clsx from 'clsx';
 import { financeApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { formatDateTime } from '../../utils/dateFormat';
 import { formatZar } from './formatZar';
 import BillingHistoryCharts from './BillingHistoryCharts';
+
+function StatusBadge({ status }) {
+  const draft = status === 'draft';
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+        draft ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'
+      )}
+    >
+      {draft ? 'Draft' : 'Submitted'}
+    </span>
+  );
+}
 
 export default function FinanceDashboard() {
   const { can, effectiveBranch } = useAuth();
@@ -26,8 +41,8 @@ export default function FinanceDashboard() {
   }
 
   const runs = data?.runs ?? [];
-  const total = data?.total ?? runs.length;
-  const latest = runs[0];
+  const submittedRuns = runs.filter((run) => run.status !== 'draft');
+  const latest = submittedRuns[0] || null;
 
   return (
     <div className="space-y-6">
@@ -47,8 +62,11 @@ export default function FinanceDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="tile-card p-4">
-          <p className="text-sm text-gray-500">Saved runs</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-1">{total}</p>
+          <p className="text-sm text-gray-500">Submitted runs</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-1">{submittedRuns.length}</p>
+          {runs.length !== submittedRuns.length ? (
+            <p className="text-xs text-gray-400 mt-1">{runs.length} total including drafts</p>
+          ) : null}
         </div>
         <div className="tile-card p-4">
           <p className="text-sm text-gray-500">Latest period</p>
@@ -59,11 +77,13 @@ export default function FinanceDashboard() {
           <p className="text-2xl font-semibold text-gray-900 mt-1">
             {latest ? formatZar(latest.grandTotal) : '—'}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Full supplier cost</p>
+          <p className="text-xs text-gray-400 mt-1">Full supplier cost (submitted)</p>
         </div>
       </div>
 
-      {runs.length > 0 ? <BillingHistoryCharts runs={runs} latest={latest} /> : null}
+      {submittedRuns.length > 0 ? (
+        <BillingHistoryCharts runs={submittedRuns} latest={latest} />
+      ) : null}
 
       <div className="tile-card overflow-x-auto">
         {isLoading ? (
@@ -84,10 +104,12 @@ export default function FinanceDashboard() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Processed By</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Clients</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grand Total</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -98,10 +120,30 @@ export default function FinanceDashboard() {
                       {run.period}
                     </Link>
                   </td>
+                  <td className="px-4 py-3 text-sm">
+                    <StatusBadge status={run.status || 'submitted'} />
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{run.processedBy}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{run.clientCount}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{formatZar(run.grandTotal)}</td>
                   <td className="px-4 py-3 text-sm text-gray-500">{formatDateTime(run.createdAt)}</td>
+                  <td className="px-4 py-3 text-sm">
+                    {run.status === 'draft' ? (
+                      <Link
+                        to={`/finance/billing?draftId=${encodeURIComponent(run.id)}`}
+                        className="inline-flex items-center px-2.5 py-1 rounded border border-amber-400 text-xs font-medium text-amber-900 hover:bg-amber-50"
+                      >
+                        Resume
+                      </Link>
+                    ) : (
+                      <Link
+                        to={`/finance/billing/${run.id}`}
+                        className="text-xs text-gray-600 hover:underline"
+                      >
+                        View
+                      </Link>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

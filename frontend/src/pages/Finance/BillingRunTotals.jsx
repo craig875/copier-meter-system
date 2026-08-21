@@ -42,6 +42,8 @@ export default function BillingRunTotals({
   grand,
   noActivity = 0,
   noActivityCount = 0,
+  excludedChargedCount = 0,
+  excludedChargedTotal = 0,
   activeFilter,
   onFilterChange,
 }) {
@@ -75,6 +77,7 @@ export default function BillingRunTotals({
           clickable && 'cursor-pointer'
         );
         const count = tile.count ? tile.count(totals) : null;
+        const showChargedExcluded = tile.id === 'excluded' && excludedChargedCount > 0;
         const body = (
           <>
             <p className={clsx('text-sm', active ? 'text-red-700' : 'text-gray-500')}>{tile.label}</p>
@@ -87,6 +90,11 @@ export default function BillingRunTotals({
                 {formatZar(tile.amount(totals))}
               </p>
             )}
+            {showChargedExcluded ? (
+              <p className="text-xs font-medium text-amber-700 mt-1">
+                {excludedChargedCount} with charges · {formatZar(excludedChargedTotal)}
+              </p>
+            ) : null}
             <p className="text-xs text-gray-400 mt-1">{tile.hint}</p>
           </>
         );

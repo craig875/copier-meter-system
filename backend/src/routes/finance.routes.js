@@ -52,7 +52,13 @@ router.post(
   requirePermission('finance.billing.save'),
   financeController.saveBillingRun
 );
- 
+
+router.post(
+  '/billing/:id/submit',
+  requirePermission('finance.billing.save'),
+  financeController.submitBillingRun
+);
+
 router.delete(
   '/billing/:id',
   requirePermission('finance.billing.delete'),

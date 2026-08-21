@@ -1152,6 +1152,7 @@ model BillingRun {
   branch        String           @map("branch")
   period        String           @map("period")          // e.g. "2026-05"
   processedBy   String           @map("processed_by")    // display name, no FK
+  status        String           @default("draft") @map("status") // draft | submitted
   notes         String?          @map("notes")
   totalMobile   Float            @default(0) @map("total_mobile")
   totalIntl     Float            @default(0) @map("total_intl")
@@ -1163,12 +1164,15 @@ model BillingRun {
   grandTotal    Float            @default(0) @map("grand_total")
   clientCount   Int              @default(0) @map("client_count")
   createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
 
   lines         BillingRunLine[]
+  files         BillingRunFile[]
 
   @@index([branch])
   @@index([period])
   @@index([createdAt])
+  @@index([status])
   @@map("billing_runs")
 }
 
@@ -1195,6 +1199,22 @@ model BillingRunLine {
   @@index([clientCode])
   @@index([billingRunId, lineType])
   @@map("billing_run_lines")
+}
+
+model BillingRunFile {
+  id           String     @id @default(uuid())
+  billingRunId String     @map("billing_run_id")
+  filename     String     @map("filename")
+  engine       String     @map("engine") // engine1 | engine2 | engine3 | contract
+  content      String     @map("content") @db.Text // CSV text or base64 for xlsx
+  encoding     String     @default("text") @map("encoding") // text | base64
+  contentType  String?    @map("content_type")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  run          BillingRun @relation(fields: [billingRunId], references: [id], onDelete: Cascade)
+
+  @@index([billingRunId])
+  @@map("billing_run_files")
 }
 
 model Engine3Lookup {

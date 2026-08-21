@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Download, Eraser, FileSpreadsheet, Loader2, RefreshCw, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -12,23 +12,36 @@ import {
   engineLabel,
   mergeUnmatchedIntoCode,
   mergeWithContracts,
+  normalizeClientCode,
   processBillingFiles,
 } from './billingProcess';
 import UnmatchedMergeControl from './UnmatchedMergeControl';
 import UnmatchedCodeEditor from './UnmatchedCodeEditor';
 import BillingRunTotals from './BillingRunTotals';
 import {
+  applyNoActivityAmounts,
+  CALL_TYPE_AMOUNT_FIELDS,
   confirmKey,
+  excludeNoActivityLine,
+  includeExcludedLine,
   isNoActivityLine,
+  lineHasCharges,
   partitionBillingLines,
   smartEdgeExportLines,
   toBillingSaveLine,
   totalOfLines,
 } from './billingLineSets';
-import NoActivityConfirmControl from './NoActivityConfirmControl';
+import NoActivityBillingRow from './NoActivityBillingRow';
+import ExcludedIncludeControl from './ExcludedIncludeControl';
 import { billingLinesToCsv, downloadBillingCsv } from './billingCsv';
 import { logSplitTotals } from './billingDebug';
 import { readContractFile } from './contractReport';
+import {
+  confirmedCodesFromDbLines,
+  dbLineToImportLine,
+  draftFilesToImportItems,
+  itemsToDraftFiles,
+} from './billingDraft';
 import {
   clearBillingImportSession,
   fileToPayload,
@@ -74,11 +87,17 @@ const TABLE_HEADERS = [
 
 export default function BillingImport() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
   const { can, effectiveBranch } = useAuth();
   const canProcess = can('finance.billing.process') || can('finance.billing.view');
   const canSave = can('finance.billing.save');
+  const canExclude = can('finance.exclusions.manage');
+  const [excludingIndex, setExcludingIndex] = useState(null);
+  const [includingIndex, setIncludingIndex] = useState(null);
+  const [draftId, setDraftId] = useState(() => searchParams.get('draftId') || null);
+  const [resuming, setResuming] = useState(Boolean(searchParams.get('draftId')));
 
   const [items, setItems] = useState([]);
   const [dragging, setDragging] = useState(false);
@@ -89,9 +108,17 @@ export default function BillingImport() {
   const [lineFilter, setLineFilter] = useState('all');
   const [confirmedCodes, setConfirmedCodes] = useState(() => new Set());
   const skipPersist = useRef(true);
+  const resumeLoaded = useRef(false);
 
   useEffect(() => {
     skipPersist.current = true;
+    if (draftId && !resumeLoaded.current) {
+      // Resume effect owns initial load
+      const id = window.setTimeout(() => {
+        skipPersist.current = false;
+      }, 0);
+      return () => window.clearTimeout(id);
+    }
     const saved = loadBillingImportSession(effectiveBranch);
     if (saved) {
       setItems(saved.items);
@@ -110,7 +137,61 @@ export default function BillingImport() {
       skipPersist.current = false;
     }, 0);
     return () => window.clearTimeout(id);
-  }, [effectiveBranch]);
+  }, [effectiveBranch, draftId]);
+
+  useEffect(() => {
+    const id = searchParams.get('draftId');
+    if (!id) return undefined;
+    if (resumeLoaded.current && id === draftId) return undefined;
+
+    let cancelled = false;
+    resumeLoaded.current = false;
+    (async () => {
+      setResuming(true);
+      try {
+        const run = await financeApi.getBillingRun(id);
+        if (cancelled) return;
+        if (run.status !== 'draft') {
+          toast.error('That billing run is already submitted');
+          setSearchParams({}, { replace: true });
+          setDraftId(null);
+          return;
+        }
+        const restoredItems = draftFilesToImportItems(run.files || []);
+        const withContracts = await Promise.all(
+          restoredItems.map(async (item) => {
+            if (item.engine !== 'contract') return item;
+            const parsed = await readContractFile(item.file);
+            return parsed?.rows ? { ...item, contractRows: parsed.rows } : item;
+          })
+        );
+        skipPersist.current = true;
+        setDraftId(run.id);
+        setPeriod(run.period || defaultPeriod());
+        setItems(withContracts);
+        setLines((run.lines || []).map(dbLineToImportLine));
+        setConfirmedCodes(new Set(confirmedCodesFromDbLines(run.lines || [])));
+        setWarnings([]);
+        setLineFilter('all');
+        resumeLoaded.current = true;
+        toast.success('Draft restored — continue where you left off');
+        window.setTimeout(() => {
+          skipPersist.current = false;
+        }, 0);
+      } catch (err) {
+        if (!cancelled) {
+          toast.error(err?.response?.data?.error || 'Failed to resume draft');
+          setSearchParams({}, { replace: true });
+          setDraftId(null);
+        }
+      } finally {
+        if (!cancelled) setResuming(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, setSearchParams, draftId]);
 
   useEffect(() => {
     if (skipPersist.current) return;
@@ -126,21 +207,48 @@ export default function BillingImport() {
     }
   }, [effectiveBranch, items, lines, warnings, period, confirmedCodes]);
 
-  const saveMutation = useMutation({
+  const draftMutation = useMutation({
     mutationFn: (payload) => financeApi.saveBillingRun(payload),
     onSuccess: (res) => {
-      toast.success('Billing run saved');
+      const id = res?.run?.id;
+      if (id) {
+        setDraftId(id);
+        setSearchParams({ draftId: id }, { replace: true });
+        resumeLoaded.current = true;
+      }
       queryClient.invalidateQueries({ queryKey: ['finance', 'billing-history'] });
+      toast.success('Saved as draft');
+    },
+    onError: (err) => toast.error(err?.response?.data?.error || 'Failed to save draft'),
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: (payload) => financeApi.saveBillingRun(payload),
+    onSuccess: (res) => {
+      toast.success('Billing run submitted');
+      queryClient.invalidateQueries({ queryKey: ['finance', 'billing-history'] });
+      clearBillingImportSession(effectiveBranch);
       const id = res?.run?.id;
       navigate(id ? `/finance/billing/${id}` : '/finance');
     },
-    onError: (err) => toast.error(err?.response?.data?.error || 'Failed to save billing run'),
+    onError: (err) => toast.error(err?.response?.data?.error || 'Failed to submit billing run'),
   });
+
+  const saveBusy = draftMutation.isPending || submitMutation.isPending;
 
   const { billed: billedLines, excluded: excludedLines, unmatched: unmatchedLines, noActivity: noActivityLines } =
     useMemo(() => partitionBillingLines(lines), [lines]);
   const billedTotal = useMemo(() => totalOfLines(billedLines), [billedLines]);
   const excludedTotal = useMemo(() => totalOfLines(excludedLines), [excludedLines]);
+  const excludedChargedLines = useMemo(
+    () => excludedLines.filter((line) => lineHasCharges(line)),
+    [excludedLines]
+  );
+  const excludedChargedCount = excludedChargedLines.length;
+  const excludedChargedTotal = useMemo(
+    () => totalOfLines(excludedChargedLines),
+    [excludedChargedLines]
+  );
   const unmatchedTotal = useMemo(() => totalOfLines(unmatchedLines), [unmatchedLines]);
   const grandTotal = billedTotal + excludedTotal + unmatchedTotal;
   const unmatchedCount = unmatchedLines.length;
@@ -150,6 +258,20 @@ export default function BillingImport() {
     () => noActivityLines.filter((line) => confirmedCodes.has(confirmKey(line))).length,
     [noActivityLines, confirmedCodes]
   );
+
+  const buildSavePayload = (status) => ({
+    branch: effectiveBranch,
+    period,
+    status,
+    draftId: draftId || undefined,
+    lines: billedLines.map(toBillingSaveLine),
+    noActivityLines: noActivityLines.map((line) =>
+      toBillingSaveLine(line, { confirmed: confirmedCodes.has(confirmKey(line)) })
+    ),
+    excludedLines: excludedLines.map(toBillingSaveLine),
+    unmatchedLines: unmatchedLines.map(toBillingSaveLine),
+    files: status === 'draft' ? itemsToDraftFiles(items) : undefined,
+  });
 
   const toggleNoActivityConfirm = (line) => {
     const key = confirmKey(line);
@@ -161,6 +283,176 @@ export default function BillingImport() {
       return next;
     });
   };
+
+  const handleNoActivitySave = (index, draft) => {
+    const result = applyNoActivityAmounts(lines, index, draft);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    setLines(result.lines);
+    if (result.movedToBilled) {
+      const key = confirmKey({ clientCode: result.clientCode });
+      if (key) {
+        setConfirmedCodes((prev) => {
+          if (!prev.has(key)) return prev;
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }
+      toast.success(
+        result.clientCode
+          ? `${result.clientCode} moved to Total billed`
+          : 'Row moved to Total billed'
+      );
+      return;
+    }
+    toast.success('Amounts unchanged — row still no activity');
+  };
+
+  /** Persist code exclusion; returns true on success so the button can flash green. */
+  const handleNoActivityExcludePersist = async (index) => {
+    if (!canExclude) {
+      toast.error('You cannot manage exclusions');
+      return false;
+    }
+    if (!effectiveBranch) {
+      toast.error('Select a branch first');
+      return false;
+    }
+    const line = lines[index];
+    if (!line || !isNoActivityLine(line)) {
+      toast.error('That row is not a no-activity line');
+      return false;
+    }
+    const clientCode = String(line.clientCode || '').trim();
+    if (!clientCode) {
+      toast.error('Row has no Smart Edge code to exclude');
+      return false;
+    }
+
+    setExcludingIndex(index);
+    try {
+      const current = await financeApi.getExclusions(effectiveBranch);
+      const categories = Array.isArray(current?.categories) ? current.categories : [];
+      const codes = (Array.isArray(current?.codes) ? current.codes : [])
+        .map((c) => ({
+          value: String(c?.value || '').trim(),
+          note: String(c?.note || '').trim(),
+        }))
+        .filter((c) => c.value);
+      const want = clientCode.toLowerCase();
+      if (!codes.some((c) => c.value.toLowerCase() === want)) {
+        codes.push({ value: clientCode, note: '' });
+      }
+      await financeApi.saveExclusions(effectiveBranch, { categories, codes });
+      await queryClient.invalidateQueries({ queryKey: ['finance', 'exclusions', effectiveBranch] });
+      return true;
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Failed to add exclusion');
+      return false;
+    } finally {
+      setExcludingIndex(null);
+    }
+  };
+
+  /** After the Exclude button flash — move the row into the excluded set. */
+  const handleNoActivityExcluded = (index) => {
+    const result = excludeNoActivityLine(lines, index);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    setLines(result.lines);
+    const key = confirmKey({ clientCode: result.clientCode });
+    if (key) {
+      setConfirmedCodes((prev) => {
+        if (!prev.has(key)) return prev;
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+    toast.success(`${result.clientCode} excluded`);
+  };
+
+  /**
+   * Remove code exclusion when present; category exclusions stay intact.
+   * Returns true so the Include button can flash green.
+   */
+  const handleExcludedIncludePersist = async (index) => {
+    if (!effectiveBranch) {
+      toast.error('Select a branch first');
+      return false;
+    }
+    const line = lines[index];
+    if (!line?.excluded || !lineHasCharges(line)) {
+      toast.error('That row is not a charged excluded line');
+      return false;
+    }
+    const clientCode = String(line.clientCode || '').trim();
+    if (!clientCode) {
+      toast.error('Row has no Smart Edge code');
+      return false;
+    }
+
+    setIncludingIndex(index);
+    try {
+      const current = await financeApi.getExclusions(effectiveBranch);
+      const categories = Array.isArray(current?.categories) ? current.categories : [];
+      const codes = (Array.isArray(current?.codes) ? current.codes : [])
+        .map((c) => ({
+          value: String(c?.value || '').trim(),
+          note: String(c?.note || '').trim(),
+        }))
+        .filter((c) => c.value);
+      const want = normalizeClientCode(clientCode);
+      const hasCodeExclusion = codes.some((c) => normalizeClientCode(c.value) === want);
+
+      if (hasCodeExclusion) {
+        if (!canExclude) {
+          return true;
+        }
+        const nextCodes = codes.filter((c) => normalizeClientCode(c.value) !== want);
+        await financeApi.saveExclusions(effectiveBranch, {
+          categories,
+          codes: nextCodes,
+        });
+        await queryClient.invalidateQueries({ queryKey: ['finance', 'exclusions', effectiveBranch] });
+      }
+      return true;
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Failed to update exclusions');
+      return false;
+    } finally {
+      setIncludingIndex(null);
+    }
+  };
+
+  /** After the Include button flash — move the row out of excluded. */
+  const handleExcludedIncluded = (index) => {
+    const result = includeExcludedLine(lines, index);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    setLines(result.lines);
+    if (result.movedToBilled) {
+      toast.success(
+        result.clientCode
+          ? `${result.clientCode} moved to Total billed`
+          : 'Row moved to Total billed'
+      );
+      return;
+    }
+    toast.success(
+      result.clientCode
+        ? `${result.clientCode} moved to No activity`
+        : 'Row moved to No activity'
+    );
+  };
+
   const visibleRows = useMemo(() => {
     return lines
       .map((line, index) => ({ line, index }))
@@ -355,6 +647,9 @@ export default function BillingImport() {
     setLines([]);
     setWarnings([]);
     setConfirmedCodes(new Set());
+    setDraftId(null);
+    resumeLoaded.current = false;
+    setSearchParams({}, { replace: true });
     window.setTimeout(() => {
       skipPersist.current = false;
     }, 0);
@@ -393,35 +688,43 @@ export default function BillingImport() {
     }
   };
 
-  const handleSave = () => {
+  const validateBeforePersist = () => {
     if (!canSave) {
       toast.error('You cannot save billing runs');
-      return;
+      return false;
     }
     if (!effectiveBranch) {
       toast.error('Select a branch first');
-      return;
+      return false;
     }
     if (!period) {
       toast.error('Choose a billing period');
-      return;
+      return false;
     }
-    if (billedLines.length === 0 && excludedLines.length === 0 && unmatchedLines.length === 0 && noActivityLines.length === 0) {
+    if (
+      billedLines.length === 0 &&
+      excludedLines.length === 0 &&
+      unmatchedLines.length === 0 &&
+      noActivityLines.length === 0
+    ) {
       toast.error('Process files before saving');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSaveDraft = () => {
+    if (!validateBeforePersist()) return;
+    if (items.length === 0) {
+      toast.error('Keep the source files loaded to save a draft');
       return;
     }
-    saveMutation.mutate({
-      branch: effectiveBranch,
-      period,
-      lines: [
-        ...billedLines.map(toBillingSaveLine),
-        ...noActivityLines.map((line) =>
-          toBillingSaveLine(line, { confirmed: confirmedCodes.has(confirmKey(line)) })
-        ),
-      ],
-      excludedLines: excludedLines.map(toBillingSaveLine),
-      unmatchedLines: unmatchedLines.map(toBillingSaveLine),
-    });
+    draftMutation.mutate(buildSavePayload('draft'));
+  };
+
+  const handleSubmit = () => {
+    if (!validateBeforePersist()) return;
+    submitMutation.mutate(buildSavePayload('submitted'));
   };
 
   const exportStamp = period || 'period';
@@ -442,8 +745,14 @@ export default function BillingImport() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Billing Import</h1>
           <p className="text-gray-500 mt-1">
-            Drop Albatross, Porta, and VCE CSVs plus the Smart Edge contract XLSX, then save
+            Drop Albatross, Porta, and VCE CSVs plus the Smart Edge contract XLSX, then save a draft or submit
           </p>
+          {draftId ? (
+            <p className="text-sm text-amber-700 mt-1">
+              Editing draft {draftId.slice(0, 8)}… — Save as Draft to update, or Submit to finalise
+            </p>
+          ) : null}
+          {resuming ? <p className="text-sm text-gray-500 mt-1">Restoring draft…</p> : null}
         </div>
         <Link to="/finance" className="text-sm text-red-600 hover:underline">
           Back to Finance
@@ -557,12 +866,21 @@ export default function BillingImport() {
         </button>
         <button
           type="button"
-          onClick={handleSave}
-          disabled={!canSave || lines.length === 0 || saveMutation.isPending}
+          onClick={handleSaveDraft}
+          disabled={!canSave || lines.length === 0 || items.length === 0 || saveBusy}
+          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          {draftMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+          Save as Draft
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!canSave || lines.length === 0 || saveBusy}
           className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
         >
-          {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-          Save Run
+          {submitMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+          Submit
         </button>
         {items.length > 0 || lines.length > 0 ? (
           <button
@@ -596,6 +914,8 @@ export default function BillingImport() {
           grand={grandTotal}
           noActivity={0}
           noActivityCount={noActivityCount}
+          excludedChargedCount={excludedChargedCount}
+          excludedChargedTotal={excludedChargedTotal}
           activeFilter={lineFilter}
           onFilterChange={handleLineFilter}
         />
@@ -608,7 +928,11 @@ export default function BillingImport() {
           <>
             <div className="px-4 py-3 border-b border-gray-100 text-sm text-gray-600">
               Showing {visibleRows.length} of {lines.length} rows · {billedLines.length} billed · {excludedCount}{' '}
-              excluded · {unmatchedCount} unmatched · {noActivityCount} no activity
+              excluded
+              {excludedChargedCount > 0
+                ? ` (${excludedChargedCount} with charges)`
+                : ''}{' '}
+              · {unmatchedCount} unmatched · {noActivityCount} no activity
               {noActivityCount > 0
                 ? ` · ${confirmedNoActivityCount} of ${noActivityCount} no-activity lines confirmed`
                 : ''}
@@ -635,63 +959,88 @@ export default function BillingImport() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {visibleRows.map(({ line, index }) => (
-                    <tr
-                      key={`${line.clientCode}-${line.customerName}-${index}`}
-                      className={clsx(
-                        line.excluded && 'bg-gray-100 text-gray-400',
-                        line.unmatched && 'bg-orange-50',
-                        isNoActivityLine(line) &&
-                          (confirmedCodes.has(confirmKey(line)) ? 'bg-emerald-50' : 'bg-sky-50')
-                      )}
-                    >
-                      <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                        {line.unmatched && !line.excluded ? (
-                          <UnmatchedCodeEditor
-                            key={`${line.customerName}-${line.clientCode}`}
-                            initialCode={line.clientCode}
-                            disabled={processing}
-                            busy={processing}
-                            onUpdate={(code) => handleUpdateUnmatchedCode(line, code)}
-                          />
-                        ) : (
-                          line.clientCode || '—'
+                  {visibleRows.map(({ line, index }) =>
+                    isNoActivityLine(line) ? (
+                      <NoActivityBillingRow
+                        key={`${line.clientCode}-${line.customerName}-${index}`}
+                        line={line}
+                        confirmed={confirmedCodes.has(confirmKey(line))}
+                        onToggleConfirm={() => toggleNoActivityConfirm(line)}
+                        onSave={(draft) => handleNoActivitySave(index, draft)}
+                        canExclude={canExclude}
+                        excludeBusy={excludingIndex === index}
+                        onExclude={() => handleNoActivityExcludePersist(index)}
+                        onExcluded={() => handleNoActivityExcluded(index)}
+                      />
+                    ) : (
+                      <tr
+                        key={`${line.clientCode}-${line.customerName}-${index}`}
+                        className={clsx(
+                          line.excluded &&
+                            lineHasCharges(line) &&
+                            'bg-amber-50 text-gray-900 border-l-4 border-amber-400',
+                          line.excluded && !lineHasCharges(line) && 'bg-gray-100 text-gray-400',
+                          line.unmatched && !line.excluded && 'bg-orange-50'
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {line.customerName}
-                        {line.unmatched ? (
-                          <span className="ml-2 text-xs text-orange-700">Not on contract</span>
-                        ) : null}
-                        {line.unmatched && !line.excluded ? (
-                          <UnmatchedMergeControl
-                            codeListId="billing-contract-codes"
-                            onMerge={(code) => handleMergeUnmatched(index, code)}
-                          />
-                        ) : null}
-                        {line.excluded ? (
-                          <span className="ml-2 text-xs text-gray-500">Excluded</span>
-                        ) : null}
-                        {isNoActivityLine(line) ? (
-                          <>
-                            <span className="ml-2 text-xs text-sky-700">No activity</span>
-                            <NoActivityConfirmControl
-                              confirmed={confirmedCodes.has(confirmKey(line))}
-                              onToggle={() => toggleNoActivityConfirm(line)}
+                      >
+                        <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                          {line.unmatched && !line.excluded ? (
+                            <UnmatchedCodeEditor
+                              key={`${line.customerName}-${line.clientCode}`}
+                              initialCode={line.clientCode}
+                              disabled={processing}
+                              busy={processing}
+                              onUpdate={(code) => handleUpdateUnmatchedCode(line, code)}
                             />
-                          </>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">{line.category || '—'}</td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">{formatZar(line.mobile)}</td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">{formatZar(line.international)}</td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">{formatZar(line.national)}</td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">{formatZar(line.local)}</td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">{formatZar(line.special)}</td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">{formatZar(line.virtual)}</td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">{formatZar(line.vce)}</td>
-                    </tr>
-                  ))}
+                          ) : (
+                            line.clientCode || '—'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {line.customerName}
+                          {line.unmatched ? (
+                            <span className="ml-2 text-xs text-orange-700">Not on contract</span>
+                          ) : null}
+                          {line.unmatched && !line.excluded ? (
+                            <UnmatchedMergeControl
+                              codeListId="billing-contract-codes"
+                              onMerge={(code) => handleMergeUnmatched(index, code)}
+                            />
+                          ) : null}
+                          {line.excluded ? (
+                            <span
+                              className={clsx(
+                                'ml-2 text-xs',
+                                lineHasCharges(line) ? 'text-amber-800' : 'text-gray-500'
+                              )}
+                            >
+                              Excluded
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {line.category || '—'}
+                          {line.excluded && lineHasCharges(line) ? (
+                            <>
+                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded border border-amber-300 bg-amber-100 text-xs font-medium text-amber-900">
+                                Has charges
+                              </span>
+                              <ExcludedIncludeControl
+                                busy={includingIndex === index}
+                                onInclude={() => handleExcludedIncludePersist(index)}
+                                onIncluded={() => handleExcludedIncluded(index)}
+                              />
+                            </>
+                          ) : null}
+                        </td>
+                        {CALL_TYPE_AMOUNT_FIELDS.map(({ key }) => (
+                          <td key={key} className="px-4 py-3 text-sm whitespace-nowrap">
+                            {formatZar(line[key])}
+                          </td>
+                        ))}
+                      </tr>
+                    )
+                  )}
                 </tbody>
               </table>
             )}

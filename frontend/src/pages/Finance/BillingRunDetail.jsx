@@ -86,12 +86,39 @@ export default function BillingRunDetail() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Billing run {run.period}</h1>
-        <p className="text-gray-500 mt-1">
-          {run.processedBy} · {formatDateTime(run.createdAt)} · {run.clientCount} billed clients
-        </p>
-        {run.notes ? <p className="text-sm text-gray-600 mt-2">{run.notes}</p> : null}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-900">Billing run {run.period}</h1>
+            <span
+              className={clsx(
+                'inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium',
+                run.status === 'draft'
+                  ? 'bg-amber-100 text-amber-900'
+                  : 'bg-emerald-100 text-emerald-900'
+              )}
+            >
+              {run.status === 'draft' ? 'Draft' : 'Submitted'}
+            </span>
+          </div>
+          <p className="text-gray-500 mt-1">
+            {run.processedBy} · {formatDateTime(run.createdAt)} · {run.clientCount} billed clients
+          </p>
+          {run.notes ? <p className="text-sm text-gray-600 mt-2">{run.notes}</p> : null}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {run.status === 'draft' ? (
+            <Link
+              to={`/finance/billing?draftId=${encodeURIComponent(run.id)}`}
+              className="inline-flex items-center px-4 py-2 border border-amber-400 rounded-lg text-sm text-amber-900 hover:bg-amber-50"
+            >
+              Resume draft
+            </Link>
+          ) : null}
+          <Link to="/finance" className="text-sm text-red-600 hover:underline self-center">
+            Back to Finance
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
