@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { Download } from 'lucide-react';
+import { Download, Loader2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { financeApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -22,14 +22,27 @@ const TABS = [
 
 export default function BillingRunDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { can } = useAuth();
   const canView = can('finance.billing.view');
+  const canDelete = can('finance.billing.delete');
   const [tab, setTab] = useState('billed');
 
   const { data: run, isLoading, error } = useQuery({
     queryKey: ['finance', 'billing-run', id],
     queryFn: () => financeApi.getBillingRun(id),
     enabled: canView && Boolean(id),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => financeApi.deleteBillingRun(id),
+    onSuccess: () => {
+      toast.success('Billing run deleted');
+      queryClient.invalidateQueries({ queryKey: ['finance', 'billing-history'] });
+      navigate('/finance');
+    },
+    onError: (err) => toast.error(err?.response?.data?.error || 'Failed to delete billing run'),
   });
 
   const grouped = useMemo(() => groupRunLines(run?.lines ?? []), [run?.lines]);
@@ -49,6 +62,17 @@ export default function BillingRunDetail() {
       `${kind}-${run?.branch || 'branch'}-${run?.period || 'period'}.csv`,
       billingLinesToCsv(rows)
     );
+  };
+
+  const handleDelete = () => {
+    if (
+      !window.confirm(
+        'Are you sure you want to delete this billing run? This cannot be undone.'
+      )
+    ) {
+      return;
+    }
+    deleteMutation.mutate();
   };
 
   if (!canView) {
@@ -83,6 +107,7 @@ export default function BillingRunDetail() {
     unmatched: 'No unmatched lines on this run',
     noActivity: 'No zero-activity contract lines on this run',
   };
+  const isSubmitted = run.status !== 'draft';
 
   return (
     <div className="space-y-6">
@@ -106,7 +131,7 @@ export default function BillingRunDetail() {
           </p>
           {run.notes ? <p className="text-sm text-gray-600 mt-2">{run.notes}</p> : null}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           {run.status === 'draft' ? (
             <Link
               to={`/finance/billing?draftId=${encodeURIComponent(run.id)}`}
@@ -114,6 +139,21 @@ export default function BillingRunDetail() {
             >
               Resume draft
             </Link>
+          ) : null}
+          {isSubmitted && canDelete ? (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Delete
+            </button>
           ) : null}
           <Link to="/finance" className="text-sm text-red-600 hover:underline self-center">
             Back to Finance
