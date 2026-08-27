@@ -342,4 +342,19 @@ export class NotificationService {
     await this.preferenceRepo.upsert(user.id, category, Boolean(enabled));
     return this.getPreferences(user);
   }
+
+  /**
+   * Global connectivity in-app mute for a user.
+   * Missing preference row means enabled (default on).
+   */
+  async getConnectivityAlertsEnabled(userId) {
+    const rows = await this.preferenceRepo.findByUserId(userId);
+    const row = rows.find((r) => r.category === 'connectivity');
+    return row == null ? true : Boolean(row.enabled);
+  }
+
+  async setConnectivityAlertsEnabled(userId, enabled) {
+    await this.preferenceRepo.upsert(userId, 'connectivity', Boolean(enabled));
+    return { connectivityAlertsEnabled: Boolean(enabled) };
+  }
 }

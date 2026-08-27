@@ -277,6 +277,29 @@ const UserModal = ({ user, canUpdate, canManageOverrides, onClose }) => {
           : [MODULE_COPERS],
   });
 
+  const prefsQueryKey = ['users', user?.id, 'notification-preferences'];
+  const { data: notificationPrefs, isLoading: prefsLoading } = useQuery({
+    queryKey: prefsQueryKey,
+    queryFn: () => usersApi.getNotificationPreferences(user.id),
+    enabled: isEditing && !!user?.id,
+  });
+
+  const prefsMutation = useMutation({
+    mutationFn: (connectivityAlertsEnabled) =>
+      usersApi.updateNotificationPreferences(user.id, { connectivityAlertsEnabled }),
+    onSuccess: (res) => {
+      queryClient.setQueryData(prefsQueryKey, res);
+      toast.success(
+        res.connectivityAlertsEnabled
+          ? 'Connectivity alerts enabled'
+          : 'Connectivity alerts muted'
+      );
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Could not update notification preferences');
+    },
+  });
+
   const validateForm = () => {
     if (!formData.branch || (formData.branch !== 'JHB' && formData.branch !== 'CT')) {
       toast.error('Home branch is required');
@@ -611,6 +634,43 @@ const UserModal = ({ user, canUpdate, canManageOverrides, onClose }) => {
                   </div>
                 )}
               </div>
+
+              {isEditing ? (
+                <div className="flex items-start justify-between gap-4 p-3 rounded-lg border border-gray-200">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Connectivity alerts</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      In-app link down, restored, and DNS failure alerts for this user.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notificationPrefs?.connectivityAlertsEnabled !== false}
+                    disabled={!detailsEditable || prefsLoading || prefsMutation.isPending}
+                    onClick={() => {
+                      if (!detailsEditable) return;
+                      const next = !(notificationPrefs?.connectivityAlertsEnabled !== false);
+                      prefsMutation.mutate(next);
+                    }}
+                    className={clsx(
+                      'relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors disabled:opacity-50',
+                      notificationPrefs?.connectivityAlertsEnabled !== false
+                        ? 'bg-red-600'
+                        : 'bg-gray-300'
+                    )}
+                  >
+                    <span
+                      className={clsx(
+                        'inline-block h-5 w-5 rounded-full bg-white mt-0.5 transition',
+                        notificationPrefs?.connectivityAlertsEnabled !== false
+                          ? 'translate-x-5'
+                          : 'translate-x-1'
+                      )}
+                    />
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="flex justify-end gap-3 p-4 border-t shrink-0">

@@ -14,7 +14,7 @@ export const NOTIFICATION_CATEGORIES = Object.freeze([
   {
     key: 'connectivity',
     moduleKey: MODULE_CONNECTIVITY,
-    label: 'Connectivity',
+    label: 'Connectivity alerts',
     description: 'Link down, restored, and DNS failure alerts',
     types: ['connectivity_link_down', 'connectivity_link_restored', 'connectivity_dns_failure'],
   },

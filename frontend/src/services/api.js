@@ -61,6 +61,10 @@ export const usersApi = {
   create: (data) => api.post('/users', data).then(res => res.data),
   update: (id, data) => api.put(`/users/${id}`, data).then(res => res.data),
   delete: (id) => api.delete(`/users/${id}`).then(res => res.data),
+  getNotificationPreferences: (id) =>
+    api.get(`/users/${id}/notification-preferences`).then((res) => res.data),
+  updateNotificationPreferences: (id, body) =>
+    api.patch(`/users/${id}/notification-preferences`, body).then((res) => res.data),
   listPermissionOverrides: (userId) =>
     api.get(`/users/${userId}/permission-overrides`).then((res) => res.data),
   upsertPermissionOverride: (userId, body) =>
