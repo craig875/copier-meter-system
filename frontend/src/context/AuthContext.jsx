@@ -118,14 +118,18 @@ export const AuthProvider = ({ children }) => {
     navigate('/login');
   };
 
-  const isAdmin = user?.role === 'admin';
-  const isManager = user?.role === 'manager';
-  const isSalesAgent = user?.role === 'sales_agent';
-  /** Admin or manager (elevated UI; managers still use `modules` via hasModule) */
-  const isElevated = isAdmin || isManager;
+  // Prefer assignedRole (Stage A+ role matrix); fall back to legacy User.role enum
+  // for dual-run accounts that still lack roleId / assignedRole.
+  const roleKey = user?.assignedRole?.key ?? user?.role ?? null;
+  const isAdmin = roleKey === 'admin';
+  const isManager = roleKey === 'manager';
+  const isSalesAgent = roleKey === 'sales_agent';
+  /** Owner, admin, or manager (elevated UI; managers still use `modules` via hasModule) */
+  const isElevated =
+    roleKey === 'owner' || roleKey === 'admin' || roleKey === 'manager';
 
-  const isMeterUser = user?.role === 'meter_user';
-  const isCapturer = user?.role === 'capturer';
+  const isMeterUser = roleKey === 'meter_user';
+  const isCapturer = roleKey === 'capturer';
 
   const hasModule = (moduleKey) => {
     if (user?.role === 'admin') return true;
